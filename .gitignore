@@ -1,0 +1,29 @@
+# Secrets — Plaid / BEA / Census keys live here
+.env
+.env.local
+
+# Machine-local agent settings
+.claude/settings.local.json
+
+# Maven
+target/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
