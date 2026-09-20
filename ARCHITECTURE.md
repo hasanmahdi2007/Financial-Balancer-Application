@@ -896,9 +896,13 @@ only output is a CSV. Nothing else should follow it across.
    hidden ones as naivety.
 3. **`min(actual, baseline)` treats one cheap month as the new normal.** *Experiment:* recompute from
    a 3-month trailing median and compare variance.
-4. **`discretionaryFloor` is undefined** and defaults to zero, so the app would recommend cutting all
-   entertainment to zero. *Fix:* seed from the lifestyle tier via
-   `lifestyle_floor(tier, category, pct_of_baseline)`. **Blocks Stage 1's end-to-end test.**
+4. **~~`discretionaryFloor` is undefined~~ — resolved.** It is derived from BLS CEX 2024, where
+   typical discretionary spending (entertainment 4.6%, food away from home 5.0%, apparel 2.5%) is
+   about 12% of expenditure. The floor is a fraction of that: `12% × tierFraction ×
+   obligationMultiplier`, clamped to 3–12% of net income, stored as
+   `lifestyle_floor(tier, category, pct_of_baseline)` so it scales by city. **The user is always
+   prompted for their own figure; the derived value is only a fallback.** Full table in
+   `.claude/packets/P4.md`. Owned by P4, not P1 — P1 receives the floor as a `Money`.
 5. **Cuts may not close the gap and the result does not say so.** *Fix:* `residualGap` on
    `AllocationResult`, with a test asserting it is non-zero when cuts are insufficient.
 6. **Plaid's real categories will not match expectations** — a gym may return `PERSONAL_CARE`.
