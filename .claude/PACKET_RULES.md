@@ -53,6 +53,33 @@ prevents one of them.
 
 ---
 
+## Working in a worktree
+
+Your packet runs in its own git worktree, alongside three others on the same machine. Two
+consequences that are easy to get wrong:
+
+**There is one shared container stack, and it is already running.** Postgres is on **5434** and Redis
+on **6380** — non-standard because this machine also runs the jobs-tracker stack (which holds 6379 and
+8080) and a native Windows Postgres (which holds 5432). **Do not run `docker compose up` from your
+worktree.** Four worktrees starting their own stacks collide on those same ports, and the failure
+presents as "no container appeared" rather than as an error. Check what is already running instead:
+
+```bash
+wsl docker ps --filter "name=fb-"
+```
+
+If you need a database for an integration test, use Testcontainers, which allocates its own random
+port and does not touch the shared stack. Pin **postgres:15-alpine**, matching what is shipped.
+
+**`.env` does not exist in your worktree.** It is gitignored, so `git worktree add` does not copy it.
+If your packet needs API keys, copy the file across once:
+
+```bash
+cp ../newProject/.env .env
+```
+
+If that file does not exist yet, ask — do not invent keys, and never commit one.
+
 ## Environment
 
 **Docker** is Docker Desktop with the WSL2 backend. The `docker` CLI exists **only while Docker
