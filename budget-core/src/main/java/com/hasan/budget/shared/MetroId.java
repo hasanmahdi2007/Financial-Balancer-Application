@@ -1,4 +1,4 @@
-package com.hasan.budget.costofliving.domain;
+package com.hasan.budget.shared;
 
 import java.util.Objects;
 
