@@ -136,19 +136,28 @@ genuine LP territory — so the engine sits behind an `AllocationStrategy` inter
 
 ## Cost-of-living data
 
-Two free, official US government sources:
+**v1 ships curated figures for about ten cities** — six in Lebanon, a few US metros — hand-researched,
+committed as CSV, and seeded into Postgres via Flyway behind a `CostOfLivingProvider` port.
 
-- **BEA Regional Price Parities** — 50 states and ~380 metro areas, split into goods, **rents**, and
-  other services. The rents component drives the housing cap directly.
-- **Census ACS table `B25064`** — median gross rent, granular well past 500 cities, updated annually.
+They are labelled **`CROWDSOURCED`, never `OFFICIAL`**. They are researched estimates, not statistics,
+and every figure carries its source and an `as_of` date that the UI shows. The app's central claim on
+your trust is that it never presents a guess as a fact; that has to apply to its own numbers first.
+Any figure you correct yourself becomes `USER_PROVIDED` and outranks everything else, permanently.
 
-Metro-level parity indices drive the arithmetic; city-level median rent adds granularity and a
-concrete dollar anchor. Human-readable tiers ("Tier 6 — High cost") are *derived from* these numbers
-for display. Never the reverse: the engine multiplies caps by indices, and a coarse tier cannot do
-arithmetic.
+**Deriving baselines from official statistics is deferred, not abandoned.** The original design built
+them from BLS Consumer Expenditure Survey data localised by BEA Regional Price Parities, cross-checked
+against Census ACS `B25064` median rent. It was cut from v1 deliberately: it bought one user-visible
+sentence — *"your groceries are high for this city"* — for two to three days of work, and it carried an
+unvalidated modelling risk in how survey categories map onto price-parity components.
 
-Data is seeded into Postgres via Flyway behind a `CostOfLivingProvider` port, so a live paid API can
-replace the seed later without touching a single caller.
+The seams for it exist and are unused on purpose: the port, the `OFFICIAL` confidence tier, and an
+empty `OFFICIAL` layer in the resolver chain. Reviving it is a new class implementing an existing
+interface, touching no caller. The full specification — sources, formula, reference figures, and the
+measurement that must run before any of it is trusted — is in
+`.claude/packets/P9-DEFERRED-official-cost-of-living.md`.
+
+That ordering is deliberate: get the product working, then let real use decide which sophistication
+earns its place.
 
 ---
 

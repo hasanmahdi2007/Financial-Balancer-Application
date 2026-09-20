@@ -354,6 +354,14 @@ Only `kind == SPEND` becomes a `CategoryObservation`. `TRANSFER_INTERNAL` aggreg
 
 ## 8. Cost-of-living data
 
+> **Deferred as of v1.** The BLS/BEA/Census derivation described in this section is **not built**.
+> v1 ships curated figures for about ten cities, labelled `CROWDSOURCED`. The reasoning, the full
+> specification and the reference data are in
+> `.claude/packets/P9-DEFERRED-official-cost-of-living.md`. The rest of this section is retained
+> because it documents the design the port was built to accept — the `OFFICIAL` confidence tier and
+> an empty `OFFICIAL` resolver layer both exist so reviving it is a new class, not a refactor.
+> `city_category_baseline.income_quintile` must stay **nullable** for that to hold.
+
 ### Sources, and why nothing is fetched at runtime
 
 ```mermaid
@@ -884,16 +892,14 @@ only output is a CSV. Nothing else should follow it across.
 
 ## 17. Open risks
 
-1. **The `CEX × RPP/100` mapping is unvalidated** and is the highest-risk item in the project. RPP
-   indexes a *basket*; we apply its components to *our* categories, a judgement call with unbounded
-   error. *Cheapest experiment:* for five metros, compare `CEX_housing(q3) × RPP_rents/100` against
-   ACS `B25064` median gross rent. Within ~15% is defensible; off by 2× means the formula is broken.
-   **One afternoon, in Stage 2, before anything is built on top.**
-2. **Quintile mismatch.** CEX quintiles are **pre-tax household** income; we collect **net
-   personal**, and the product is single-person while the CEX average household is ~2.5 people.
-   Baselines will read high on both counts. If systematic, add a per-capita adjustment as a `country`
-   column, not a constant. State the assumption in the README — visible assumptions read as rigour,
-   hidden ones as naivety.
+1. **~~The `CEX × RPP/100` mapping is unvalidated~~ — removed from v1 by deferring the derivation.**
+   This was the highest-risk item in the project, and cutting it removed the risk rather than
+   managing it. The validation experiment and the analysis survive in
+   `.claude/packets/P9-DEFERRED-official-cost-of-living.md` and must be run before that feature is
+   ever revived.
+2. **~~Quintile mismatch~~ — moot in v1.** Curated figures have no quintile. The analysis (the two
+   errors pull in opposite directions, so the net must be measured rather than reasoned) is preserved
+   in the deferred brief and in the javadoc on `IncomeQuintile`.
 3. **`min(actual, baseline)` treats one cheap month as the new normal.** *Experiment:* recompute from
    a 3-month trailing median and compare variance.
 4. **~~`discretionaryFloor` is undefined~~ — resolved.** It is derived from BLS CEX 2024, where

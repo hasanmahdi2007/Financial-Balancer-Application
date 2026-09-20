@@ -78,16 +78,26 @@ the framework-free domain tests do not depend on Spring's test starters at all.
 
 ## External data
 
-- **Cost of living** — BEA Regional Price Parities (states + ~380 metro areas, split into goods /
-  rents / other services) and Census ACS table `B25064` (median gross rent). Both free and official.
-  The rents component drives the housing cap. Seeded into Postgres via Flyway, behind a
-  `CostOfLivingProvider` port so a live source can replace the seed without touching callers.
-  Display tiers are derived from these numbers — never the reverse, because the engine multiplies
-  caps by indices and a coarse tier cannot do arithmetic.
-- **Bank data** — Plaid **Sandbox** (`user_good` / `pass_good`). Cursor-based `/transactions/sync`,
-  not the legacy `/transactions/get`. Access tokens are encrypted at rest.
+- **Cost of living** — **curated figures only, for about ten cities.** Hand-researched USD amounts for
+  six Lebanese cities and a few US metros, committed as CSV and seeded into Postgres via Flyway,
+  behind a `CostOfLivingProvider` port. They are labelled `CROWDSOURCED`, never `OFFICIAL`, because
+  they are researched estimates rather than statistics — mislabelling them would make the whole
+  confidence model dishonest.
 
-Secrets live in `.env`, which is gitignored. Never commit Plaid, BEA, or Census keys.
+  **Deriving baselines from BLS, BEA and Census is deferred**, not abandoned: it bought one
+  user-visible sentence for 2–3 days of work and carried an unvalidated modelling risk. The port, the
+  `OFFICIAL` confidence tier and an empty `OFFICIAL` resolver layer all exist so that reviving it is a
+  new class rather than a refactor. Full specification, including the reference figures and the
+  measurement that must run first, is in `.claude/packets/P9-DEFERRED-official-cost-of-living.md`.
+  **`city_category_baseline.income_quintile` must stay nullable** — that one column is what keeps the
+  revival free of a migration.
+- **Bank data** — Plaid **Sandbox**, test user `user_transactions_dynamic` with any non-blank password
+  (**not** `user_good`, which lacks the credit-card and loan accounts needed to exercise the
+  credit-card double-count case). Cursor-based `/transactions/sync`, not the legacy
+  `/transactions/get`. Note the sign convention: **positive means money leaving the account**, so a
+  deposit arrives negative and must be flipped for display. Access tokens are encrypted at rest.
+
+Secrets live in `.env`, which is gitignored. Never commit Plaid or Supabase keys.
 
 ## Environment quirks
 
