@@ -8,6 +8,10 @@
 #
 # Postgres and Redis publish to localhost on purpose: they are needed by tests and by the app when
 # it is run from an IDE outside this stack. They are not reachable from outside this machine.
+#
+# PORTS ARE CHOSEN TO COEXIST WITH THE jobs-tracker STACK, which runs on the same machine and holds
+# 6379 (redis) and 8080 (api-gateway). Redis here is therefore on 6380. When the gateway is added in
+# packet P6 it must not take 8080 either. Postgres keeps 5432 because jobs-tracker's is on 5433.
 
 services:
   postgres:
@@ -33,7 +37,7 @@ services:
     image: redis:7-alpine
     container_name: fb-redis
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
