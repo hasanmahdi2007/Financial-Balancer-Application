@@ -88,9 +88,14 @@ public final class GreedyPriorityAllocator implements AllocationStrategy {
             return List.of();
         }
 
+        // Rigidity first, so what the user called disposable goes before what they called essential
+        // and anything they locked is not touched at all. The category's cut order only breaks ties
+        // inside a tier.
         List<DiscretionarySpend> byFlexibility = discretionary.stream()
+                .filter(DiscretionarySpend::isCuttable)
                 .sorted(Comparator
-                        .comparingInt((DiscretionarySpend spend) -> spend.flexibilityRank())
+                        .comparing((DiscretionarySpend spend) -> spend.rigidity())
+                        .thenComparingInt((DiscretionarySpend spend) -> spend.category().cutOrder())
                         .thenComparing((DiscretionarySpend spend) -> spend.category().name()))
                 .toList();
 

@@ -166,7 +166,7 @@ class GreedyPriorityAllocatorTest {
         AllocationResult result = allocate(
                 Money.of(-200),
                 List.of(goal("car", "300", NEXT_MONTH, Priority.HIGH)),
-                List.of(new DiscretionarySpend(SpendCategory.ENTERTAINMENT, Money.of(600), 1)));
+                List.of(DiscretionarySpend.of(SpendCategory.ENTERTAINMENT, Money.of(600))));
 
         assertThat(find(result, "car").status()).isEqualTo(AllocationStatus.INFEASIBLE);
         // 300 shortfall on the goal plus 200 of overspend.
@@ -180,8 +180,8 @@ class GreedyPriorityAllocatorTest {
                 Money.ZERO,
                 List.of(goal("car", "250", NEXT_MONTH, Priority.HIGH)),
                 List.of(
-                        new DiscretionarySpend(SpendCategory.SUBSCRIPTIONS, Money.of(300), 2),
-                        new DiscretionarySpend(SpendCategory.ENTERTAINMENT, Money.of(100), 1)));
+                        DiscretionarySpend.of(SpendCategory.SUBSCRIPTIONS, Money.of(300)),
+                        DiscretionarySpend.of(SpendCategory.ENTERTAINMENT, Money.of(100))));
 
         assertThat(result.tradeoffs()).containsExactly(
                 new Tradeoff(SpendCategory.ENTERTAINMENT, Money.of(100)),
@@ -194,8 +194,8 @@ class GreedyPriorityAllocatorTest {
                 Money.ZERO,
                 List.of(goal("car", "1000", NEXT_MONTH, Priority.HIGH)),
                 List.of(
-                        new DiscretionarySpend(SpendCategory.ENTERTAINMENT, Money.of(200), 1),
-                        new DiscretionarySpend(SpendCategory.SUBSCRIPTIONS, Money.of(100), 2)));
+                        DiscretionarySpend.of(SpendCategory.ENTERTAINMENT, Money.of(200)),
+                        DiscretionarySpend.of(SpendCategory.SUBSCRIPTIONS, Money.of(100))));
 
         Money suggested = result.tradeoffs().stream()
                 .map(Tradeoff::suggestedReduction)
@@ -208,7 +208,7 @@ class GreedyPriorityAllocatorTest {
         AllocationResult result = allocate(
                 Money.of(1000),
                 List.of(goal("car", "300", NEXT_MONTH, Priority.HIGH)),
-                List.of(new DiscretionarySpend(SpendCategory.ENTERTAINMENT, Money.of(400), 1)));
+                List.of(DiscretionarySpend.of(SpendCategory.ENTERTAINMENT, Money.of(400))));
 
         assertThat(result.tradeoffs()).isEmpty();
     }
