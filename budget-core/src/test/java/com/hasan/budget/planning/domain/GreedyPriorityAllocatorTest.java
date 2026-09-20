@@ -3,6 +3,7 @@ package com.hasan.budget.planning.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.hasan.budget.shared.Money;
+import com.hasan.budget.shared.Rigidity;
 import com.hasan.budget.shared.SpendCategory;
 import java.time.LocalDate;
 import java.util.List;
@@ -241,6 +242,49 @@ class GreedyPriorityAllocatorTest {
                 .map(GoalAllocation::allocated)
                 .reduce(Money.ZERO, Money::plus);
         assertThat(distributed.plus(result.unallocatedSurplus())).isEqualTo(Money.of(1000));
+    }
+
+    @Test
+    void neverSuggestsCuttingSomethingTheUserLocked() {
+        AllocationResult result = allocate(
+                Money.ZERO,
+                List.of(goal("car", "250", NEXT_MONTH, Priority.HIGH)),
+                List.of(
+                        new DiscretionarySpend(
+                                SpendCategory.ENTERTAINMENT, Money.of(500), Rigidity.LOCKED),
+                        DiscretionarySpend.of(SpendCategory.DINING_OUT, Money.of(100))));
+
+        // The locked gym-membership case: the money is there, but the user has said it is untouchable,
+        // so the engine takes what it can elsewhere and leaves the rest of the gap open.
+        assertThat(result.tradeoffs())
+                .containsExactly(new Tradeoff(SpendCategory.DINING_OUT, Money.of(100)));
+    }
+
+    @Test
+    void prefersWhatTheUserCallsDisposableOverWhatTheyCallEssential() {
+        AllocationResult result = allocate(
+                Money.ZERO,
+                List.of(goal("car", "150", NEXT_MONTH, Priority.HIGH)),
+                List.of(
+                        new DiscretionarySpend(
+                                SpendCategory.DINING_OUT, Money.of(200), Rigidity.ESSENTIAL),
+                        new DiscretionarySpend(
+                                SpendCategory.CLOTHING, Money.of(200), Rigidity.DISPOSABLE)));
+
+        // Rigidity beats the category's own default ordering, which would have put DINING_OUT first.
+        assertThat(result.tradeoffs())
+                .containsExactly(new Tradeoff(SpendCategory.CLOTHING, Money.of(150)));
+    }
+
+    @Test
+    void neverSuggestsCuttingUnidentifiedSpending() {
+        AllocationResult result = allocate(
+                Money.ZERO,
+                List.of(goal("car", "250", NEXT_MONTH, Priority.HIGH)),
+                List.of(DiscretionarySpend.of(SpendCategory.OTHER, Money.of(900))));
+
+        // "Reduce Other by $250" is advice nobody can act on, so the engine stays silent instead.
+        assertThat(result.tradeoffs()).isEmpty();
     }
 
     private AllocationResult allocate(Money surplus, List<GoalInput> goals) {
