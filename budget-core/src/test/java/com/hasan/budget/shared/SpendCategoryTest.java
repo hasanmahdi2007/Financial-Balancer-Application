@@ -88,6 +88,31 @@ class SpendCategoryTest {
     }
 
     @Test
+    void everyCategoryCanBeExplainedToAUser() {
+        // A prompt built from this table is only honest if every entry has something to say.
+        for (SpendCategory category : SpendCategory.values()) {
+            assertThat(category.label()).as("label of %s", category).isNotBlank();
+            assertThat(category.covers()).as("covers of %s", category).isNotBlank();
+        }
+    }
+
+    @Test
+    void noUserFacingLabelLeaksTheConstantName() {
+        // "DINING_OUT" in an interface is a developer's word escaping into a user's question.
+        assertThat(SpendCategory.values())
+                .allSatisfy(category -> {
+                    assertThat(category.label()).doesNotContain("_");
+                    assertThat(category.label()).isNotEqualTo(category.name());
+                });
+    }
+
+    @Test
+    void labelsAreDistinctSoTwoRowsCannotReadTheSame() {
+        assertThat(java.util.Arrays.stream(SpendCategory.values()).map(SpendCategory::label).toList())
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
     void subscriptionsAreOwedThisMonthYetStillCuttable() {
         // The case a single flexibility rank could not express, and the reason the axes are separate.
         assertThat(SpendCategory.SUBSCRIPTIONS.baselinePolicy()).isEqualTo(BaselinePolicy.TAKE_AS_IS);

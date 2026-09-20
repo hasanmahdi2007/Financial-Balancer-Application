@@ -46,9 +46,17 @@ prevents one of them.
 9. **No test may touch the network.** This machine's DNS drops intermittently, and a suite that fails
    for connectivity reasons stops being trusted within a week. Record fixtures and commit them.
 
-10. **Commit messages explain why, not what.** The diff already shows what changed.
+10. **Anything you ask a user for must explain itself.** Never surface an internal term — not
+    "discretionary", "floor", "baseline" or "rigidity" — and never a constant name like
+    `DINING_OUT`. Every `SpendCategory` carries a `label()` and `covers()` written for a person, and
+    `SpendingQuestion` assembles a question, its reason, what it covers, and the basis for any
+    suggested default. Derive explanations from that data rather than hand-writing them in a
+    template, so they cannot drift when the taxonomy changes. A question the user has to guess at is
+    a defect, not a polish item.
 
-11. **The `jobs-tracker-distributed-system` repository is read-only.** Copy files out of it if your
+11. **Commit messages explain why, not what.** The diff already shows what changed.
+
+12. **The `jobs-tracker-distributed-system` repository is read-only.** Copy files out of it if your
     brief says to; never edit or commit to it.
 
 ---
