@@ -28,6 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
+		<!-- Integration tests need Docker, so they are opt-in locally and always on in CI. -->
+		<skipITs>true</skipITs>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -114,10 +116,60 @@
 			<version>1.5.0</version>
 			<scope>test</scope>
 		</dependency>
+
+		<!--
+			Added up front by P0 for packets that do not exist yet, so that four agents working in
+			parallel never edit this file simultaneously. Unused dependencies here are deliberate.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!--
+			Testcontainers 2.x artifact names. The 1.x names (org.testcontainers:postgresql) still
+			exist on Maven Central but are NOT managed by the Boot 4.1 BOM, so using them fails with
+			a missing-version error. Nearly every tutorial online still shows the old names.
+		-->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
+			<!--
+				Two test tiers. Surefire runs *Test: pure JUnit, no Spring, no database, no network,
+				so it runs anywhere in seconds and is where most tests belong. Failsafe runs *IT
+				against a real Postgres via Testcontainers, which needs Docker and is therefore
+				skipped locally by default: run with -DskipITs=false, or let CI do it.
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<skipITs>${skipITs}</skipITs>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

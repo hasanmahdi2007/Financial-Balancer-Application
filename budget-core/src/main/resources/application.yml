@@ -1,0 +1,42 @@
+# Root configuration.
+#
+# Per-module settings live in application-<module>.yml and are imported below, so that packets
+# working in parallel never edit the same config file at the same time. Add your module's file and
+# its import line; do not put module settings here.
+
+spring:
+  application:
+    name: budget-core
+  config:
+    import:
+      - optional:classpath:application-costofliving.yml
+      - optional:classpath:application-ingestion.yml
+      - optional:classpath:application-profile.yml
+      - optional:classpath:application-planning.yml
+  datasource:
+    url: ${DATASOURCE_URL:jdbc:postgresql://localhost:5432/budget}
+    username: ${POSTGRES_USER:budget}
+    password: ${POSTGRES_PASSWORD:budget}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema. Letting Hibernate generate it would mean the schema in production
+      # is whatever the entities happened to imply, rather than something reviewed and versioned.
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.hasan.budget: INFO

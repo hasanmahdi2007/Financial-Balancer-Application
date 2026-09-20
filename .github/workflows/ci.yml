@@ -6,7 +6,10 @@ on:
   pull_request:
 
 jobs:
-  budget-core:
+  # Fast feedback. Pure JUnit, no Spring context, no database, no network. This job is what most
+  # commits need to hear back from, so it must stay quick.
+  domain:
+    name: Domain tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +20,24 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Build and test
+      - name: Unit tests and architecture rules
         working-directory: budget-core
-        run: ./mvnw --batch-mode verify
+        run: ./mvnw --batch-mode test
+
+  # Slower. Flyway migrations and repositories against a real Postgres via Testcontainers, which
+  # works here because GitHub runners ship with Docker.
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "25"
+          distribution: temurin
+          cache: maven
+
+      - name: Verify with integration tests
+        working-directory: budget-core
+        run: ./mvnw --batch-mode verify -DskipITs=false

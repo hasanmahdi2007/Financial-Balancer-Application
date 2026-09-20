@@ -1,0 +1,44 @@
+# Local development stack.
+#
+# SECURITY NOTE, load-bearing rather than decorative:
+# when the application services are added (packet P6), `budget-core` must NOT publish a port.
+# It trusts a user-id header injected by the gateway, so anything that can reach it directly can
+# forge that header and read another user's bank data. Only `api-gateway` gets a published port.
+# This is exactly the line a future change deletes "to make local testing easier" - don't.
+#
+# Postgres and Redis publish to localhost on purpose: they are needed by tests and by the app when
+# it is run from an IDE outside this stack. They are not reachable from outside this machine.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: fb-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-budget}
+      POSTGRES_USER: ${POSTGRES_USER:-budget}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-budget}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # Without this, the app starts before Postgres accepts connections and Flyway fails on a
+      # cold machine in a way that looks like a migration bug.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-budget} -d ${POSTGRES_DB:-budget}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: fb-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
