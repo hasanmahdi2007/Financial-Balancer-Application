@@ -10,19 +10,23 @@
 # it is run from an IDE outside this stack. They are not reachable from outside this machine.
 #
 # PORTS ARE CHOSEN TO COEXIST WITH THE jobs-tracker STACK, which runs on the same machine and holds
-# 6379 (redis) and 8080 (api-gateway). Redis here is therefore on 6380. When the gateway is added in
-# packet P6 it must not take 8080 either. Postgres keeps 5432 because jobs-tracker's is on 5433.
+# 6379 (redis) and 8080 (api-gateway), and a NATIVE Windows Postgres holds 5432. So: Postgres here
+# is on 5434 and Redis on 6380. When the gateway is added in
+# packet P6 it must not take 8080 either.
 
 services:
+  # Pinned to 15 rather than 17 because that image is already on this machine and the network here
+  # drops constantly. Nothing in this project needs a 17-only feature, and 15 is supported to 2027.
+  # Testcontainers must pin the SAME version so local and CI test the database we actually ship.
   postgres:
-    image: postgres:17-alpine
+    image: postgres:15-alpine
     container_name: fb-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-budget}
       POSTGRES_USER: ${POSTGRES_USER:-budget}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-budget}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
