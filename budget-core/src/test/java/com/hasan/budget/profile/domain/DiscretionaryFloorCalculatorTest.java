@@ -60,7 +60,7 @@ class DiscretionaryFloorCalculatorTest {
                 .monthly();
         Money homebody = calculator
                 .floorFor(new FloorRequest(
-                        LifestyleTier.HOMEBODY, Money.of(4_000), Money.of(1_800), Map.of(), null, null))
+                        LifestyleTier.HOMEBODY, Money.of(4_000), Money.of(1_800), Map.of(), null, null, Map.of()))
                 .monthly();
 
         assertThat(frequent).isGreaterThan(homebody);
@@ -100,7 +100,8 @@ class DiscretionaryFloorCalculatorTest {
                         SpendCategory.DINING_OUT, Money.of(600),
                         SpendCategory.CLOTHING, Money.of(300)),
                 null,
-                null));
+                null,
+                Map.of()));
 
         assertThat(floor.monthly())
                 .describedAs("unclamped this would be $885.50, which is most of the surplus")
@@ -195,6 +196,128 @@ class DiscretionaryFloorCalculatorTest {
                 FloorRequest.of(LifestyleTier.HOMEBODY, Money.of(4_000), Money.of(1_800)));
 
         assertThat(floor.basis()).isEqualTo("typical for someone who rarely goes out");
+    }
+
+    /**
+     * The bug this was added for. The surplus counts every discretionary category at zero and
+     * leaves the floor to cover them in one figure, so a declared $300 season ticket changed the
+     * surplus by nothing at all and the app told the user it was free. A floor derived from tier
+     * and obligation load alone cannot know it was declared, so it has to be told.
+     */
+    @Test
+    void aDeclaredCommitmentRaisesTheFloorThatIsMeantToCoverIt() {
+        FloorRequest asked = FloorRequest.of(LifestyleTier.REGULAR, Money.of(4_000), Money.of(1_800));
+
+        DiscretionaryFloor without = calculator.floorFor(asked);
+        DiscretionaryFloor withSeasonTicket = calculator.floorFor(
+                asked.withDeclaredCommitments(Map.of(SpendCategory.ENTERTAINMENT, Money.of(300))));
+
+        assertThat(without.monthly()).isEqualTo(Money.of("217.80"));
+        assertThat(withSeasonTicket.monthly())
+                .describedAs("the ticket must change the answer, or the app says it is free")
+                .isGreaterThan(without.monthly());
+        assertThat(withSeasonTicket.perCategory().get(SpendCategory.ENTERTAINMENT))
+                .isGreaterThanOrEqualTo(Money.of(300));
+    }
+
+    /**
+     * The floor may never come out below what the user has actually named. A commitment they
+     * declared is part of their minimum by definition, which is the same argument the floor rests
+     * on in the first place.
+     */
+    @Test
+    void theFloorIsNeverLessThanEverythingTheUserHasDeclared() {
+        DiscretionaryFloor floor = calculator.floorFor(
+                FloorRequest.of(LifestyleTier.HOMEBODY, Money.of(4_000), Money.of(3_200))
+                        .withDeclaredCommitments(Map.of(
+                                SpendCategory.ENTERTAINMENT, Money.of(300),
+                                SpendCategory.DINING_OUT, Money.of(120))));
+
+        assertThat(floor.monthly()).isGreaterThanOrEqualTo(Money.of(420));
+    }
+
+    /**
+     * A large commitment in one category must not crowd out the protection for the others. Raising
+     * only the total would let the engine answer a $700 season ticket by proposing the user stop
+     * eating out, which is the advice the floor exists to prevent.
+     */
+    @Test
+    void aBigCommitmentInOneCategoryDoesNotStripTheOthers() {
+        DiscretionaryFloor floor = calculator.floorFor(
+                FloorRequest.of(LifestyleTier.REGULAR, Money.of(4_000), Money.of(1_800))
+                        .withDeclaredCommitments(Map.of(SpendCategory.ENTERTAINMENT, Money.of(700))));
+
+        assertThat(floor.perCategory().get(SpendCategory.ENTERTAINMENT)).isEqualTo(Money.of(700));
+        assertThat(floor.perCategory().get(SpendCategory.DINING_OUT))
+                .describedAs("eating out keeps the protection the tier earned it")
+                .isEqualTo(Money.of(90));
+        assertThat(floor.perCategory().get(SpendCategory.CLOTHING)).isEqualTo(Money.of(45));
+        assertThat(floor.monthly()).isEqualTo(Money.of(835));
+    }
+
+    /**
+     * The clamp bounds a guess, not a fact. Clamping a declared commitment away would leave the
+     * surplus overstated by the difference, which is the same defect as counting it at zero. So the
+     * arithmetic takes the real figure, and the excess is reported instead of discarded.
+     */
+    @Test
+    void declaredCommitmentsBeatTheUpperClampButAreReportedWhenTheyDo() {
+        DiscretionaryFloor floor = calculator.floorFor(
+                FloorRequest.of(LifestyleTier.REGULAR, Money.of(4_000), Money.of(1_800))
+                        .withDeclaredCommitments(Map.of(SpendCategory.ENTERTAINMENT, Money.of(700))));
+
+        assertThat(floor.sustainableCeiling())
+                .describedAs("12% of a $4,000 income")
+                .isEqualTo(Money.of(480));
+        assertThat(floor.monthly())
+                .describedAs("above the ceiling, because the money leaves the account either way")
+                .isGreaterThan(floor.sustainableCeiling());
+        assertThat(floor.overCommitted())
+                .describedAs("and the user is told, rather than the difference being swallowed")
+                .isTrue();
+    }
+
+    /** An ordinary derived floor sits under the ceiling and says nothing about over-commitment. */
+    @Test
+    void anOrdinaryFloorIsNotReportedAsOverCommitted() {
+        DiscretionaryFloor floor = calculator.floorFor(
+                FloorRequest.of(LifestyleTier.REGULAR, Money.of(4_000), Money.of(1_800)));
+
+        assertThat(floor.overCommitted()).isFalse();
+    }
+
+    /**
+     * A user's own answer outranks a derived default, but not money they have separately told us
+     * leaves every month. That is arithmetic, not opinion: a floor below it would overstate the
+     * surplus by the difference.
+     */
+    @Test
+    void aUsersOwnFigureStillCannotFallBelowWhatTheyHaveDeclared() {
+        DiscretionaryFloor floor = calculator.floorFor(
+                FloorRequest.of(LifestyleTier.REGULAR, Money.of(4_000), Money.of(1_800))
+                        .withDeclaredCommitments(Map.of(SpendCategory.ENTERTAINMENT, Money.of(300)))
+                        .statedBy(Money.of(50)));
+
+        assertThat(floor.userProvided()).isTrue();
+        assertThat(floor.perCategory().get(SpendCategory.ENTERTAINMENT))
+                .isGreaterThanOrEqualTo(Money.of(300));
+        assertThat(floor.monthly()).isGreaterThanOrEqualTo(Money.of(300));
+    }
+
+    /**
+     * Nothing caches a floor, so adding, changing or removing a commitment retriggers the whole
+     * derivation by construction. A floor computed once at onboarding would go stale the moment the
+     * user named something.
+     */
+    @Test
+    void removingACommitmentGivesTheProtectionBack() {
+        FloorRequest asked = FloorRequest.of(LifestyleTier.REGULAR, Money.of(4_000), Money.of(1_800));
+        FloorRequest withTicket =
+                asked.withDeclaredCommitments(Map.of(SpendCategory.ENTERTAINMENT, Money.of(300)));
+
+        assertThat(calculator.floorFor(withTicket).monthly()).isGreaterThan(Money.of("217.80"));
+        assertThat(calculator.floorFor(withTicket.withDeclaredCommitments(Map.of())).monthly())
+                .isEqualTo(Money.of("217.80"));
     }
 
     /**

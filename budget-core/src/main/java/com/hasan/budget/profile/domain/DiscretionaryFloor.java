@@ -18,17 +18,40 @@ import java.util.Objects;
  *     a number is arbitrary either ignores it or replaces it at random.
  * @param userProvided true when the user answered the question themselves, in which case no
  *     clamp or multiplier was applied to their answer
+ * @param sustainableCeiling the most the model would protect for someone on this income. The floor
+ *     is allowed to exceed it - a commitment the user has declared is money that leaves whatever
+ *     the model thinks - but when it does, that is worth saying rather than swallowing.
  */
 public record DiscretionaryFloor(
-        Money monthly, Map<SpendCategory, Money> perCategory, String basis, boolean userProvided) {
+        Money monthly,
+        Map<SpendCategory, Money> perCategory,
+        String basis,
+        boolean userProvided,
+        Money sustainableCeiling) {
 
     public DiscretionaryFloor {
         Objects.requireNonNull(monthly, "monthly");
         Objects.requireNonNull(basis, "basis");
+        Objects.requireNonNull(sustainableCeiling, "sustainableCeiling");
         perCategory = Map.copyOf(perCategory);
         if (monthly.isNegative()) {
             throw new IllegalArgumentException("monthly must not be negative but was " + monthly);
         }
+    }
+
+    /**
+     * True when what the user has committed to, or asked for, is more than the model considers
+     * sustainable on their income.
+     *
+     * <p>Not an error and not a correction. The arithmetic still uses the real figure, because
+     * money the user has told us about leaves their account whatever a model thinks. This exists so
+     * the interface can say so - "the fun-money commitments you have named come to $835 a month,
+     * which is more than we would normally suggest protecting on your income" - rather than
+     * silently discarding the difference and overstating the surplus by it, which is the same bug
+     * as counting a declared commitment at zero, only smaller.
+     */
+    public boolean overCommitted() {
+        return monthly.compareTo(sustainableCeiling) > 0;
     }
 
     /**
