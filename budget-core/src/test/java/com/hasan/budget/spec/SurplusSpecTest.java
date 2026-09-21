@@ -17,6 +17,7 @@ import com.hasan.budget.planning.domain.Priority;
 import com.hasan.budget.planning.domain.Tradeoff;
 import com.hasan.budget.planning.domain.surplus.CategoryLine;
 import com.hasan.budget.planning.domain.surplus.CategoryObservation;
+import com.hasan.budget.planning.domain.surplus.ItemScope;
 import com.hasan.budget.planning.domain.surplus.SurplusBreakdown;
 import com.hasan.budget.planning.domain.surplus.SurplusInput;
 import com.hasan.budget.planning.domain.surplus.UserLineItem;
@@ -302,7 +303,7 @@ class SurplusSpecTest {
         @Test
         void aCustomLineItemIsCountedInTheSurplus() {
             List<CategoryObservation> spending = List.of(spent(SpendCategory.RENT, "1200"));
-            UserLineItem seasonTicket = UserLineItem.of(
+            UserLineItem seasonTicket = UserLineItem.onTopOf(
                     "li-1", "Football season ticket", SpendCategory.SUBSCRIPTIONS, Money.of(300));
 
             SurplusBreakdown withItem =
@@ -326,12 +327,12 @@ class SurplusSpecTest {
             SurplusBreakdown asSubscription = compute(input(
                     "3000",
                     List.of(),
-                    List.of(UserLineItem.of("li-1", "Match tickets", SpendCategory.SUBSCRIPTIONS, Money.of(300))),
+                    List.of(UserLineItem.onTopOf("li-1", "Match tickets", SpendCategory.SUBSCRIPTIONS, Money.of(300))),
                     SAVES_NOTHING_YET));
             SurplusBreakdown asEntertainment = compute(input(
                     "3000",
                     List.of(),
-                    List.of(UserLineItem.of("li-1", "Match tickets", SpendCategory.ENTERTAINMENT, Money.of(300))),
+                    List.of(UserLineItem.onTopOf("li-1", "Match tickets", SpendCategory.ENTERTAINMENT, Money.of(300))),
                     SAVES_NOTHING_YET));
 
             assertThat(asSubscription.lineItemTotal()).isEqualTo(Money.of(300));
@@ -346,7 +347,7 @@ class SurplusSpecTest {
             SurplusBreakdown breakdown = compute(input(
                     "3000",
                     List.of(spent(SpendCategory.SUBSCRIPTIONS, "60")),
-                    List.of(UserLineItem.of("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45))),
+                    List.of(UserLineItem.onTopOf("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45))),
                     SAVES_NOTHING_YET));
 
             CategoryLine gym = lineFor(breakdown, "li-gym");
@@ -368,9 +369,9 @@ class SurplusSpecTest {
         @Test
         void aLineItemTakesItsParentsRigidityUnlessTheUserOverridesIt() {
             UserLineItem defaulted =
-                    UserLineItem.of("li-gym", "Gym membership", SpendCategory.ENTERTAINMENT, Money.of(45));
+                    UserLineItem.onTopOf("li-gym", "Gym membership", SpendCategory.ENTERTAINMENT, Money.of(45));
             UserLineItem overridden = new UserLineItem(
-                    "li-gym", "Gym membership", SpendCategory.ENTERTAINMENT, Money.of(45), Rigidity.LOCKED);
+                    "li-gym", "Gym membership", SpendCategory.ENTERTAINMENT, Money.of(45), Rigidity.LOCKED, ItemScope.ON_TOP);
 
             assertThat(defaulted.rigidity()).isEqualTo(SpendCategory.ENTERTAINMENT.defaultRigidity());
             assertThat(defaulted.rigidity()).isEqualTo(Rigidity.DISPOSABLE);
@@ -386,9 +387,9 @@ class SurplusSpecTest {
         @Test
         void theUsersRigidityNeverChangesTheArithmetic() {
             UserLineItem disposable = new UserLineItem(
-                    "li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45), Rigidity.DISPOSABLE);
+                    "li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45), Rigidity.DISPOSABLE, ItemScope.ON_TOP);
             UserLineItem locked = new UserLineItem(
-                    "li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45), Rigidity.LOCKED);
+                    "li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45), Rigidity.LOCKED, ItemScope.ON_TOP);
 
             SurplusBreakdown asDisposable =
                     compute(input("3000", List.of(), List.of(disposable), SAVES_NOTHING_YET));
@@ -397,6 +398,141 @@ class SurplusSpecTest {
 
             assertThat(asLocked).isEqualTo(asDisposable);
             assertThat(locked.rigidity()).isEqualTo(Rigidity.LOCKED);
+        }
+
+        /**
+         * The other thing people do with a line item: put a name to part of what they already spend
+         * rather than declare something new. A gym listed inside $60 of observed subscriptions is
+         * already in that $60, so naming it must not move the surplus by a cent. Adding it would be
+         * the credit-card double count arriving through a different door.
+         */
+        @Test
+        void namingPartOfACategoryDoesNotAddToWhatIsSubtracted() {
+            List<CategoryObservation> spending = List.of(spent(SpendCategory.SUBSCRIPTIONS, "60"));
+
+            SurplusBreakdown named = compute(input(
+                    "3000",
+                    spending,
+                    List.of(UserLineItem.alreadyIn("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45))),
+                    SAVES_NOTHING_YET));
+            SurplusBreakdown unnamed = compute(input("3000", spending, List.of(), SAVES_NOTHING_YET));
+
+            assertThat(named.surplus()).isEqualTo(unnamed.surplus());
+            assertThat(named.lineItemTotal()).isEqualTo(Money.ZERO);
+            assertThat(named.fixedTotal()).isEqualTo(Money.of(60));
+            assertThatConservationHolds(named);
+        }
+
+        /**
+         * And it is still a line, because naming it is the entire reason it exists: the plan can say
+         * "cut your gym by $20" where "cut Subscriptions by $20" tells the user nothing about what
+         * to cancel.
+         */
+        @Test
+        void aNamedPartOfACategoryIsStillReportedSoAdviceCanNameIt() {
+            SurplusBreakdown breakdown = compute(input(
+                    "3000",
+                    List.of(spent(SpendCategory.SUBSCRIPTIONS, "60")),
+                    List.of(UserLineItem.alreadyIn("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45))),
+                    SAVES_NOTHING_YET));
+
+            CategoryLine gym = lineFor(breakdown, "li-gym");
+            assertThat(gym.label()).isEqualTo("Gym membership");
+            assertThat(gym.actual()).isEqualTo(Money.of(45));
+            assertThat(gym.counted()).isEqualTo(Money.ZERO);
+        }
+
+        /**
+         * The same $45 gym, the same parent category, opposite arithmetic — which is exactly why the
+         * user is asked rather than the answer inferred. Inferring it from whether an observation
+         * happens to exist would silently change the number when their bank finally syncs.
+         */
+        @Test
+        void theSameItemCountsOrNotAccordingToWhatTheUserSaidItWas() {
+            List<CategoryObservation> spending = List.of(spent(SpendCategory.SUBSCRIPTIONS, "60"));
+
+            SurplusBreakdown onTop = compute(input(
+                    "3000",
+                    spending,
+                    List.of(UserLineItem.onTopOf("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45))),
+                    SAVES_NOTHING_YET));
+            SurplusBreakdown alreadyIn = compute(input(
+                    "3000",
+                    spending,
+                    List.of(UserLineItem.alreadyIn("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45))),
+                    SAVES_NOTHING_YET));
+
+            assertThat(alreadyIn.surplus()).isEqualTo(onTop.surplus().plus(Money.of(45)));
+        }
+
+        /**
+         * Naming $90 of gym inside $60 of observed subscriptions is a data error: the money is not
+         * there to cut. Refused rather than clamped, because clamping would quietly discard whatever
+         * the user actually meant.
+         */
+        @Test
+        void namingMoreInsideACategoryThanItShowsIsRejected() {
+            SurplusInput overNamed = input(
+                    "3000",
+                    List.of(spent(SpendCategory.SUBSCRIPTIONS, "60")),
+                    List.of(UserLineItem.alreadyIn("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(90))),
+                    SAVES_NOTHING_YET);
+
+            assertThatThrownBy(() -> compute(overNamed))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("SUBSCRIPTIONS");
+        }
+
+        /** Two names inside one category have to fit together, not merely each on their own. */
+        @Test
+        void namedPartsOfOneCategoryAreCheckedAgainstTheirCombinedTotal() {
+            SurplusInput overNamed = input(
+                    "3000",
+                    List.of(spent(SpendCategory.SUBSCRIPTIONS, "60")),
+                    List.of(
+                            UserLineItem.alreadyIn("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(40)),
+                            UserLineItem.alreadyIn("li-tv", "Streaming", SpendCategory.SUBSCRIPTIONS, Money.of(40))),
+                    SAVES_NOTHING_YET);
+
+            assertThatThrownBy(() -> compute(overNamed))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("80");
+        }
+
+        /**
+         * Naming part of a category nothing was observed in is the same error seen earlier: there is
+         * no total for it to be part of, and the user almost certainly meant it as a new commitment.
+         */
+        @Test
+        void namingPartOfACategoryWithNothingObservedInItIsRejected() {
+            SurplusInput orphaned = input(
+                    "3000",
+                    List.of(spent(SpendCategory.RENT, "1200")),
+                    List.of(UserLineItem.alreadyIn("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45))),
+                    SAVES_NOTHING_YET);
+
+            assertThatThrownBy(() -> compute(orphaned))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Gym membership");
+        }
+
+        /**
+         * The question the user is asked is built from their own category's name, never from a
+         * constant. "Part of what I already spend on Subscriptions" is answerable; "ALREADY_COUNTED"
+         * is not, and neither is a sentence naming a category the interface does not show.
+         */
+        @Test
+        void theChoiceIsPutToTheUserInTheirOwnCategorysWords() {
+            for (SpendCategory category : SpendCategory.values()) {
+                for (ItemScope scope : ItemScope.values()) {
+                    assertThat(scope.labelFor(category))
+                            .as("%s asked about %s", scope, category)
+                            .contains(category.label())
+                            .doesNotContain(category.name())
+                            .doesNotContain(scope.name());
+                    assertThat(scope.means()).isNotBlank();
+                }
+            }
         }
     }
 
@@ -432,12 +568,16 @@ class SurplusSpecTest {
                             spent(SpendCategory.GROCERIES, "611.11", "455.55"),
                             spent(SpendCategory.ENTERTAINMENT, "244.44")),
                     List.of(
-                            UserLineItem.of("li-1", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of("44.44")),
-                            UserLineItem.of("li-2", "Weekly food shop", SpendCategory.GROCERIES, Money.of("155.55")),
-                            UserLineItem.of("li-3", "Match tickets", SpendCategory.ENTERTAINMENT, Money.of("77.77"))),
+                            UserLineItem.onTopOf("li-1", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of("44.44")),
+                            UserLineItem.onTopOf("li-2", "Weekly food shop", SpendCategory.GROCERIES, Money.of("155.55")),
+                            UserLineItem.onTopOf("li-3", "Match tickets", SpendCategory.ENTERTAINMENT, Money.of("77.77")),
+                            UserLineItem.alreadyIn("li-4", "Corner shop", SpendCategory.GROCERIES, Money.of("222.22"))),
                     SAVES_NOTHING_YET));
 
             assertThatConservationHolds(breakdown);
+
+            // The corner shop is a name put to part of the $611.11 already observed in groceries, so
+            // it is absent from this total while the three genuine additions are in it.
             assertThat(breakdown.lineItemTotal()).isEqualTo(Money.of("199.99"));
         }
 
@@ -490,7 +630,7 @@ class SurplusSpecTest {
                             spent(SpendCategory.RENT, "2400", "2100"),
                             spent(SpendCategory.GROCERIES, "700", "450"),
                             spent(SpendCategory.ENTERTAINMENT, "240")),
-                    List.of(UserLineItem.of("li-1", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45))),
+                    List.of(UserLineItem.onTopOf("li-1", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45))),
                     Money.of(400));
 
             assertThat(compute(request)).isEqualTo(compute(request));
@@ -535,7 +675,7 @@ class SurplusSpecTest {
                         spent(SpendCategory.TRANSPORT_FUEL, "160", "220"),
                         spent(SpendCategory.DINING_OUT, "380"),
                         spent(SpendCategory.ENTERTAINMENT, "240")),
-                List.of(UserLineItem.of("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(60))),
+                List.of(UserLineItem.onTopOf("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(60))),
                 Money.of(400)));
 
         // 2400 + 320 + 60 fixed, 180 + 450 + 160 capped, 60 of gym, 300 floor.
