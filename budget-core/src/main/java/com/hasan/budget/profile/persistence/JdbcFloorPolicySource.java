@@ -41,17 +41,22 @@ public class JdbcFloorPolicySource implements FloorPolicySource {
                 protectedShares(), obligationBands(), nationalShares(), clamp.atLeast(), clamp.atMost());
     }
 
+    /** One row of {@code lifestyle_floor}, mapped before it is grouped. */
+    private record TierShare(LifestyleTier tier, SpendCategory category, Rate share) {}
+
     private Map<LifestyleTier, Map<SpendCategory, Rate>> protectedShares() {
-        Map<LifestyleTier, Map<SpendCategory, Rate>> shares = new EnumMap<>(LifestyleTier.class);
-        jdbc.sql("SELECT tier, category, pct_of_baseline_bp FROM lifestyle_floor")
-                .query((rs, row) -> shares
-                        .computeIfAbsent(
-                                LifestyleTier.valueOf(rs.getString("tier")),
-                                tier -> new EnumMap<>(SpendCategory.class))
-                        .put(
-                                SpendCategory.valueOf(rs.getString("category")),
-                                new Rate(rs.getInt("pct_of_baseline_bp"))))
+        List<TierShare> rows = jdbc.sql("SELECT tier, category, pct_of_baseline_bp FROM lifestyle_floor")
+                .query((rs, row) -> new TierShare(
+                        LifestyleTier.valueOf(rs.getString("tier")),
+                        SpendCategory.valueOf(rs.getString("category")),
+                        new Rate(rs.getInt("pct_of_baseline_bp"))))
                 .list();
+
+        Map<LifestyleTier, Map<SpendCategory, Rate>> shares = new EnumMap<>(LifestyleTier.class);
+        for (TierShare row : rows) {
+            shares.computeIfAbsent(row.tier(), tier -> new EnumMap<>(SpendCategory.class))
+                    .put(row.category(), row.share());
+        }
         return shares;
     }
 
@@ -69,13 +74,19 @@ public class JdbcFloorPolicySource implements FloorPolicySource {
                 .list();
     }
 
+    /** One row of {@code discretionary_national_share}, mapped before it is grouped. */
+    private record NationalShare(SpendCategory category, Rate share) {}
+
     private Map<SpendCategory, Rate> nationalShares() {
-        Map<SpendCategory, Rate> shares = new EnumMap<>(SpendCategory.class);
-        jdbc.sql("SELECT category, pct_of_net_income_bp FROM discretionary_national_share")
-                .query((rs, row) -> shares.put(
+        List<NationalShare> rows = jdbc
+                .sql("SELECT category, pct_of_net_income_bp FROM discretionary_national_share")
+                .query((rs, row) -> new NationalShare(
                         SpendCategory.valueOf(rs.getString("category")),
                         new Rate(rs.getInt("pct_of_net_income_bp"))))
                 .list();
+
+        Map<SpendCategory, Rate> shares = new EnumMap<>(SpendCategory.class);
+        rows.forEach(row -> shares.put(row.category(), row.share()));
         return shares;
     }
 
