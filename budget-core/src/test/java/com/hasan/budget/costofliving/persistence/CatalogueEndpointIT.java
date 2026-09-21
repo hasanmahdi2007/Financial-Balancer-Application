@@ -8,6 +8,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,16 +30,28 @@ import org.springframework.transaction.annotation.Transactional;
  * payload. {@code CROWDSOURCED} is an internal word, and a user asked to judge a figure labelled
  * with it is being asked to guess.
  */
-// Filters off: budget-core publishes no port and trusts a user-id header the gateway injects, so
-// who may call this is the gateway's question and packet P6's to answer. Leaving the default
-// security chain in would make this test assert an authentication policy that does not exist yet,
-// and it would start passing or failing for reasons that have nothing to do with the catalogue.
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 @Transactional
 class CatalogueEndpointIT extends CostOfLivingDatabaseFixture {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Test
+    @DisplayName("the service does not challenge its own callers for a password")
+    void theGatewayIsNotAskedToLogIn() throws Exception {
+        // This is a regression test for a real half-hour of confusion. The resource-server starter
+        // is on the classpath, and with no security configuration Spring Boot locks every route
+        // behind HTTP Basic with a generated password - so every endpoint any packet writes answers
+        // 401, and the symptom looks like a bug in whichever controller is being tested.
+        //
+        // The caller here is the gateway, which has already authenticated the user and injected
+        // their id. Being asked for a password would mean nothing could reach this service at all.
+        mockMvc.perform(get("/api/catalogue/countries"))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("WWW-Authenticate"));
+        mockMvc.perform(get("/actuator/health")).andExpect(status().isOk());
+    }
 
     @Test
     @DisplayName("the country list offers only countries with figures behind them")
