@@ -33,8 +33,16 @@ public record ManualConsideredFunds(Money statedTotal, Money monthlyIncome)
                 statedTotal, monthlyIncome, SetAside.NOTHING.total(), ConsiderationMode.WHOLE);
     }
 
-    /** More money in scope is a larger total, and nothing else. No provenance is required. */
-    public ManualConsideredFunds raisedTo(Money newTotal) {
+    /**
+     * Changes what is in scope, in either direction, and nothing else.
+     *
+     * <p>Deliberately not named for raising. Putting more money in scope is a larger total and
+     * needs no explanation of where it came from - but taking money back out is the same action and
+     * must be just as easy, because a user who cannot withdraw money from a plan will stop putting
+     * it in. The bank path does this by excluding an account, flagging a deposit or lowering the
+     * share; this is the manual path's one equivalent.
+     */
+    public ManualConsideredFunds revisedTo(Money newTotal) {
         return new ManualConsideredFunds(newTotal, monthlyIncome);
     }
 }

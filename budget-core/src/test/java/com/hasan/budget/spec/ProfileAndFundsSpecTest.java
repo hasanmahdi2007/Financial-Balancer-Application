@@ -123,11 +123,15 @@ class ProfileAndFundsSpecTest {
         void aManualTotalCanBeRaisedWithoutExplainingWhereTheMoneyCameFrom() {
             ManualConsideredFunds before = new ManualConsideredFunds(Money.of(12_000), Money.of(4_000));
 
-            ConsideredFunds after = before.raisedTo(Money.of(20_000)).resolve();
+            ConsideredFunds after = before.revisedTo(Money.of(20_000)).resolve();
 
             assertThat(after.consideredBalance()).isEqualTo(Money.of(20_000));
             assertThat(after.mode()).isEqualTo(ConsiderationMode.WHOLE);
             assertThat(after.monthlyIncome()).isEqualTo(Money.of(4_000));
+            // And back out again. Taking money off the table is the same action as putting it on,
+            // or a user who changes their mind has to start over to get their own money back.
+            assertThat(before.revisedTo(Money.of(5_000)).resolve().consideredBalance())
+                    .isEqualTo(Money.of(5_000));
             // Structural, because the requirement is about what we do NOT ask for: a manual total
             // carries the figure and the income, and nowhere to record where the money came from.
             assertThat(Arrays.stream(ManualConsideredFunds.class.getRecordComponents())
