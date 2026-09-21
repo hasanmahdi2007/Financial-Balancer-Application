@@ -5,9 +5,11 @@ import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.SpendCategory;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -44,7 +46,15 @@ public final class SurplusCalculation {
         }
 
         Map<SpendCategory, Money> namedWithin = new EnumMap<>(SpendCategory.class);
+        Set<String> itemIds = new HashSet<>();
         for (UserLineItem item : input.lineItems()) {
+            // The id is the handle a proposed cut uses to name one thing rather than a category, so
+            // two items sharing one would make "cut your gym by $20" ambiguous about which line it
+            // meant - which defeats the only reason these items are named at all.
+            if (!itemIds.add(item.id())) {
+                throw new IllegalArgumentException(
+                        "line item ids must be unique, but '" + item.id() + "' is used more than once");
+            }
             if (!item.scope().isSubtractedInItsOwnRight()) {
                 checkFitsInsideItsCategory(item, observed, namedWithin);
             }

@@ -517,6 +517,26 @@ class SurplusSpecTest {
         }
 
         /**
+         * The id is the handle a proposed cut uses to say "your gym" rather than "Subscriptions".
+         * Two items sharing one makes that advice ambiguous about which line it meant, which defeats
+         * the only reason these items carry names at all.
+         */
+        @Test
+        void twoItemsCannotShareOneId() {
+            SurplusInput clashing = input(
+                    "3000",
+                    List.of(),
+                    List.of(
+                            UserLineItem.onTopOf("li-1", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45)),
+                            UserLineItem.onTopOf("li-1", "Season ticket", SpendCategory.SUBSCRIPTIONS, Money.of(300))),
+                    SAVES_NOTHING_YET);
+
+            assertThatThrownBy(() -> compute(clashing))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("li-1");
+        }
+
+        /**
          * The question the user is asked is built from their own category's name, never from a
          * constant. "Part of what I already spend on Subscriptions" is answerable; "ALREADY_COUNTED"
          * is not, and neither is a sentence naming a category the interface does not show.
