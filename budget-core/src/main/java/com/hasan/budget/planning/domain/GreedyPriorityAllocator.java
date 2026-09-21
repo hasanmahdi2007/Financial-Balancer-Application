@@ -50,13 +50,15 @@ public final class GreedyPriorityAllocator implements AllocationStrategy {
                 ? Money.ZERO.minus(request.monthlySurplus())
                 : Money.ZERO;
 
-        return new AllocationResult(
-                allocations,
-                available,
-                suggestCuts(request.discretionary(), shortfall.plus(deficit)));
+        CutPlan cuts = suggestCuts(request.discretionary(), shortfall.plus(deficit));
+
+        return new AllocationResult(allocations, available, cuts.tradeoffs(), cuts.residualGap());
     }
 
     private record Funding(GoalInput goal, Money required) {}
+
+    /** The cuts on offer, and what they still fail to cover. */
+    private record CutPlan(List<Tradeoff> tradeoffs, Money residualGap) {}
 
     private static List<Funding> rank(AllocationRequest request) {
         // Ascending requirement within a priority tier: funding the cheapest goals first keeps the
@@ -83,9 +85,9 @@ public final class GreedyPriorityAllocator implements AllocationStrategy {
         return granted.isPositive() ? AllocationStatus.AT_RISK : AllocationStatus.INFEASIBLE;
     }
 
-    private static List<Tradeoff> suggestCuts(List<DiscretionarySpend> discretionary, Money needed) {
+    private static CutPlan suggestCuts(List<DiscretionarySpend> discretionary, Money needed) {
         if (!needed.isPositive()) {
-            return List.of();
+            return new CutPlan(List.of(), Money.ZERO);
         }
 
         // Rigidity first, so what the user called disposable goes before what they called essential
@@ -111,6 +113,9 @@ public final class GreedyPriorityAllocator implements AllocationStrategy {
                 outstanding = outstanding.minus(cut);
             }
         }
-        return cuts;
+        // Whatever is left once every cuttable line has been taken to zero. Locked lines and the
+        // categories the engine refuses to name are deliberately not counted as available here, so
+        // this is the gap the user really still has to close some other way.
+        return new CutPlan(cuts, outstanding);
     }
 }
