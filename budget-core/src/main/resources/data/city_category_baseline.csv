@@ -1,0 +1,114 @@
+# What a single person pays each month, per city, in US dollars.
+#
+# CURATED, NOT DERIVED. Every row is CROWDSOURCED: a researched estimate, not a statistic. The
+# OFFICIAL tier is reserved for figures derived from BLS and BEA releases, which is deferred - see
+# .claude/packets/P9-DEFERRED-official-cost-of-living.md. Labelling a guess OFFICIAL would make the
+# whole confidence model dishonest, so nothing in this file may carry that tier.
+#
+# income_quintile is deliberately EMPTY on every row. Curated figures are not split by income; a
+# future BLS-derived source is. That is why the column is nullable in the schema, and it is the one
+# thing that keeps reviving the deferred pipeline a new class rather than a migration.
+#
+# as_of is when the figures were gathered, not when they were loaded. It is what staleness is
+# measured from, so a wrong date here silently mislabels the confidence of every plan built on it.
+metro_slug,category,income_quintile,monthly_amount,confidence,source_id,as_of
+beirut,RENT,,600.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+beirut,UTILITIES,,180.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+beirut,GROCERIES,,300.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+beirut,TRANSPORT_FUEL,,120.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+beirut,DINING_OUT,,150.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+beirut,ENTERTAINMENT,,80.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+beirut,HEALTHCARE,,90.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+beirut,SUBSCRIPTIONS,,25.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+beirut,CLOTHING,,60.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+beirut,OTHER,,70.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,RENT,,450.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,UTILITIES,,165.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,GROCERIES,,270.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,TRANSPORT_FUEL,,110.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,DINING_OUT,,120.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,ENTERTAINMENT,,65.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,HEALTHCARE,,80.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,SUBSCRIPTIONS,,22.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,CLOTHING,,50.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+jounieh,OTHER,,60.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,RENT,,420.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,UTILITIES,,160.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,GROCERIES,,260.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,TRANSPORT_FUEL,,105.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,DINING_OUT,,110.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,ENTERTAINMENT,,60.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,HEALTHCARE,,78.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,SUBSCRIPTIONS,,22.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,CLOTHING,,48.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+byblos,OTHER,,58.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,RENT,,250.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,UTILITIES,,140.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,GROCERIES,,220.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,TRANSPORT_FUEL,,85.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,DINING_OUT,,70.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,ENTERTAINMENT,,40.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,HEALTHCARE,,65.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,SUBSCRIPTIONS,,18.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,CLOTHING,,35.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+tripoli-lb,OTHER,,45.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,RENT,,300.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,UTILITIES,,145.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,GROCERIES,,230.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,TRANSPORT_FUEL,,90.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,DINING_OUT,,80.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,ENTERTAINMENT,,45.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,HEALTHCARE,,68.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,SUBSCRIPTIONS,,20.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,CLOTHING,,38.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+sidon,OTHER,,48.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,RENT,,280.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,UTILITIES,,150.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,GROCERIES,,225.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,TRANSPORT_FUEL,,95.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,DINING_OUT,,75.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,ENTERTAINMENT,,42.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,HEALTHCARE,,66.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,SUBSCRIPTIONS,,18.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,CLOTHING,,36.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+zahle,OTHER,,46.00,CROWDSOURCED,curated-lb-2026,2026-09-01
+new-york,RENT,,2650.00,CROWDSOURCED,curated-us-2026,2026-01-01
+new-york,UTILITIES,,210.00,CROWDSOURCED,curated-us-2026,2026-01-01
+new-york,GROCERIES,,530.00,CROWDSOURCED,curated-us-2026,2026-01-01
+new-york,TRANSPORT_FUEL,,160.00,CROWDSOURCED,curated-us-2026,2026-01-01
+new-york,DINING_OUT,,430.00,CROWDSOURCED,curated-us-2026,2026-01-01
+new-york,ENTERTAINMENT,,210.00,CROWDSOURCED,curated-us-2026,2026-01-01
+new-york,HEALTHCARE,,290.00,CROWDSOURCED,curated-us-2026,2026-01-01
+new-york,SUBSCRIPTIONS,,60.00,CROWDSOURCED,curated-us-2026,2026-01-01
+new-york,CLOTHING,,125.00,CROWDSOURCED,curated-us-2026,2026-01-01
+new-york,OTHER,,195.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,RENT,,2750.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,UTILITIES,,220.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,GROCERIES,,550.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,TRANSPORT_FUEL,,180.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,DINING_OUT,,450.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,ENTERTAINMENT,,220.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,HEALTHCARE,,300.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,SUBSCRIPTIONS,,60.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,CLOTHING,,130.00,CROWDSOURCED,curated-us-2026,2026-01-01
+san-francisco,OTHER,,200.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,RENT,,1450.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,UTILITIES,,175.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,GROCERIES,,420.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,TRANSPORT_FUEL,,170.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,DINING_OUT,,300.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,ENTERTAINMENT,,150.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,HEALTHCARE,,260.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,SUBSCRIPTIONS,,55.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,CLOTHING,,95.00,CROWDSOURCED,curated-us-2026,2026-01-01
+austin,OTHER,,150.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,RENT,,800.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,UTILITIES,,155.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,GROCERIES,,360.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,TRANSPORT_FUEL,,150.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,DINING_OUT,,200.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,ENTERTAINMENT,,100.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,HEALTHCARE,,240.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,SUBSCRIPTIONS,,50.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,CLOTHING,,75.00,CROWDSOURCED,curated-us-2026,2026-01-01
+wichita,OTHER,,120.00,CROWDSOURCED,curated-us-2026,2026-01-01

@@ -1,0 +1,121 @@
+package com.hasan.budget.costofliving.persistence;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * The cascading location picker over HTTP, against the real seeded database.
+ *
+ * <p>An integration test rather than a unit one because the things that can actually be wrong here
+ * are the route, the serialised shape, and whether the figures a browser receives are the ones in
+ * the migration. None of those can be established by calling the controller as an object.
+ *
+ * <p>The assertion that matters most is the last one in each case: no constant name may appear in a
+ * payload. {@code CROWDSOURCED} is an internal word, and a user asked to judge a figure labelled
+ * with it is being asked to guess.
+ */
+@AutoConfigureMockMvc
+@Transactional
+class CatalogueEndpointIT extends CostOfLivingDatabaseFixture {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    @DisplayName("the service does not challenge its own callers for a password")
+    void theGatewayIsNotAskedToLogIn() throws Exception {
+        // This is a regression test for a real half-hour of confusion. The resource-server starter
+        // is on the classpath, and with no security configuration Spring Boot locks every route
+        // behind HTTP Basic with a generated password - so every endpoint any packet writes answers
+        // 401, and the symptom looks like a bug in whichever controller is being tested.
+        //
+        // The caller here is the gateway, which has already authenticated the user and injected
+        // their id. Being asked for a password would mean nothing could reach this service at all.
+        mockMvc.perform(get("/api/catalogue/countries"))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("WWW-Authenticate"));
+
+        // The health endpoint is checked for reachability, not for cheerfulness. It aggregates
+        // Redis, so it answers 503 wherever Redis is absent - true on a CI runner and false on a
+        // machine with the local stack up. Asserting 200 here passed locally and failed in CI, and
+        // it deserved to: it was testing whether Redis happened to be running, in a test about
+        // whether security lets the caller through. What matters is that the request is not turned
+        // away at the door.
+        MvcResult health = mockMvc.perform(get("/actuator/health"))
+                .andExpect(header().doesNotExist("WWW-Authenticate"))
+                .andReturn();
+        assertThat(health.getResponse().getStatus())
+                .describedAs("health must answer on its own merits, not be refused for a password")
+                .isNotEqualTo(HttpStatus.UNAUTHORIZED.value());
+    }
+
+    @Test
+    @DisplayName("the country list offers only countries with figures behind them")
+    void theCountryListIsOfferedWithItsCaveats() throws Exception {
+        mockMvc.perform(get("/api/catalogue/countries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].code").value(hasItems("LB", "US")))
+                .andExpect(jsonPath("$[?(@.code == 'LB')].name").value("Lebanon"))
+                // Lebanon being dollar-priced in practice is something a person needs to know
+                // before they trust a figure quoted in dollars, so it travels with the country.
+                .andExpect(jsonPath("$[?(@.code == 'LB')].note")
+                        .value(everyItem(containsString("dollars"))));
+    }
+
+    @Test
+    @DisplayName("choosing a country returns its cities, each saying what its figures are")
+    void citiesArriveWithProvenanceInPlainWords() throws Exception {
+        mockMvc.perform(get("/api/catalogue/countries/LB/cities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id").value(hasItems("beirut", "tripoli-lb")))
+                .andExpect(jsonPath("$[0].name").value("Beirut"))
+                .andExpect(jsonPath("$[0].basis").value("Researched by us"))
+                .andExpect(jsonPath("$[0].explanation").value(containsString("not an official")))
+                .andExpect(jsonPath("$[0].gathered").value("2026-09-01"))
+                .andExpect(content().string(not(containsString("CROWDSOURCED"))));
+    }
+
+    @Test
+    @DisplayName("a country's cities are its own")
+    void oneCountrysCitiesNeverLeakIntoAnothers() throws Exception {
+        mockMvc.perform(get("/api/catalogue/countries/US/cities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id").value(hasItems("wichita", "new-york")))
+                .andExpect(jsonPath("$[*].id").value(not(hasItem("beirut"))));
+    }
+
+    @Test
+    @DisplayName("the manual form arrives already filled in, and explains every box")
+    void theManualFormIsPrefilledAndExplained() throws Exception {
+        mockMvc.perform(get("/api/catalogue/countries/LB/manual-form"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(10))
+                .andExpect(jsonPath("$[0].question")
+                        .value("About how much do you spend on rent each month?"))
+                .andExpect(jsonPath("$[0].suggested").value("350.00"))
+                .andExpect(jsonPath("$[0].covers[0]").value("Rent - your rent or mortgage payment"))
+                .andExpect(jsonPath("$[0].basis").value(containsString("starting point")))
+                // Eleven blank boxes is where people abandon signup, so nothing arrives empty.
+                .andExpect(jsonPath("$[*].suggested").value(everyItem(not(is("0.00")))))
+                .andExpect(content().string(not(containsString("ESTIMATED"))));
+    }
+}
