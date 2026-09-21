@@ -198,6 +198,49 @@ class DiscretionaryFloorCalculatorTest {
     }
 
     /**
+     * Someone who skipped the lifestyle question still gets a plan. The alternative - having
+     * onboarding pick a tier for them - would put that policy in whichever caller needed one first.
+     */
+    @Test
+    void aUserWhoNeverSaidHowOftenTheyGoOutGetsTheLeastWeProtectForAnyone() {
+        DiscretionaryFloor floor = calculator.floorFor(
+                FloorRequest.withoutALifestyleTier(Money.of(4_000), Money.of(1_800)));
+
+        assertThat(floor.monthly())
+                .describedAs("3% of income - the lower clamp, and nothing claimed beyond it")
+                .isEqualTo(Money.of(120));
+        assertThat(floor.monthly().isPositive()).isTrue();
+        assertThat(floor.perCategory().values().stream().reduce(Money.ZERO, Money::plus))
+                .isEqualTo(floor.monthly());
+    }
+
+    /**
+     * And the basis must not claim a grounding it does not have. Saying "typical for someone who
+     * goes out regularly" about a person who never said how often they go out would be inventing
+     * the justification, which is worse than offering no figure.
+     */
+    @Test
+    void aFloorWithNoTierDoesNotClaimToBeTypicalOfAnyone() {
+        DiscretionaryFloor floor = calculator.floorFor(
+                FloorRequest.withoutALifestyleTier(Money.of(4_000), Money.of(1_800)));
+
+        assertThat(floor.basis()).doesNotContain("typical for someone");
+        assertThat(floor.basis())
+                .isEqualTo("the least we protect for anyone, until you tell us how often you go out");
+    }
+
+    /** Their own answer still wins outright, tier or no tier. */
+    @Test
+    void aUserWithNoTierWhoAnswersTheQuestionKeepsTheirOwnFigure() {
+        DiscretionaryFloor floor = calculator.floorFor(
+                FloorRequest.withoutALifestyleTier(Money.of(4_000), Money.of(1_800))
+                        .statedBy(Money.of(300)));
+
+        assertThat(floor.monthly()).isEqualTo(Money.of(300));
+        assertThat(floor.userProvided()).isTrue();
+    }
+
+    /**
      * Never show an internal term in the interface. A person asked about their "discretionary
      * floor" is being asked to guess, and a person shown "DINING_OUT" is being shown a variable
      * name.

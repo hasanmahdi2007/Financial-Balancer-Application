@@ -3,13 +3,19 @@ package com.hasan.budget.profile.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.hasan.budget.costofliving.domain.Confidence;
+import com.hasan.budget.profile.application.DiscretionaryFloorService;
+import com.hasan.budget.profile.application.ProfileConfiguration;
 import com.hasan.budget.profile.application.TaxRateResolver;
+import com.hasan.budget.profile.domain.FloorRequest;
+import com.hasan.budget.profile.domain.LifestyleTier;
 import com.hasan.budget.profile.domain.Rate;
 import com.hasan.budget.profile.domain.ResolvedTaxRate;
 import com.hasan.budget.profile.domain.SeededFloorPolicy;
 import com.hasan.budget.shared.CountryCode;
+import com.hasan.budget.shared.Money;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -36,7 +42,12 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
-@Import({JdbcFloorPolicySource.class, JdbcCountryTaxRateLayer.class, JdbcUserTaxRateLayer.class})
+@Import({
+    JdbcFloorPolicySource.class,
+    JdbcCountryTaxRateLayer.class,
+    JdbcUserTaxRateLayer.class,
+    ProfileConfiguration.class
+})
 @Testcontainers
 class ProfilePolicyIT {
 
@@ -54,6 +65,12 @@ class ProfilePolicyIT {
 
     @Autowired
     private JdbcCountryTaxRateLayer seededForTheCountry;
+
+    @Autowired
+    private DiscretionaryFloorService floorService;
+
+    @Autowired
+    private TaxRateResolver wiredResolver;
 
     /**
      * The one assertion that stops the seeded tables and the policy the unit tests exercise from
@@ -85,6 +102,33 @@ class ProfilePolicyIT {
     @Test
     void aCountryWeHoldNoRateForAnswersNothingRatherThanZero() {
         assertThat(seededForTheCountry.rateFor("anyone", new CountryCode("FR"))).isEmpty();
+    }
+
+    /**
+     * The module as Spring assembles it, which nothing else in the suite covers: the unit tests
+     * construct these by hand, so a configuration that could not wire would fail for the first time
+     * at boot. It also proves the whole path - seeded rows to a question a person can answer.
+     */
+    @Test
+    void theFloorQuestionIsAssembledFromTheSeededRows() {
+        var question = floorService.questionFor(
+                FloorRequest.of(LifestyleTier.REGULAR, Money.of(4_000), Money.of(1_800))
+                        .in("Beirut", Map.of()));
+
+        assertThat(question.suggested()).isEqualTo(Money.of("217.80"));
+        assertThat(question.basis()).isEqualTo("typical for someone in Beirut who goes out regularly");
+        assertThat(question.explainedCoverage()).hasSize(3);
+    }
+
+    /** The precedence the configuration declares is the precedence the wired resolver applies. */
+    @Test
+    void theWiredChainPutsTheUsersOwnFigureFirst() {
+        typedByTheUser.record("the-wired-user", Rate.ofPercent("31"), LocalDate.of(2026, 3, 14));
+
+        assertThat(wiredResolver.resolve("the-wired-user", CountryCode.LEBANON).orElseThrow().rate())
+                .isEqualTo(Rate.ofPercent("31"));
+        assertThat(wiredResolver.resolve("anyone-else", CountryCode.LEBANON).orElseThrow().confidence())
+                .isEqualTo(Confidence.ESTIMATED);
     }
 
     /**

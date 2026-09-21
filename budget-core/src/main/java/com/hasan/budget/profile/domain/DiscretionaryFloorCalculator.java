@@ -40,8 +40,11 @@ public final class DiscretionaryFloorCalculator {
     public DiscretionaryFloor floorFor(FloorRequest request) {
         Objects.requireNonNull(request, "request");
 
-        Map<SpendCategory, Money> weights = protectedAmounts(request);
-        Money computed = weights.values().stream().reduce(Money.ZERO, Money::plus);
+        // Without a tier there is nothing to size the protection with, so the weights are plain
+        // typical spending and only the lower clamp applies.
+        Map<SpendCategory, Money> weights = request.tier() == null
+                ? typicalAmounts(request)
+                : protectedAmounts(request);
 
         if (request.userStatedFloor() != null) {
             // Their answer replaces the default outright - no multiplier, no clamp. They were asked
@@ -53,13 +56,28 @@ public final class DiscretionaryFloorCalculator {
                     true);
         }
 
+        if (request.tier() == null) {
+            // The least the policy would leave anyone, rather than a tier picked on the user's
+            // behalf. Claiming "typical for someone who goes out regularly" about a person who has
+            // never said how often they go out would be inventing the grounding, and a stated basis
+            // that is not true is worse than no figure at all.
+            Money leastForAnyone =
+                    policy.floorAtLeastShareOfIncome().applyTo(request.netMonthlyIncome());
+            return new DiscretionaryFloor(
+                    leastForAnyone,
+                    split(weights, leastForAnyone),
+                    "the least we protect for anyone, until you tell us how often you go out",
+                    false);
+        }
+
+        Money computed = weights.values().stream().reduce(Money.ZERO, Money::plus);
         Money adjusted = policy.multiplierFor(request.obligationRatio()).applyTo(computed);
         Money floor = clampToIncome(adjusted, request.netMonthlyIncome());
         return new DiscretionaryFloor(floor, split(weights, floor), basisFor(request), false);
     }
 
-    /** What each protected category is worth before the obligation multiplier and the clamps. */
-    private Map<SpendCategory, Money> protectedAmounts(FloorRequest request) {
+    /** What the user's city says each protected category normally costs, before any protection. */
+    private Map<SpendCategory, Money> typicalAmounts(FloorRequest request) {
         Map<SpendCategory, Money> amounts = new EnumMap<>(SpendCategory.class);
         for (SpendCategory category : ProtectedSpending.categories()) {
             Money typical = request.localBaselines().get(category);
@@ -68,8 +86,16 @@ public final class DiscretionaryFloorCalculator {
                         .get(category)
                         .applyTo(request.netMonthlyIncome());
             }
-            amounts.put(category, policy.protectedShare(request.tier(), category).applyTo(typical));
+            amounts.put(category, typical);
         }
+        return amounts;
+    }
+
+    /** What each protected category is worth before the obligation multiplier and the clamps. */
+    private Map<SpendCategory, Money> protectedAmounts(FloorRequest request) {
+        Map<SpendCategory, Money> amounts = new EnumMap<>(SpendCategory.class);
+        typicalAmounts(request).forEach((category, typical) ->
+                amounts.put(category, policy.protectedShare(request.tier(), category).applyTo(typical)));
         return amounts;
     }
 

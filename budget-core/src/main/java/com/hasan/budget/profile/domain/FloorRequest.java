@@ -12,6 +12,10 @@ import java.util.Objects;
  * one: the arguments are all money-ish and adjacent, and a caller swapping two of them would
  * produce a plausible wrong answer rather than a compile error.
  *
+ * @param tier how much of the user's life happens outside the house, or null when they have not
+ *     been asked yet or skipped onboarding. Null is a real state rather than a defensive check: the
+ *     tier is what sizes the protection, so without one there is no honest way to claim a
+ *     particular figure, and the calculator falls back to the least it would leave anyone.
  * @param localBaselines the resolved baseline for each protected category in the user's city, as
  *     bare amounts. Provenance deliberately does not travel this far - the moment the arithmetic
  *     can see a confidence, someone writes a condition on it. May be empty, in which case the
@@ -31,7 +35,6 @@ public record FloorRequest(
         String cityLabel) {
 
     public FloorRequest {
-        Objects.requireNonNull(tier, "tier");
         Objects.requireNonNull(netMonthlyIncome, "netMonthlyIncome");
         Objects.requireNonNull(fixedCommitments, "fixedCommitments");
         localBaselines = Map.copyOf(localBaselines);
@@ -52,7 +55,20 @@ public record FloorRequest(
 
     /** A user with no bank data and no city figures yet: the first-run case. */
     public static FloorRequest of(LifestyleTier tier, Money netMonthlyIncome, Money fixedCommitments) {
+        Objects.requireNonNull(tier, "tier");
         return new FloorRequest(tier, netMonthlyIncome, fixedCommitments, Map.of(), null, null);
+    }
+
+    /**
+     * A user who skipped onboarding, or reached a plan before being asked how often they go out.
+     *
+     * <p>Named rather than reached by passing a null tier, so that a caller arrives here on purpose.
+     * The alternative - having onboarding pick a tier on the user's behalf - would put a policy
+     * decision in whichever caller happened to need one first, and each caller would pick
+     * differently.
+     */
+    public static FloorRequest withoutALifestyleTier(Money netMonthlyIncome, Money fixedCommitments) {
+        return new FloorRequest(null, netMonthlyIncome, fixedCommitments, Map.of(), null, null);
     }
 
     public FloorRequest in(String cityLabel, Map<SpendCategory, Money> localBaselines) {
