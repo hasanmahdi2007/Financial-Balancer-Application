@@ -1,0 +1,38 @@
+# The country-level fallback, in US dollars per month.
+#
+# Two jobs, which is why the plausible band lives on the same row as the figure it qualifies:
+#
+#  1. The last layer of the resolver. A city with no row for a category lands here rather than at
+#     zero, and the result is labelled ESTIMATED so the interface can say so out loud.
+#  2. The pre-fill for the manual form, for users whose city is not listed. Eleven blank boxes is
+#     where people abandon signup; a pre-filled figure they correct is a question they can answer.
+#
+# low_pct and high_pct bound a believable user-submitted figure, as a percentage of the estimate on
+# this row. They are per category because spread differs by category, not by a global factor: rent
+# ranges from Wichita to San Francisco within one country, while a grocery bill does not. That is
+# what catches rent typed into the groceries box - 600 dollars is a normal Beirut rent and twice any
+# believable Beirut grocery bill.
+#
+# income_quintile is empty here for the same reason it is empty on the city rows: these figures are
+# not split by income, and a future derived source will be.
+country_code,category,income_quintile,monthly_amount,confidence,source_id,as_of,low_pct,high_pct
+LB,RENT,,350.00,ESTIMATED,estimate-lb-2026,2026-09-01,35,300
+LB,UTILITIES,,155.00,ESTIMATED,estimate-lb-2026,2026-09-01,40,250
+LB,GROCERIES,,250.00,ESTIMATED,estimate-lb-2026,2026-09-01,50,200
+LB,TRANSPORT_FUEL,,100.00,ESTIMATED,estimate-lb-2026,2026-09-01,30,300
+LB,DINING_OUT,,95.00,ESTIMATED,estimate-lb-2026,2026-09-01,20,300
+LB,ENTERTAINMENT,,55.00,ESTIMATED,estimate-lb-2026,2026-09-01,10,400
+LB,HEALTHCARE,,72.00,ESTIMATED,estimate-lb-2026,2026-09-01,20,400
+LB,SUBSCRIPTIONS,,20.00,ESTIMATED,estimate-lb-2026,2026-09-01,10,400
+LB,CLOTHING,,45.00,ESTIMATED,estimate-lb-2026,2026-09-01,20,400
+LB,OTHER,,55.00,ESTIMATED,estimate-lb-2026,2026-09-01,10,500
+US,RENT,,1450.00,ESTIMATED,estimate-us-2026,2026-01-01,35,300
+US,UTILITIES,,180.00,ESTIMATED,estimate-us-2026,2026-01-01,40,250
+US,GROCERIES,,400.00,ESTIMATED,estimate-us-2026,2026-01-01,50,200
+US,TRANSPORT_FUEL,,165.00,ESTIMATED,estimate-us-2026,2026-01-01,30,300
+US,DINING_OUT,,270.00,ESTIMATED,estimate-us-2026,2026-01-01,20,300
+US,ENTERTAINMENT,,140.00,ESTIMATED,estimate-us-2026,2026-01-01,10,400
+US,HEALTHCARE,,250.00,ESTIMATED,estimate-us-2026,2026-01-01,20,400
+US,SUBSCRIPTIONS,,50.00,ESTIMATED,estimate-us-2026,2026-01-01,10,400
+US,CLOTHING,,90.00,ESTIMATED,estimate-us-2026,2026-01-01,20,400
+US,OTHER,,140.00,ESTIMATED,estimate-us-2026,2026-01-01,10,500

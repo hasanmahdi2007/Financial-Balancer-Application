@@ -1,0 +1,14 @@
+# Countries this product holds data for.
+#
+# Curated, hand-researched reference data - not a statistical publication. Every figure here is an
+# estimate, which is why nothing loaded from this file is ever labelled OFFICIAL.
+#
+# annual_inflation_pct drives staleness. It is the ONE column that makes the same staleness code
+# behave differently per country: the US at 3%/yr keeps a figure FRESH for roughly twenty months,
+# Lebanon at 17.3%/yr reaches STALE in about ten.
+#
+# listed controls whether the country appears in the signup dropdown. A country with no data must
+# never be offered, because selecting it is a dead end.
+code,name,currency,annual_inflation_pct,inflation_as_of,listed,data_note
+LB,Lebanon,USD,17.30,2026-01-01,true,"Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent."
+US,United States,USD,3.00,2026-01-01,true,"Figures are for a single person renting alone. The official BLS/BEA derivation is deferred, so these are curated estimates like every other row here."

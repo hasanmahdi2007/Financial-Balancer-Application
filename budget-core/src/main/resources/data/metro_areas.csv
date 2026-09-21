@@ -1,0 +1,16 @@
+# The cities the signup dropdown offers.
+#
+# slug is the only lookup key. A city name the user types is display-only and never resolves to one
+# of these rows, which is what removes geocoding and fuzzy matching from the product entirely: a
+# typo can never almost-match the wrong metro.
+slug,country_code,display_name,admin1,population,sort_rank
+beirut,LB,Beirut,Beirut Governorate,2400000,1
+jounieh,LB,Jounieh,Keserwan,120000,2
+byblos,LB,Byblos (Jbeil),Keserwan-Jbeil,40000,3
+tripoli-lb,LB,Tripoli,North Governorate,730000,4
+sidon,LB,Sidon (Saida),South Governorate,270000,5
+zahle,LB,Zahle,Beqaa Governorate,150000,6
+new-york,US,New York,New York,18900000,1
+san-francisco,US,San Francisco,California,4600000,2
+austin,US,Austin,Texas,2400000,3
+wichita,US,Wichita,Kansas,650000,4
