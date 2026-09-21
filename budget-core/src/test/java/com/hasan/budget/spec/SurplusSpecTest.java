@@ -381,8 +381,13 @@ class SurplusSpecTest {
         /**
          * Rigidity is carried, never acted on here: it decides what may be cut, which is a question
          * for whoever proposes cuts, not for the arithmetic. Two inputs differing only in rigidity
-         * must therefore produce byte-identical breakdowns — if that ever stops being true, policy
+         * must therefore produce the same money, everywhere — if that ever stops being true, policy
          * has leaked into the formula.
+         *
+         * <p>Every monetary figure is compared rather than the whole record, because the line now
+         * reports the rigidity itself and so the two records are legitimately unequal. The final
+         * assertions confirm they really do differ on that axis, so this cannot pass by comparing
+         * two identical things.
          */
         @Test
         void theUsersRigidityNeverChangesTheArithmetic() {
@@ -396,8 +401,16 @@ class SurplusSpecTest {
             SurplusBreakdown asLocked =
                     compute(input("3000", List.of(), List.of(locked), SAVES_NOTHING_YET));
 
-            assertThat(asLocked).isEqualTo(asDisposable);
-            assertThat(locked.rigidity()).isEqualTo(Rigidity.LOCKED);
+            assertThat(asLocked.surplus()).isEqualTo(asDisposable.surplus());
+            assertThat(asLocked.fixedTotal()).isEqualTo(asDisposable.fixedTotal());
+            assertThat(asLocked.cappedTotal()).isEqualTo(asDisposable.cappedTotal());
+            assertThat(asLocked.lineItemTotal()).isEqualTo(asDisposable.lineItemTotal());
+            assertThat(asLocked.assumedReduction()).isEqualTo(asDisposable.assumedReduction());
+            assertThat(lineFor(asLocked, "li-gym").counted())
+                    .isEqualTo(lineFor(asDisposable, "li-gym").counted());
+
+            assertThat(lineFor(asLocked, "li-gym").rigidity()).isEqualTo(Rigidity.LOCKED);
+            assertThat(lineFor(asDisposable, "li-gym").rigidity()).isEqualTo(Rigidity.DISPOSABLE);
         }
 
         /**
@@ -537,6 +550,46 @@ class SurplusSpecTest {
         }
 
         /**
+         * The user's answer has to survive onto the line, because whoever proposes a cut reads the
+         * breakdown and not the input. A gym marked LOCKED that arrives on the line as its
+         * category's default is cuttable, and the engine would then offer up the single thing the
+         * user said never to touch.
+         */
+        @Test
+        void aLockedItemReachesTheBreakdownStillLocked() {
+            UserLineItem lockedGym = new UserLineItem(
+                    "li-gym",
+                    "Gym membership",
+                    SpendCategory.SUBSCRIPTIONS,
+                    Money.of(45),
+                    Rigidity.LOCKED,
+                    ItemScope.ON_TOP);
+
+            SurplusBreakdown breakdown =
+                    compute(input("3000", List.of(), List.of(lockedGym), SAVES_NOTHING_YET));
+
+            CategoryLine gym = lineFor(breakdown, "li-gym");
+            assertThat(gym.rigidity()).isEqualTo(Rigidity.LOCKED);
+            assertThat(gym.isCuttable())
+                    .as("a locked line must never be offered as a cut")
+                    .isFalse();
+
+            // And the category default it would otherwise have fallen back to really is cuttable,
+            // so this test would pass for the wrong reason if the fallback were used.
+            assertThat(SpendCategory.SUBSCRIPTIONS.defaultRigidity()).isNotEqualTo(Rigidity.LOCKED);
+        }
+
+        /** A whole category has no personal answer attached, so it carries its own default. */
+        @Test
+        void aWholeCategoryLineCarriesItsCategorysDefaultRigidity() {
+            SurplusBreakdown breakdown =
+                    compute(input("3000", List.of(spent(SpendCategory.ENTERTAINMENT, "240")), List.of(), SAVES_NOTHING_YET));
+
+            assertThat(lineFor(breakdown, SpendCategory.ENTERTAINMENT).rigidity())
+                    .isEqualTo(SpendCategory.ENTERTAINMENT.defaultRigidity());
+        }
+
+        /**
          * The question the user is asked is built from their own category's name, never from a
          * constant. "Part of what I already spend on Subscriptions" is answerable; "ALREADY_COUNTED"
          * is not, and neither is a sentence naming a category the interface does not show.
@@ -654,6 +707,118 @@ class SurplusSpecTest {
                     Money.of(400));
 
             assertThat(compute(request)).isEqualTo(compute(request));
+        }
+
+        /**
+         * The surplus is not money in hand. It is what the user would have if they spent no more
+         * than the baseline on controllable categories and no more than the floor on fun, and that
+         * difference has to be stated or the plan reads as a promise it cannot keep.
+         *
+         * <p>Spends $700 on groceries against a $450 baseline and $620 on fun against a $300 floor,
+         * so $250 + $320 = $570 is already assumed away.
+         */
+        @Test
+        void theSurplusSaysHowMuchSpendingItHasAlreadyAssumedAway() {
+            SurplusBreakdown breakdown = compute(input(
+                    "6000",
+                    List.of(
+                            spent(SpendCategory.RENT, "2400", "2100"),
+                            spent(SpendCategory.GROCERIES, "700", "450"),
+                            spent(SpendCategory.DINING_OUT, "380"),
+                            spent(SpendCategory.ENTERTAINMENT, "240"))));
+
+            assertThat(breakdown.assumedReduction()).isEqualTo(Money.of(570));
+
+            // Which is exactly the distance between the headline figure and the money that is
+            // genuinely left once every real dollar of spending is taken off the income.
+            Money reallySpent = Money.of("2400").plus(Money.of(700)).plus(Money.of(380)).plus(Money.of(240));
+            Money cashLeft = breakdown.income().minus(reallySpent);
+            assertThat(breakdown.surplus().minus(cashLeft)).isEqualTo(breakdown.assumedReduction());
+        }
+
+        /**
+         * The headline promise this figure exists to keep. Goals need $2,250 against a $2,070
+         * surplus, so the plan proposes a $180 cut — but following only that cut leaves the user
+         * $570 short, and the honest instruction is $750.
+         */
+        @Test
+        void followingOnlyTheSuggestedCutsStillLeavesTheAssumedReductionToMake() {
+            SurplusBreakdown breakdown = compute(input(
+                    "6000",
+                    List.of(
+                            spent(SpendCategory.RENT, "2400", "2100"),
+                            spent(SpendCategory.HEALTHCARE, "320"),
+                            spent(SpendCategory.SUBSCRIPTIONS, "60"),
+                            spent(SpendCategory.UTILITIES, "180", "200"),
+                            spent(SpendCategory.GROCERIES, "700", "450"),
+                            spent(SpendCategory.TRANSPORT_FUEL, "160", "220"),
+                            spent(SpendCategory.DINING_OUT, "380"),
+                            spent(SpendCategory.ENTERTAINMENT, "240")),
+                    List.of(UserLineItem.onTopOf("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(60))),
+                    Money.of(400)));
+
+            AllocationResult plan = planFor(
+                    breakdown,
+                    List.of(
+                            goal("emergency", "Emergency fund", "6000", "2027-01-15", Priority.CRITICAL),
+                            goal("car", "Car", "10500", "2026-07-15", Priority.HIGH)));
+
+            Money suggested = plan.tradeoffs().stream()
+                    .map(Tradeoff::suggestedReduction)
+                    .reduce(Money.ZERO, Money::plus);
+
+            assertThat(suggested).isEqualTo(Money.of(180));
+            assertThat(breakdown.assumedReduction()).isEqualTo(Money.of(570));
+            assertThat(breakdown.totalReductionNeeded(suggested))
+                    .as("what the user actually has to change, not just the part the cuts name")
+                    .isEqualTo(Money.of(750));
+        }
+
+        /**
+         * An item that only names part of a category is already inside that category's observed
+         * figure, so counting it again here would inflate the reduction the user is told to make —
+         * the same double count the scope axis exists to prevent, one layer further out.
+         *
+         * <p>$700 of groceries capped to $450 and $500 of fun against a $300 floor is a $450
+         * reduction. Naming $400 of that grocery spend as a corner shop must not move it.
+         */
+        @Test
+        void theAssumedReductionDoesNotCountANamedPartTwice() {
+            List<CategoryObservation> spending = List.of(
+                    spent(SpendCategory.GROCERIES, "700", "450"), spent(SpendCategory.ENTERTAINMENT, "500"));
+
+            SurplusBreakdown plain = compute(input("4000", spending, List.of(), SAVES_NOTHING_YET));
+            SurplusBreakdown named = compute(input(
+                    "4000",
+                    spending,
+                    List.of(UserLineItem.alreadyIn("li-shop", "Corner shop", SpendCategory.GROCERIES, Money.of(400))),
+                    SAVES_NOTHING_YET));
+
+            assertThat(plain.assumedReduction()).isEqualTo(Money.of(450));
+            assertThat(named.assumedReduction()).isEqualTo(Money.of(450));
+        }
+
+        /** Spend less than the floor and nothing has been assumed away; it never goes negative. */
+        @Test
+        void aUserSpendingLessThanTheirFloorHasAssumedAwayNothing() {
+            SurplusBreakdown breakdown = compute(input(
+                    "4000",
+                    List.of(spent(SpendCategory.RENT, "1200"), spent(SpendCategory.DINING_OUT, "40"))));
+
+            assertThat(breakdown.assumedReduction()).isEqualTo(Money.ZERO);
+        }
+
+        /** Reported, never subtracted — so it cannot disturb conservation. */
+        @Test
+        void theAssumedReductionDoesNotEnterTheArithmetic() {
+            SurplusBreakdown breakdown = compute(input(
+                    "6000",
+                    List.of(
+                            spent(SpendCategory.GROCERIES, "700", "450"),
+                            spent(SpendCategory.ENTERTAINMENT, "500"))));
+
+            assertThat(breakdown.assumedReduction().isPositive()).isTrue();
+            assertThatConservationHolds(breakdown);
         }
 
         /**
@@ -850,8 +1015,11 @@ class SurplusSpecTest {
     private static AllocationResult planFor(SurplusBreakdown breakdown, List<GoalInput> goals) {
         List<DiscretionarySpend> cutCandidates = breakdown.lines().stream()
                 .filter(line -> line.actual().isPositive())
-                .map(line -> DiscretionarySpend.of(line.category(), line.actual()))
-                .filter(DiscretionarySpend::isCuttable)
+                .filter(CategoryLine::isCuttable)
+                // The line's own rigidity, not the category default: a gym the user locked must
+                // reach the allocator as locked, or the one thing they said never to touch is the
+                // first thing proposed.
+                .map(line -> new DiscretionarySpend(line.category(), line.actual(), line.rigidity()))
                 .toList();
 
         return new GreedyPriorityAllocator()
