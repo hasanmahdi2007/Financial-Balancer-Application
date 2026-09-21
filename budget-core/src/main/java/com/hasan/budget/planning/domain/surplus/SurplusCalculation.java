@@ -83,7 +83,41 @@ public final class SurplusCalculation {
                 input.discretionaryFloor(),
                 input.alreadySaving(),
                 surplus,
+                assumedReduction(input, fixedTotal, cappedTotal, lineItemTotal),
                 lines);
+    }
+
+    /**
+     * The difference between what the user actually spent and what this surplus charged them for.
+     * It is everything the formula has already assumed away: spending above a local baseline, and
+     * discretionary spending above the floor.
+     *
+     * <p>Without this figure the surplus reads as money in hand, and a cut suggested on top of it
+     * reads as the whole instruction. It is not - the user has to make this reduction as well, and
+     * following only the suggested cut leaves them exactly this much short.
+     *
+     * <p>Floored at zero: a user who spends less than their floor has assumed away nothing, and a
+     * negative reduction is not a thing anyone can act on.
+     */
+    private static Money assumedReduction(
+            SurplusInput input, Money fixedTotal, Money cappedTotal, Money lineItemTotal) {
+        Money observedSpending = Money.ZERO;
+        for (CategoryObservation observation : input.observations()) {
+            observedSpending = observedSpending.plus(observation.actual());
+        }
+        for (UserLineItem item : input.lineItems()) {
+            // Items that only name part of a category are already inside that category's observed
+            // figure, so adding them here would count the same money twice.
+            if (item.scope().isSubtractedInItsOwnRight()) {
+                observedSpending = observedSpending.plus(item.monthlyAmount());
+            }
+        }
+        return observedSpending
+                .minus(fixedTotal)
+                .minus(cappedTotal)
+                .minus(lineItemTotal)
+                .minus(input.discretionaryFloor())
+                .max(Money.ZERO);
     }
 
     private static Map<SpendCategory, Money> observedByCategory(List<CategoryObservation> observations) {
@@ -131,7 +165,10 @@ public final class SurplusCalculation {
                 observation.actual(),
                 observation.effectiveBaseline(),
                 countedAmount(category.baselinePolicy(), observation.actual(), observation.effectiveBaseline()),
-                category.baselinePolicy());
+                category.baselinePolicy(),
+                // A whole category has no personal answer attached, so it takes the category's own
+                // default. Only a named item can carry the user's override.
+                category.defaultRigidity());
     }
 
     private static CategoryLine lineFor(UserLineItem item) {
@@ -150,7 +187,16 @@ public final class SurplusCalculation {
                 : Money.ZERO;
 
         return new CategoryLine(
-                item.parent(), item.id(), item.label(), item.monthlyAmount(), null, counted, policy);
+                item.parent(),
+                item.id(),
+                item.label(),
+                item.monthlyAmount(),
+                null,
+                counted,
+                policy,
+                // The user's own answer, carried onto the line so whoever proposes cuts reads it
+                // here rather than having to go back to the input and remember to.
+                item.rigidity());
     }
 
     /**
