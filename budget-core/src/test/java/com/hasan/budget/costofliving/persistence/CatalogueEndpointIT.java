@@ -1,5 +1,6 @@
 package com.hasan.budget.costofliving.persistence;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
@@ -16,7 +17,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -50,7 +53,19 @@ class CatalogueEndpointIT extends CostOfLivingDatabaseFixture {
         mockMvc.perform(get("/api/catalogue/countries"))
                 .andExpect(status().isOk())
                 .andExpect(header().doesNotExist("WWW-Authenticate"));
-        mockMvc.perform(get("/actuator/health")).andExpect(status().isOk());
+
+        // The health endpoint is checked for reachability, not for cheerfulness. It aggregates
+        // Redis, so it answers 503 wherever Redis is absent - true on a CI runner and false on a
+        // machine with the local stack up. Asserting 200 here passed locally and failed in CI, and
+        // it deserved to: it was testing whether Redis happened to be running, in a test about
+        // whether security lets the caller through. What matters is that the request is not turned
+        // away at the door.
+        MvcResult health = mockMvc.perform(get("/actuator/health"))
+                .andExpect(header().doesNotExist("WWW-Authenticate"))
+                .andReturn();
+        assertThat(health.getResponse().getStatus())
+                .describedAs("health must answer on its own merits, not be refused for a password")
+                .isNotEqualTo(HttpStatus.UNAUTHORIZED.value());
     }
 
     @Test
