@@ -103,6 +103,18 @@ class ConsideredFundsSourceTest {
                 .isEqualTo(new Runway(4, false));
     }
 
+    /**
+     * A balance against a shortfall of pennies runs to more months than an int holds. A display
+     * figure is not worth an exception, so it saturates instead.
+     */
+    @Test
+    void anAbsurdlyLongRunwaySaturatesRatherThanOverflowing() {
+        ConsideredFunds funds =
+                new ManualConsideredFunds(Money.of(50_000_000), Money.of(4_000)).resolve();
+
+        assertThat(Runway.of(funds, Money.of("0.01")).months()).isEqualTo(Integer.MAX_VALUE);
+    }
+
     /** With no shortfall there is nothing to run down, and a month count would be meaningless. */
     @Test
     void thereIsNoRunwayToCountWhenNothingIsBeingRunDown() {

@@ -29,7 +29,9 @@ class ConsideredFundsQuestionTest {
                 .describedAs("the reason has to be given, or the question reads as prying")
                 .contains("may not be yours to spend");
         assertThat(question.visibleBalance()).isEqualTo(Money.of(120_000));
-        assertThat(question.explainedCoverage()).containsExactly("Current account", "Joint account");
+        assertThat(question.explainedCoverage())
+                .containsExactly(
+                        "Current account", "Joint account - you asked us to leave this one out");
     }
 
     /**
@@ -48,13 +50,25 @@ class ConsideredFundsQuestionTest {
      * are being asked about disagree with their own bank.
      */
     @Test
-    void anExcludedAccountIsStillShownInTheQuestion() {
+    void anExcludedAccountIsStillShownInTheQuestionAndSaysWhy() {
         ConsideredFundsQuestion question = ConsideredFundsQuestion.forAccounts(ACCOUNTS);
 
         assertThat(question.accountsWeCanSee()).hasSize(2);
+        assertThat(question.explainedCoverage().get(1))
+                .describedAs("shown, and marked, rather than quietly dropped from the list")
+                .contains("leave this one out");
         assertThat(question.visibleBalance())
                 .describedAs("the figure the user can check against their own bank")
                 .isEqualTo(Money.of(120_000));
+    }
+
+    /** Not every bank sends a name, and no screen should ever render "null" for an account. */
+    @Test
+    void anAccountWithNoNameFromTheBankStillReadsAsSomething() {
+        ConsideredFundsQuestion question = ConsideredFundsQuestion.forAccounts(
+                List.of(BankAccountBalance.visible("chk", null, Money.of(500))));
+
+        assertThat(question.explainedCoverage()).containsExactly("Account");
     }
 
     @Test

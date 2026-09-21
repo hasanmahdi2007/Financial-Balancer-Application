@@ -56,13 +56,19 @@ public record ConsideredFundsQuestion(
     }
 
     /**
-     * One rendered line per account, for example {@code "Current account"}. Built from what the bank
-     * told us rather than from wording of our own, so an account the user renamed reads back the way
-     * they named it.
+     * One rendered line per account, for example {@code "Current account"} or
+     * {@code "Joint account - you asked us to leave this one out"}.
+     *
+     * <p>Named by whatever the bank calls them, so an account the user renamed reads back the way
+     * they named it. Already-excluded accounts stay in the list and say so, rather than being
+     * dropped: a user cannot sensibly answer "how much of this?" while looking at a total that
+     * disagrees with their own bank, and quietly omitting a row is how that happens.
      */
     public List<String> explainedCoverage() {
         return accountsWeCanSee.stream()
-                .map(account -> account.label() == null ? "Account" : account.label())
+                .map(account -> account.excluded()
+                        ? account.label() + " - you asked us to leave this one out"
+                        : account.label())
                 .toList();
     }
 }

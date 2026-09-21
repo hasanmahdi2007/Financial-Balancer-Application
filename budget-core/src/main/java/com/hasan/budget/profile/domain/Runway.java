@@ -1,6 +1,7 @@
 package com.hasan.budget.profile.domain;
 
 import com.hasan.budget.shared.Money;
+import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
 
@@ -33,11 +34,13 @@ public record Runway(int months, boolean indefinite) {
         if (!monthlyDeficit.isPositive()) {
             return INDEFINITE;
         }
-        return new Runway(
-                funds.consideredBalance()
-                        .amount()
-                        .divide(monthlyDeficit.amount(), 0, RoundingMode.DOWN)
-                        .intValueExact(),
-                false);
+        // Clamped rather than converted exactly: a large balance against a shortfall of a few cents
+        // runs to more months than an int can hold, and a display figure is not worth an
+        // ArithmeticException. Anything past this is "indefinite" to a reader anyway.
+        BigDecimal months = funds.consideredBalance()
+                .amount()
+                .divide(monthlyDeficit.amount(), 0, RoundingMode.DOWN)
+                .min(BigDecimal.valueOf(Integer.MAX_VALUE));
+        return new Runway(months.intValue(), false);
     }
 }

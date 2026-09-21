@@ -16,6 +16,11 @@ public record BankAccountBalance(String accountId, String label, Money balance, 
     public BankAccountBalance {
         Objects.requireNonNull(accountId, "accountId");
         Objects.requireNonNull(balance, "balance");
+        // Normalised once, here, because the label is shown to the user and not every bank sends
+        // one. Defaulting it at each call site would eventually mean one screen showing "null".
+        if (label == null || label.isBlank()) {
+            label = "Account";
+        }
     }
 
     /** A visible account, for the common case where the user has excluded nothing. */
