@@ -161,6 +161,72 @@ earns its place.
 
 ---
 
+## The floor, and the tax trap
+
+### What the plan is not allowed to cut
+
+Every budgeting engine that optimises without a floor eventually says *"cut going out to $0, cut
+eating out to $0"*. It is arithmetically correct and nobody follows it. So the plan carries a
+**minimum the engine may not touch**, and the app **always asks you for it** — with the question
+written for a person, not for a developer:
+
+> **What is the least you would want to spend each month on enjoying life?**
+> We will never suggest cutting below this, even to reach a goal faster.
+>
+> - Going out and fun — nights out, cinema, games, sports, hobbies
+> - Eating out — restaurants, cafes, takeaway, snacks and coffee
+> - Clothes — clothing, shoes and personal items
+>
+> *Suggested: $217.80 — typical for someone in Beirut who goes out regularly*
+
+The suggestion is only a pre-filled default, for people who skip it. It is derived, not invented:
+
+```
+protected(category) = local baseline × tier share
+floor               = Σ protected × obligation multiplier,  clamped to 3%–12% of net income
+```
+
+The tier share runs 25% for someone mostly at home to 55% for someone out most days — a *fraction*
+of typical spending, because a floor equal to typical spending would make no cut possible anywhere.
+The obligation multiplier then runs 1.15 down to 0.70 as the share of income already committed to
+rent and loans rises past 40%, 55% and 70%: someone with little left after their fixed costs cannot
+also protect a large lifestyle budget. The clamps bound both ends — the lower stops a heavily
+indebted user being told to live on nothing, the upper stops the floor swallowing the surplus and
+making every goal look infeasible.
+
+**The stated approximation.** Where a city baseline exists, the floor scales with that city
+automatically — the same policy row produces a Beirut figure in Beirut and a San Francisco figure in
+San Francisco. Where one does not, it falls back to BLS Consumer Expenditure Survey 2024 national
+shares of annual expenditure: entertainment 4.6%, food away from home 5.0%, apparel and services
+2.5%. Those are shares of *expenditure*, and they are applied here to *net income*. Households spend
+close to their net income, which makes the substitution reasonable — but it is a substitution, and it
+belongs in the open rather than buried in a constant.
+
+Every one of those numbers is a database row (`lifestyle_floor`, `floor_obligation_band`,
+`discretionary_national_share`, `discretionary_floor_clamp`), so tuning the policy against real users
+is an edit to data, not a redeploy. And your own answer overrides the computed figure outright — no
+multiplier, neither clamp. You were asked a plain question about your own life.
+
+### Why there is usually no tax line at all
+
+Payroll deposits are **already net of tax**, and this app collects net income. Applying a tax rate on
+top of that figure subtracts tax twice and quietly removes another fifth of money you actually have.
+The mistake is invisible in testing — every number still adds up — and shows only as a plan that is
+inexplicably pessimistic.
+
+So one question at onboarding decides it. *Income arrives already taxed* (employed, the common case)
+means **no tax line at all**, and the resolved rate is used only to explain the gross-to-net gap if
+you ask. *Income arrives untaxed* (freelance, common in Lebanon) funds a tax reserve at the resolved
+rate, locked, because a tax reserve is not something to offer you as a saving.
+
+The rate resolves through the same ordered chain as a cost-of-living baseline — your own figure
+first, then the seeded country estimate — and is stored as an **effective rate labelled
+`ESTIMATED`**, never `OFFICIAL`. Real systems are progressive, with brackets and allowances; a single
+percentage approximates one person's position in one, and presenting it as a statutory truth would be
+the false precision the rest of the confidence model exists to prevent.
+
+---
+
 ## Stack
 
 Java 25 · Spring Boot 4.1 · PostgreSQL · Redis · Plaid (Sandbox) · React + Vite + TypeScript ·
@@ -180,7 +246,7 @@ Docker Compose · GitHub Actions
 | `analytics-engine`, `ai-enrichment` | Later phases |
 
 Known gaps, stated rather than hidden: no auth beyond a stub yet, no live deployment, no
-multi-currency, and no tax or pay-frequency modelling.
+multi-currency, and no pay-frequency modelling. Tax is a single effective rate, not a bracket model.
 
 ---
 
