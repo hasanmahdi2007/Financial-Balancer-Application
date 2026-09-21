@@ -159,6 +159,26 @@ measurement that must run before any of it is trusted — is in
 That ordering is deliberate: get the product working, then let real use decide which sophistication
 earns its place.
 
+### User-contributed figures, and what "crowdsourced" does not mean here
+
+**There is no crowd.** A figure you type applies to your own plan immediately and is visible to
+nobody else. Sharing it is a separate opt-in step, and a shared figure becomes a city default only
+after it passes validation **and** is approved by hand — never one without the other.
+
+Of the four validators the design calls for, **one is built**: bank corroboration, which compares
+your claim against your own transactions. It is the only one that works with a single user, and it is
+also the strongest, because it checks a claim against evidence rather than against opinion. Alongside
+it runs a plausibility band per category, which is what catches a rent figure typed into the
+groceries box.
+
+**Quorum and outlier rejection are designed and not built** — require *k* submissions, take the
+median, reject anything beyond three times the median absolute deviation. They are meaningless at one
+user, so they are specified and switched off rather than faked. When there are enough submissions to
+make them mean something, turning them on is adding a check to a battery that already exists.
+
+The `CROWDSOURCED` label on the curated figures therefore means *"researched by us"*, not *"agreed by
+residents"*. The interface says exactly that; the constant name never reaches a user.
+
 ---
 
 ## Stack
@@ -173,7 +193,8 @@ Docker Compose · GitHub Actions
 | Area | State |
 |---|---|
 | Allocation engine + domain model | Implemented, 26 unit tests |
-| Cost-of-living ingestion and provider | Designed, not yet built |
+| Cost-of-living schema, curated data, resolver and catalogue | Implemented; two provider adapters held to one contract test |
+| Official (BLS/BEA/Census) baseline derivation | Deferred out of v1 — see above |
 | Plaid Link + cursor sync | Designed, not yet built |
 | REST API and frontend | Not yet built |
 | Gateway adaptation | Not yet built |

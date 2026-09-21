@@ -1,0 +1,11 @@
+# Where each committed figure came from.
+#
+# These are research notes, not citations of a statistical series. Saying so in the data is the
+# point: a figure whose source reads "compiled by the author" cannot later be mistaken for one that
+# came out of a government release.
+id,name,url,retrieved_at,license_note
+curated-lb-2026,Curated Lebanese city snapshot (September 2026),,2026-09-01,"Hand-researched from rental listings, supermarket prices and generator subscription rates. Estimates compiled by the project author; not an official statistic."
+curated-us-2026,Curated US metro snapshot (January 2026),,2026-01-01,"Hand-researched from rental listings and published consumer price levels. Estimates compiled by the project author; not an official statistic."
+estimate-lb-2026,Lebanon country-level estimate (September 2026),,2026-09-01,"Rough national midpoint across the curated Lebanese cities. Used only where no city figure exists."
+estimate-us-2026,United States country-level estimate (January 2026),,2026-01-01,"Rough national midpoint across the curated US metros. Used only where no city figure exists."
+user-contributed,Figures shared by users of this app,,2026-09-01,"Submitted by a user, checked against their own bank transactions and approved by hand. Not a statistic, and not a crowd: the quorum that would make it one is designed and not built."
