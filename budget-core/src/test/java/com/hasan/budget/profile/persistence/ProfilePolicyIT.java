@@ -1,6 +1,7 @@
 package com.hasan.budget.profile.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.hasan.budget.costofliving.domain.Confidence;
 import com.hasan.budget.profile.application.DiscretionaryFloorService;
@@ -24,6 +25,8 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.jdbc.test.autoconfigure.JdbcTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -65,6 +68,9 @@ class ProfilePolicyIT {
 
     @Autowired
     private JdbcCountryTaxRateLayer seededForTheCountry;
+
+    @Autowired
+    private JdbcClient jdbc;
 
     @Autowired
     private DiscretionaryFloorService floorService;
@@ -118,6 +124,33 @@ class ProfilePolicyIT {
         assertThat(question.suggested()).isEqualTo(Money.of("217.80"));
         assertThat(question.basis()).isEqualTo("typical for someone in Beirut who goes out regularly");
         assertThat(question.explainedCoverage()).hasSize(3);
+    }
+
+    /**
+     * A tax rate for a country we do not hold is a typo, not a new market, and it now fails on
+     * write instead of silently meaning "no rate for you" at read time - which would switch off a
+     * freelancer's whole tax reserve with nothing anywhere saying why.
+     */
+    @Test
+    void aTaxRateForACountryWeDoNotHoldIsRefusedByTheDatabase() {
+        assertThatThrownBy(() -> jdbc.sql("""
+                        INSERT INTO country_tax_rate (country_code, effective_rate_bp, source_name, as_of)
+                        VALUES ('ZZ', 1500, 'a country that does not exist', DATE '2025-01-01')
+                        """)
+                        .update())
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    /** The seeded rates point at real countries, which is what the constraint above now guarantees. */
+    @Test
+    void everySeededTaxRateNamesACountryTheProductHolds() {
+        assertThat(jdbc.sql("""
+                                SELECT count(*) FROM country_tax_rate r
+                                WHERE NOT EXISTS (SELECT 1 FROM country c WHERE c.code = r.country_code)
+                                """)
+                        .query(Long.class)
+                        .single())
+                .isZero();
     }
 
     /** The precedence the configuration declares is the precedence the wired resolver applies. */
