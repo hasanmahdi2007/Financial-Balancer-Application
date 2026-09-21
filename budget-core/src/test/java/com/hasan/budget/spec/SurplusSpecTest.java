@@ -798,6 +798,48 @@ class SurplusSpecTest {
             assertThat(named.assumedReduction()).isEqualTo(Money.of(450));
         }
 
+        /**
+         * A declared fun-money commitment moves the surplus by nothing, because every discretionary
+         * category is counted at zero and the floor is meant to cover them all. So the floor has to
+         * be told what was declared, or a $300 season ticket is silently free.
+         *
+         * <p>Only commitments that are genuinely extra and genuinely discretionary belong in that
+         * figure. A named part of a category is already inside its total, and a subscription is
+         * already subtracted in its own right; protecting either with the floor as well would count
+         * it twice.
+         */
+        @Test
+        void onlyExtraDiscretionaryCommitmentsAreOfferedUpForTheFloor() {
+            SurplusInput request = input(
+                    "4000",
+                    List.of(
+                            spent(SpendCategory.ENTERTAINMENT, "500"),
+                            spent(SpendCategory.SUBSCRIPTIONS, "60")),
+                    List.of(
+                            UserLineItem.onTopOf("li-1", "Season ticket", SpendCategory.ENTERTAINMENT, Money.of(300)),
+                            UserLineItem.onTopOf("li-2", "Concert fund", SpendCategory.ENTERTAINMENT, Money.of(50)),
+                            UserLineItem.onTopOf("li-3", "Weekend meals", SpendCategory.DINING_OUT, Money.of(80)),
+                            // Taken as-is, so already subtracted; the floor must not protect it too.
+                            UserLineItem.onTopOf("li-4", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45)),
+                            // A name put to part of the observed $500; already inside that total.
+                            UserLineItem.alreadyIn("li-5", "Cinema", SpendCategory.ENTERTAINMENT, Money.of(120))),
+                    SAVES_NOTHING_YET);
+
+            assertThat(request.declaredDiscretionaryCommitments())
+                    .containsOnlyKeys(SpendCategory.DINING_OUT, SpendCategory.ENTERTAINMENT)
+                    .containsEntry(SpendCategory.ENTERTAINMENT, Money.of(350))
+                    .containsEntry(SpendCategory.DINING_OUT, Money.of(80));
+        }
+
+        /** Nothing declared means nothing to protect, not an absent entry to guess at. */
+        @Test
+        void noDeclaredCommitmentsProducesAnEmptyFigureRatherThanNull() {
+            SurplusInput request =
+                    input("4000", List.of(spent(SpendCategory.ENTERTAINMENT, "500")), List.of(), SAVES_NOTHING_YET);
+
+            assertThat(request.declaredDiscretionaryCommitments()).isEmpty();
+        }
+
         /** Spend less than the floor and nothing has been assumed away; it never goes negative. */
         @Test
         void aUserSpendingLessThanTheirFloorHasAssumedAwayNothing() {
