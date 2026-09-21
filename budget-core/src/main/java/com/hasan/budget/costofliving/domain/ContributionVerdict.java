@@ -19,10 +19,6 @@ public record ContributionVerdict(
         reasons = List.copyOf(reasons);
     }
 
-    public boolean passed() {
-        return state == ContributionState.QUEUED;
-    }
-
     /** One line, already joined, for an interface that has room for a sentence and not a list. */
     public String explanation() {
         return String.join(" ", reasons);
