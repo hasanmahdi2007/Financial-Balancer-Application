@@ -40,6 +40,9 @@ public record SpendingQuestion(
     /**
      * The question that protects a user's quality of life from the optimiser.
      *
+     * <p>What it covers is derived from the taxonomy rather than listed here, so that adding a
+     * category to the protected set updates this question without anyone remembering to.
+     *
      * <p>Without an answer the engine treats every dollar of going out and eating as available, and a
      * goal that falls short produces "stop going out entirely" - correct arithmetic and advice nobody
      * follows.
@@ -48,7 +51,7 @@ public record SpendingQuestion(
         return new SpendingQuestion(
                 "What is the least you would want to spend each month on enjoying life?",
                 "We will never suggest cutting below this, even to reach a goal faster.",
-                List.of(SpendCategory.ENTERTAINMENT, SpendCategory.DINING_OUT, SpendCategory.CLOTHING),
+                ProtectedSpending.categories(),
                 suggested,
                 basis);
     }
