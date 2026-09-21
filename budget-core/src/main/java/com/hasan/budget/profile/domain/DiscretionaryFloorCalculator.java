@@ -2,6 +2,7 @@ package com.hasan.budget.profile.domain;
 
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.SpendCategory;
+import java.math.RoundingMode;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
@@ -11,9 +12,16 @@ import java.util.Objects;
  *
  * <pre>
  * protected(c) = typical(c) × protectedShareOfBaseline(tier, c)
- * floor        = Σ protected(c) × obligationMultiplier(fixedCommitments / netIncome)
+ * derived      = Σ protected(c) × obligationMultiplier(fixedCommitments / netIncome)
  *                clamped to [3%, 12%] of net income
+ * floor(c)     = max(derived share of c, what the user declared for c)
+ * floor        = Σ floor(c)
  * </pre>
+ *
+ * <p>The last two lines are why a declared commitment cannot be lost. The surplus formula counts
+ * every discretionary category at zero and leaves this one figure to cover them, which works for
+ * observed spending and fails for something the user names: a declared season ticket would change
+ * the surplus by nothing at all, and the app would be telling them it was free.
  *
  * <p>{@code typical(c)} is the user's own city baseline where one exists, which is what makes the
  * same policy row produce a Beirut figure in Beirut and a San Francisco figure in San Francisco.
@@ -49,11 +57,10 @@ public final class DiscretionaryFloorCalculator {
         if (request.userStatedFloor() != null) {
             // Their answer replaces the default outright - no multiplier, no clamp. They were asked
             // a plain question about their own life, and a derived figure has no standing to argue.
-            return new DiscretionaryFloor(
-                    request.userStatedFloor(),
-                    split(weights, request.userStatedFloor()),
-                    "the figure you set",
-                    true);
+            // Declared commitments are the one thing it cannot fall below, because those are not an
+            // opinion about their life; they are money leaving the account either way.
+            return finish(
+                    request, split(weights, request.userStatedFloor()), "the figure you set", true);
         }
 
         if (request.tier() == null) {
@@ -63,8 +70,8 @@ public final class DiscretionaryFloorCalculator {
             // that is not true is worse than no figure at all.
             Money leastForAnyone =
                     policy.floorAtLeastShareOfIncome().applyTo(request.netMonthlyIncome());
-            return new DiscretionaryFloor(
-                    leastForAnyone,
+            return finish(
+                    request,
                     split(weights, leastForAnyone),
                     "the least we protect for anyone, until you tell us how often you go out",
                     false);
@@ -72,8 +79,38 @@ public final class DiscretionaryFloorCalculator {
 
         Money computed = weights.values().stream().reduce(Money.ZERO, Money::plus);
         Money adjusted = policy.multiplierFor(request.obligationRatio()).applyTo(computed);
-        Money floor = clampToIncome(adjusted, request.netMonthlyIncome());
-        return new DiscretionaryFloor(floor, split(weights, floor), basisFor(request), false);
+        Money clamped = clampToIncome(adjusted, request.netMonthlyIncome());
+        return finish(request, split(weights, clamped), basisFor(request), false);
+    }
+
+    /**
+     * Raises the derived protection to cover anything the user has actually declared, and reports
+     * whether the result outgrew what the model considers sustainable.
+     *
+     * <p>Applied <em>after</em> the clamps, and that order is the whole point. The clamps bound a
+     * guess - they stop a derived figure swallowing the surplus. A declared commitment is not a
+     * guess: it is money the user has told us leaves every month. Clamping it away would leave the
+     * surplus overstated by the difference, which is the same defect as counting the commitment at
+     * zero, arrived at more politely.
+     *
+     * <p>Per category rather than against the total, so that a large commitment in one category
+     * cannot crowd out the protection for the others. A $700 season ticket must not leave the
+     * engine free to cut eating out to nothing on the grounds that the total is already high
+     * enough.
+     */
+    private DiscretionaryFloor finish(
+            FloorRequest request, Map<SpendCategory, Money> derived, String basis, boolean userProvided) {
+        Map<SpendCategory, Money> perCategory = new EnumMap<>(SpendCategory.class);
+        derived.forEach((category, amount) -> perCategory.put(
+                category, amount.max(request.declaredCommitments().getOrDefault(category, Money.ZERO))));
+        // A commitment parented to a category the floor does not otherwise protect still has to be
+        // covered, or the surplus counts it at zero exactly as before.
+        request.declaredCommitments()
+                .forEach((category, amount) -> perCategory.merge(category, amount, Money::max));
+
+        Money monthly = perCategory.values().stream().reduce(Money.ZERO, Money::plus);
+        Money ceiling = policy.floorAtMostShareOfIncome().applyTo(request.netMonthlyIncome());
+        return new DiscretionaryFloor(monthly, perCategory, basis, userProvided, ceiling);
     }
 
     /** What the user's city says each protected category normally costs, before any protection. */
@@ -119,7 +156,13 @@ public final class DiscretionaryFloorCalculator {
 
         Money allocated = Money.ZERO;
         for (Map.Entry<SpendCategory, Money> entry : weights.entrySet()) {
-            Money share = Rate.ratioOf(entry.getValue(), weighed).applyTo(total);
+            // Weight times total over the whole, rather than a rounded percentage of the total.
+            // Going via a rate loses precision at the fourth decimal place, which showed up as a
+            // split of an untouched total handing back 89.99 for a 90.00 weight.
+            Money share = new Money(entry.getValue()
+                    .amount()
+                    .multiply(total.amount())
+                    .divide(weighed.amount(), 10, RoundingMode.HALF_UP));
             shares.put(entry.getKey(), share);
             allocated = allocated.plus(share);
         }
