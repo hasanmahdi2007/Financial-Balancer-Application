@@ -54,8 +54,14 @@ public record PriceLadder(List<TicketEstimate> options) {
      */
     public static PriceLadder fromDiningBaseline(Money monthlyDiningBaseline, List<ObservedTicket> observed) {
         Objects.requireNonNull(monthlyDiningBaseline, "monthlyDiningBaseline");
-        return fromTypicalTicket(
-                Amounts.perPeriodAtLeast(monthlyDiningBaseline, TYPICAL_MEALS_OUT_PER_MONTH), observed);
+        Objects.requireNonNull(observed, "observed");
+        // Straight from the baseline to each band price in one division. Going via a rounded typical
+        // meal would round twice for no benefit; see SpendBand.priceFromMonthlyBudget.
+        Map<SpendBand, Money> estimated = new EnumMap<>(SpendBand.class);
+        for (SpendBand band : SpendBand.values()) {
+            estimated.put(band, band.priceFromMonthlyBudget(monthlyDiningBaseline, TYPICAL_MEALS_OUT_PER_MONTH));
+        }
+        return build(estimated, observed);
     }
 
     /**
@@ -70,6 +76,10 @@ public record PriceLadder(List<TicketEstimate> options) {
         for (SpendBand band : SpendBand.values()) {
             estimated.put(band, band.priceFrom(typicalTicket));
         }
+        return build(estimated, observed);
+    }
+
+    private static PriceLadder build(Map<SpendBand, Money> estimated, List<ObservedTicket> observed) {
         Map<SpendBand, Money> observedByBand = averageByBand(observed, estimated);
 
         List<TicketEstimate> priced = new ArrayList<>(SpendBand.values().length);
@@ -121,9 +131,11 @@ public record PriceLadder(List<TicketEstimate> options) {
 
         Map<SpendBand, Money> average = new EnumMap<>(SpendBand.class);
         for (Map.Entry<SpendBand, Money> entry : weightedTotal.entrySet()) {
+            // Summed first, divided once. A mean has no safe direction to round in, so it goes to the
+            // nearest cent: this is a report of what the user paid, not a limit they must stay under.
             average.put(
                     entry.getKey(),
-                    Amounts.perPeriodAtLeast(entry.getValue(), sampleCount.get(entry.getKey())));
+                    Amounts.fractionOf(entry.getValue(), 1, sampleCount.get(entry.getKey())));
         }
         return average;
     }

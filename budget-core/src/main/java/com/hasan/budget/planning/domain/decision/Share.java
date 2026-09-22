@@ -39,7 +39,7 @@ public record Share(Money amount) {
         if (percent < 0) {
             throw new IllegalArgumentException("percent must not be negative but was " + percent);
         }
-        return new Share(Amounts.percentOf(pool, percent));
+        return new Share(Amounts.fractionOf(pool, percent, 100));
     }
 
     /**

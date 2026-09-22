@@ -68,14 +68,20 @@ public final class SpendDecision {
      * is reported rather than hidden.
      */
     private static Money sustainableDaily(Money remainingBudget, int remainingDays) {
-        return Amounts.perPeriodAtMost(remainingBudget.max(Money.ZERO), remainingDays);
+        return Amounts.perDayAtMost(remainingBudget.max(Money.ZERO), remainingDays);
     }
 
+    /**
+     * The tolerance is taken against the rate the user was <em>shown</em>, not against the unrounded
+     * one behind it. That is deliberate rather than sloppy: the comparison a person can check is the
+     * one against the figure on their screen, and a verdict drawn from a number they were never told
+     * is a verdict they cannot verify. It is still a single rounding from that figure.
+     */
     private static SpendVerdict verdictFor(Money price, Money sustainableDaily) {
         if (price.compareTo(sustainableDaily) <= 0) {
             return SpendVerdict.COMFORTABLE;
         }
-        Money tolerated = Amounts.percentOf(sustainableDaily, 100 + SUSTAINABLE_TOLERANCE_PERCENT);
+        Money tolerated = Amounts.fractionOf(sustainableDaily, 100 + SUSTAINABLE_TOLERANCE_PERCENT, 100);
         return price.compareTo(tolerated) <= 0 ? SpendVerdict.SUSTAINABLE : SpendVerdict.OVER_BUDGET;
     }
 
@@ -109,7 +115,11 @@ public final class SpendDecision {
                     price.minus(remainingBudget).max(Money.ZERO));
         }
 
-        Money reducedDailyRate = Amounts.perPeriodAtMost(leftAfterPurchase, followingDays);
+        // Two figures, each rounded once from an exact division, and the reduction between them is
+        // their difference - which is exact, because subtracting one two-decimal amount from another
+        // loses nothing. Deriving the reduction from the unrounded rates instead and rounding it
+        // separately would give a number that does not reconcile with the two rates on screen.
+        Money reducedDailyRate = Amounts.perDayAtMost(leftAfterPurchase, followingDays);
         return new CatchUpPlan(
                 reducedDailyRate,
                 sustainableDaily.minus(reducedDailyRate),

@@ -1,61 +1,74 @@
 package com.hasan.budget.planning.domain.decision;
 
 import com.hasan.budget.shared.Money;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
- * The three pieces of money arithmetic this package needs beyond what {@link Money} offers, and the
- * reasoning for each rounding direction.
+ * The two pieces of money arithmetic this package needs beyond what {@link Money} offers.
  *
- * <p>They live together rather than being inlined at every call site because the direction is the
- * part that is easy to get wrong and impossible to see in a one-line expression. A daily rate
- * rounded the wrong way either tells the user they can spend more than they have or has them
- * following a plan that overshoots their allowance, and neither failure announces itself.
+ * <p><strong>The rule both of them exist to enforce: round once, at the end, and by as little as the
+ * answer allows.</strong> Every intermediate step is carried at full precision and only the figure
+ * actually reported to the user is brought back to the cent. Chaining {@code Money} operations cannot
+ * do that, because {@code Money} normalises to two decimal places in its constructor - so a
+ * three-step calculation rounds three times and the errors compound in whatever direction each step
+ * happened to choose. That is why this is the one class in the package that unwraps a {@code Money}
+ * to a {@link BigDecimal}: keeping the unrounded arithmetic in one small file is what stops it
+ * leaking into the engine, and every method here hands back a {@code Money} immediately.
  *
- * <p>{@code Money} deliberately exposes only {@link Money#spreadOver(int)}, which rounds up. That is
- * the right default for the case it was written for - splitting a savings target across months,
- * where rounding down leaves the goal a cent short on the final month - so the two directions here
- * are both expressed in terms of it rather than by reaching for {@code BigDecimal} again.
+ * <p>Direction is chosen once, per figure, for a stated reason. {@link #fractionOf} rounds to the
+ * nearest cent because a price estimate or a share has no safe direction - nearest is simply the
+ * least wrong answer. {@link #perDayAtMost} rounds down because a rate the user is invited to spend
+ * at must never exceed what they actually have.
+ *
+ * <p>Note what is <em>not</em> here: anything that rounds a reduction up. {@link Money#spreadOver}
+ * does that, and is right for what it was written for - splitting a savings target across months,
+ * where rounding down leaves the goal a cent short on the final month. Here the equivalent falls out
+ * for free: the reduction a user must make is the difference between two rates that were each already
+ * rounded once, and flooring a rate <em>is</em> rounding its reduction up. One rounding, not two.
  */
 final class Amounts {
+
+    private static final int CENTS = 2;
 
     private Amounts() {}
 
     /**
-     * A whole-percent share of an amount, rounded up. Used for band prices and tolerance limits,
-     * where up is the cautious direction: a slightly dearer estimate and a slightly wider tolerance
-     * both err toward telling the user something costs more than it might, never less.
-     */
-    static Money percentOf(Money amount, int percent) {
-        if (percent < 0) {
-            throw new IllegalArgumentException("percent must not be negative but was " + percent);
-        }
-        return amount.times(percent).spreadOver(HUNDRED);
-    }
-
-    /**
-     * An amount split across periods, rounded up, so the periods together cover at least the whole
-     * amount. Used for a reduction the user has to make: cutting a shade more per day than strictly
-     * needed errs toward staying on track.
-     */
-    static Money perPeriodAtLeast(Money total, int periods) {
-        return total.spreadOver(periods);
-    }
-
-    /**
-     * An amount split across periods, rounded down, so the periods together never exceed the whole
-     * amount. Used for a rate the user is allowed to spend at: rounding a spending allowance up by
-     * a cent a day is how a plan that claims to land exactly on the allowance quietly overshoots it.
+     * {@code amount x numerator / denominator}, rounded to the nearest cent exactly once.
      *
-     * <p>Expressed as the ceiling of the negated amount, which is the same value, because rounding
-     * away from zero on a negative number rounds down on the positive one.
+     * <p>Both factors are taken together rather than applied in sequence, which is the whole point.
+     * A band price is a percentage of a typical meal, and a typical meal is a fraction of a monthly
+     * budget; computing it as two steps rounds twice and, where both steps round the same way, the
+     * error compounds into a price a cent or more off what it should be. Expressed as one fraction it
+     * rounds once and cannot drift.
      */
-    static Money perPeriodAtMost(Money total, int periods) {
+    static Money fractionOf(Money amount, int numerator, int denominator) {
+        if (numerator < 0) {
+            throw new IllegalArgumentException("numerator must not be negative but was " + numerator);
+        }
+        if (denominator < 1) {
+            throw new IllegalArgumentException("denominator must be >= 1 but was " + denominator);
+        }
+        return new Money(amount.amount()
+                .multiply(BigDecimal.valueOf(numerator))
+                .divide(BigDecimal.valueOf(denominator), CENTS, RoundingMode.HALF_UP));
+    }
+
+    /**
+     * An amount split across days, rounded down, so the days together never exceed the whole amount.
+     *
+     * <p>Down rather than nearest, because this is a rate the user is told they may spend at. At
+     * $400 over 21 days the exact figure is $19.047619, and reporting $19.05 invites them to spend
+     * $400.05 - which is the same problem the plan was supposed to solve, one cent at a time,
+     * twenty-one times over.
+     */
+    static Money perDayAtMost(Money total, int days) {
         if (total.isNegative()) {
             throw new IllegalArgumentException("total must not be negative but was " + total);
         }
-        Money roundedAwayFromZero = Money.ZERO.minus(total).spreadOver(periods);
-        return Money.ZERO.minus(roundedAwayFromZero);
+        if (days < 1) {
+            throw new IllegalArgumentException("days must be >= 1 but was " + days);
+        }
+        return new Money(total.amount().divide(BigDecimal.valueOf(days), CENTS, RoundingMode.FLOOR));
     }
-
-    private static final int HUNDRED = 100;
 }

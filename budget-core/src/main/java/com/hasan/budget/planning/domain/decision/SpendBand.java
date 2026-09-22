@@ -52,6 +52,23 @@ public enum SpendBand {
 
     /** This band's price where a typical meal costs {@code typicalTicket}. */
     public Money priceFrom(Money typicalTicket) {
-        return Amounts.percentOf(typicalTicket, percentOfTypical);
+        return Amounts.fractionOf(typicalTicket, percentOfTypical, 100);
+    }
+
+    /**
+     * This band's price straight from a monthly dining budget, without stopping at a typical meal on
+     * the way.
+     *
+     * <p>Two steps would round twice and compound. A $183.33 monthly budget gives a typical meal of
+     * $9.1665, reported as $9.17, from which the {@code FANCY} band's 320% comes out at $29.34 - where
+     * the honest figure, taken as one division, is $29.33. A cent on a meal price is not a catastrophe,
+     * but it is a cent nobody chose, and it is the kind of drift that has two screens quoting the same
+     * band disagree about it.
+     */
+    public Money priceFromMonthlyBudget(Money monthlyBudget, int mealsPerMonth) {
+        if (mealsPerMonth < 1) {
+            throw new IllegalArgumentException("mealsPerMonth must be >= 1 but was " + mealsPerMonth);
+        }
+        return Amounts.fractionOf(monthlyBudget, percentOfTypical, 100 * mealsPerMonth);
     }
 }
