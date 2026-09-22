@@ -1,10 +1,12 @@
 # Local development stack.
 #
 # SECURITY NOTE, load-bearing rather than decorative:
-# when the application services are added (packet P6), `budget-core` must NOT publish a port.
+# `budget-core` must NOT publish a port.
 # It trusts a user-id header injected by the gateway, so anything that can reach it directly can
 # forge that header and read another user's bank data. Only `api-gateway` gets a published port.
 # This is exactly the line a future change deletes "to make local testing easier" - don't.
+# `ProfileAndFundsSpecTest.budgetCoreIsUnreachableFromOutsideTheComposeNetwork` reads this file and
+# fails if it happens.
 #
 # Postgres and Redis publish to localhost on purpose: they are needed by tests and by the app when
 # it is run from an IDE outside this stack. They are not reachable from outside this machine.
@@ -47,6 +49,45 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # The domain service. No `ports` key, and there must never be one - see the note at the top of this
+  # file. The gateway reaches it by service name inside this network, which is the only way in.
+  budget-core:
+    build: ./budget-core
+    container_name: fb-budget-core
+    environment:
+      DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-budget}
+      POSTGRES_USER: ${POSTGRES_USER:-budget}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-budget}
+      REDIS_HOST: redis
+      # 6379 inside the network: the 6380 in the mappings above is a host-side choice, made because
+      # another stack on this machine already holds 6379 there.
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # The only service reachable from outside. It validates the caller's Supabase token, rate-limits,
+  # and injects the user id that budget-core trusts.
+  api-gateway:
+    build: ./api-gateway
+    container_name: fb-api-gateway
+    # 8090, because the jobs-tracker stack on this machine holds 8080.
+    ports:
+      - "127.0.0.1:8090:8080"
+    environment:
+      BUDGET_CORE_URI: http://budget-core:8080
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_JWKS_URI: ${SUPABASE_JWKS_URI}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      budget-core:
+        condition: service_started
 
 volumes:
   postgres-data:
