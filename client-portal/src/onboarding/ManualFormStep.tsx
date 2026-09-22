@@ -5,6 +5,7 @@ import { catalogue, type SpendingQuestion } from '../api/catalogue';
 import { useRemote } from '../api/useRemote';
 import { Failure, Loading } from '../ui/Feedback';
 import { useOnboardingDraft, type ManualAnswer } from './OnboardingDraft';
+import { liftSharedEnding } from './sharedWording';
 
 /** Whole dollars or dollars and cents, never negative. Kept as text so no amount becomes a float. */
 const AMOUNT = /^\d{1,7}(\.\d{1,2})?$/;
@@ -54,6 +55,11 @@ function ManualForm({ countryCode, questions }: { countryCode: string; questions
   const invalid = amounts.map((amount) => !AMOUNT.test(amount.trim()));
   const cityMissing = cityLabel.trim() === '';
 
+  // The server builds every question's `why` and `basis` from the same parts, so on a ten-question
+  // form the same caveat arrives ten times. Said once at the top, what differs per box is readable.
+  const why = liftSharedEnding(questions.map((q) => q.why));
+  const basis = liftSharedEnding(questions.map((q) => q.basis));
+
   function submit(event: FormEvent) {
     event.preventDefault();
     if (cityMissing || invalid.some(Boolean)) {
@@ -71,6 +77,13 @@ function ManualForm({ countryCode, questions }: { countryCode: string; questions
 
   return (
     <form className="form" onSubmit={submit} noValidate>
+      {why.shared || basis.shared ? (
+        <div className="banner banner--info" role="note">
+          {why.shared ? <p>{why.shared}</p> : null}
+          {basis.shared ? <p>{basis.shared}</p> : null}
+        </div>
+      ) : null}
+
       <label className="field">
         <span className="field__label">What is your city called?</span>
         <span className="field__help">
@@ -98,7 +111,7 @@ function ManualForm({ countryCode, questions }: { countryCode: string; questions
             <label className="field" htmlFor={id}>
               <span className="field__label">{q.question}</span>
             </label>
-            <p className="question__why">{q.why}</p>
+            {why.particular[i] ? <p className="question__why">{why.particular[i]}</p> : null}
             <div className="money-input">
               <span aria-hidden="true">$</span>
               <input
@@ -107,7 +120,7 @@ function ManualForm({ countryCode, questions }: { countryCode: string; questions
                 inputMode="decimal"
                 value={amounts[i]}
                 aria-invalid={problem}
-                aria-describedby={`${id}-covers ${id}-basis`}
+                aria-describedby={basis.particular[i] ? `${id}-covers ${id}-basis` : `${id}-covers`}
                 onChange={(e) => setAmounts((all) => all.map((a, j) => (j === i ? e.target.value : a)))}
               />
               <span className="money-input__unit">a month</span>
@@ -125,9 +138,11 @@ function ManualForm({ countryCode, questions }: { countryCode: string; questions
                 ))}
               </ul>
             </div>
-            <p id={`${id}-basis`} className="question__basis">
-              {q.basis}
-            </p>
+            {basis.particular[i] ? (
+              <p id={`${id}-basis`} className="question__basis">
+                {basis.particular[i]}
+              </p>
+            ) : null}
           </fieldset>
         );
       })}

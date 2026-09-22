@@ -28,10 +28,22 @@ describe('the form for a city we do not hold figures for', () => {
     renderApp('/setup/LB/my-city', signedIn());
 
     const box = (await screen.findByLabelText(rent.question)).closest('fieldset')!;
-    expect(within(box).getByText(rent.why)).toBeInTheDocument();
     for (const line of rent.covers) expect(within(box).getByText(line)).toBeInTheDocument();
-    expect(within(box).getByText(rent.basis)).toBeInTheDocument();
     expect(internalWordsIn(document.body.textContent ?? '')).toEqual([]);
+  });
+
+  it('says the reason and the caveat once, not once per box', async () => {
+    // The server assembles both from the same parts, so ten questions carry them ten times. Read
+    // ten times over, they bury the one line per box that differs, and a form nobody reads is a
+    // form people abandon.
+    renderApp('/setup/LB/my-city', signedIn());
+    await screen.findByLabelText(rent.question);
+
+    const note = screen.getByRole('note');
+    expect(note).toHaveTextContent('Prices have been quoted in US dollars');
+    expect(note).toHaveTextContent('It is a starting point rather than a measurement of your life.');
+    expect(screen.getAllByText(/starting point rather than a measurement/)).toHaveLength(1);
+    expect(screen.getAllByText(/Prices have been quoted in US dollars/)).toHaveLength(1);
   });
 
   it('keeps the answers as typed and carries them forward with the city name', async () => {
