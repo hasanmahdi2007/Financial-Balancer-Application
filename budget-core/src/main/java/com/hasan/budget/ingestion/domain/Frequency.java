@@ -20,7 +20,13 @@ public enum Frequency {
     /** The provider saw a repeat it could not put a cadence on. Treated as monthly. */
     UNKNOWN(12);
 
-    private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
+    /**
+     * Held as an int rather than a {@code BigDecimal} constant on purpose: an architecture rule bans
+     * raw decimal fields anywhere in the domain, because that is how amounts escape {@link Money}
+     * and take the scale and rounding bugs it exists to prevent with them. The conversion below
+     * needs a decimal for one division, and a local is where that belongs.
+     */
+    private static final int MONTHS_PER_YEAR = 12;
 
     private final int timesPerYear;
 
@@ -44,7 +50,7 @@ public enum Frequency {
         BigDecimal monthly = perOccurrence
                 .amount()
                 .multiply(BigDecimal.valueOf(timesPerYear))
-                .divide(MONTHS_PER_YEAR, 2, RoundingMode.HALF_UP);
+                .divide(BigDecimal.valueOf(MONTHS_PER_YEAR), 2, RoundingMode.HALF_UP);
         // Already at the scale Money keeps, so wrapping it rounds nothing a second time.
         return new Money(monthly);
     }
