@@ -1,0 +1,50 @@
+[
+  {
+    "id": "beirut",
+    "name": "Beirut",
+    "region": "Beirut Governorate",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-09-01"
+  },
+  {
+    "id": "jounieh",
+    "name": "Jounieh",
+    "region": "Keserwan",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-09-01"
+  },
+  {
+    "id": "byblos",
+    "name": "Byblos (Jbeil)",
+    "region": "Keserwan-Jbeil",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-09-01"
+  },
+  {
+    "id": "tripoli-lb",
+    "name": "Tripoli",
+    "region": "North Governorate",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-09-01"
+  },
+  {
+    "id": "sidon",
+    "name": "Sidon (Saida)",
+    "region": "South Governorate",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-09-01"
+  },
+  {
+    "id": "zahle",
+    "name": "Zahle",
+    "region": "Beqaa Governorate",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-09-01"
+  }
+]

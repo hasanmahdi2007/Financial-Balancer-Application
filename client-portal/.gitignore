@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+# Vite's own env files would sit beside the one at the repo root and silently shadow it. Keys live
+# in the root .env only; see vite.config.ts for how exactly two of them reach the browser.
+.env
+.env.*
