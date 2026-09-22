@@ -3,6 +3,7 @@ package com.hasan.budget.planning.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -157,6 +158,69 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                         .query(Integer.class)
                         .single())
                 .isPositive();
+    }
+
+    /**
+     * Everything the app asks for has to explain itself, so the questions endpoint is checked for the
+     * explanation and not only for the number: a pre-filled figure with no stated basis reads as
+     * arbitrary, and a user who thinks a number is arbitrary either ignores it or replaces it at
+     * random.
+     */
+    @Test
+    @DisplayName("the questions the app still has to ask explain themselves")
+    void everyQuestionSaysWhatItIsAskingAndWhy() throws Exception {
+        mockMvc.perform(as(ana, put("/api/v1/profile"))
+                        .content("""
+                                {"country":"LB","city":"beirut","incomeArrivesTaxed":true}"""))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(as(ana, get("/api/v1/questions")))
+                .andExpect(status().isOk())
+                // Nothing is known yet, so the money questions come first and the rest follow.
+                .andExpect(jsonPath("$[?(@.key == 'monthly-income')].why").exists())
+                .andExpect(jsonPath("$[?(@.key == 'lifestyle')].choices[0].label").exists())
+                .andExpect(jsonPath("$[?(@.key == 'spending:groceries')].suggested").exists())
+                .andExpect(jsonPath("$[?(@.key == 'spending:groceries')].covers[0]")
+                        .value(hasItem(containsString("Groceries - "))))
+                .andExpect(content().string(not(containsString("GROCERIES"))))
+                .andExpect(content().string(not(containsString("discretionary"))))
+                .andExpect(content().string(not(containsString("floor"))));
+    }
+
+    /** A figure the user gives beats ours, and a commitment they name is theirs to lock. */
+    @Test
+    @DisplayName("the user's own figures and named commitments are kept and shown back")
+    void theUsersOwnFiguresAreKept() throws Exception {
+        onboard(ana);
+
+        mockMvc.perform(as(ana, put("/api/v1/overrides/groceries")).content("""
+                        {"amount":"275.00"}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.amount").value("275.00"))
+                .andExpect(jsonPath("$.basis.label").value("Your own figure"));
+
+        mockMvc.perform(as(ana, put("/api/v1/line-items/gym")).content("""
+                        {"label":"Gym membership","category":"subscriptions","amount":"30.00",
+                         "howWilling":"locked","kind":"on-top"}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.howWilling.label").value("Cannot be changed"))
+                .andExpect(jsonPath("$.kind.label").value("Extra, on top of my Subscriptions"));
+
+        // A locked line is never proposed as a cut; it gets a sentence instead, and never a number.
+        mockMvc.perform(as(ana, post("/api/v1/plan")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.hints[?(@.id == 'gym')].hint").exists())
+                .andExpect(jsonPath("$.cuts.suggested[?(@.lineIds[0] == 'gym')]").isEmpty());
+
+        mockMvc.perform(as(ana, get("/api/v1/line-items")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+        mockMvc.perform(as(ben, org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/v1/line-items/gym")))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(as(ana, org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/api/v1/line-items/gym")))
+                .andExpect(status().isNoContent());
     }
 
     @Test
