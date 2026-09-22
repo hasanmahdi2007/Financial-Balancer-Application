@@ -32,8 +32,8 @@ Target user: a single person (not a household) with an income, a city, and goals
 | F5 | Goals, recompute, and tradeoffs | **Built, 27 tests passing** |
 | F6 | Investment surface, deliberately minimal | Designed |
 | F7 | Plan history via append-only snapshots | Designed |
-| F8 | "Can I afford this meal right now?" with a catch-up plan | Designed |
-| F9 | Budget rebalancing with user-assigned rigidity tiers | Designed |
+| F8 | "Can I afford this meal right now?" with a catch-up plan | **Built, 33 tests passing** |
+| F9 | Budget rebalancing with user-assigned rigidity tiers | **Built, 27 tests passing** |
 
 ### Explicitly out of scope
 
@@ -694,6 +694,18 @@ catchUpPerDay = sustainableDaily − (remainingBudget − estimatedTicket) / (re
 
 The verdict carries the next band down and *its* verdict, which turns a warning into advice rather
 than a scold.
+
+**Round once, at the end, and by as little as the answer allows.** Every figure above is one division
+from unrounded inputs, never a chain of rounded ones — two roundings compound, and a band price
+computed via a rounded typical meal comes out a cent off. Direction is chosen per figure and for a
+stated reason: `sustainableDaily` and the reduced daily rate round **down**, because a rate the user
+is invited to spend at must never exceed what they have ($19.047619 reported as $19.05 invites
+$400.05 against $400 left). `catchUpPerDay` then needs no rounding at all — it is the difference
+between two rates already rounded once, and flooring a rate *is* rounding its reduction up, which is
+the safe direction the reduction wanted anyway. Everything else — band prices, observed averages, the
+tolerance limit, a percentage share — goes to the **nearest** cent, because an estimate has no safe
+direction and nearest is simply the least wrong. This is what makes "following the catch-up plan
+lands exactly on the allowance" true rather than nearly true.
 
 **Band prices are lookup data scaled by the city**, never hardcoded dollars:
 `meal_band(band, multiplier_of_typical_meal)` — FAST_FOOD 0.4, LOW 0.6, MEDIUM 1.0, HIGH 1.8,

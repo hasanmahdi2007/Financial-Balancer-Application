@@ -55,6 +55,33 @@ class PriceLadderTest {
     }
 
     /**
+     * The rounding happens once, at the end, and a band price from a monthly budget proves it.
+     *
+     * <p>$183.33 a month over twenty meals is $9.1665 a meal, which as a figure a person can be shown
+     * is $9.17. Take the fancy band's 320% of <em>that</em> and you get $29.34; take 320% of the
+     * budget itself in a single division and you get $29.33. The second is the honest one, and it is
+     * what this returns — the intermediate meal price is never rounded, because it is never reported.
+     *
+     * <p>A cent, on one band, from one awkward baseline. It is worth a test precisely because it is
+     * small: nothing else in the suite would have noticed, and the same compounding applied to a
+     * larger chain is how figures start disagreeing with each other for no traceable reason.
+     */
+    @Test
+    void aBandPriceRoundsOnceFromTheBudgetRatherThanTwiceViaATypicalMeal() {
+        Money awkwardBaseline = Money.of("183.33");
+
+        PriceLadder ladder = PriceLadder.fromDiningBaseline(awkwardBaseline, NO_TRANSACTIONS_YET);
+
+        assertThat(ladder.forBand(SpendBand.FANCY).orElseThrow().price()).isEqualTo(Money.of("29.33"));
+        // The route not taken, asserted so the difference is visible rather than asserted about.
+        assertThat(SpendBand.FANCY.priceFrom(Money.of("9.17"))).isEqualTo(Money.of("29.34"));
+
+        // The bands where the two routes happen to agree still have to come out right.
+        assertThat(ladder.forBand(SpendBand.FAST_FOOD).orElseThrow().price()).isEqualTo(Money.of("3.67"));
+        assertThat(ladder.forBand(SpendBand.MEDIUM).orElseThrow().price()).isEqualTo(Money.of("9.17"));
+    }
+
+    /**
      * Real prices replacing three of the five bands, and the ladder still climbs. That is not luck: a
      * merchant joins the band whose estimate is nearest its average, so each band only ever absorbs
      * prices from its own stretch of the range and cannot overtake its neighbour.

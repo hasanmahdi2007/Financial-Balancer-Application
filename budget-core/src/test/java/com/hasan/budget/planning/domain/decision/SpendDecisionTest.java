@@ -43,8 +43,11 @@ class SpendDecisionTest {
 
     /**
      * The boundary itself, asserted at the cent, because "within a tolerance band" is the sort of
-     * phrase that silently becomes a different band under a refactor. A tenth above $19.04 is $20.95
-     * once rounded outward, so $20.95 is still sustainable and $20.96 is not.
+     * phrase that silently becomes a different band under a refactor.
+     *
+     * <p>Worked through: a tenth above the $19.04 the user was shown is $20.944, and it is rounded
+     * once, to the nearest cent, giving $20.94. Not $20.95 — nothing here rounds outward to buy itself
+     * a little slack, which is the same discipline the daily rate follows in the other direction.
      */
     @Test
     void theSustainableToleranceEndsExactlyWhereItSaysItDoes() {
@@ -52,8 +55,8 @@ class SpendDecisionTest {
 
         assertThat(decide(SUSTAINABLE_DAILY).verdict()).isEqualTo(SpendVerdict.COMFORTABLE);
         assertThat(decide(Money.of("19.05")).verdict()).isEqualTo(SpendVerdict.SUSTAINABLE);
-        assertThat(decide(Money.of("20.95")).verdict()).isEqualTo(SpendVerdict.SUSTAINABLE);
-        assertThat(decide(Money.of("20.96")).verdict()).isEqualTo(SpendVerdict.OVER_BUDGET);
+        assertThat(decide(Money.of("20.94")).verdict()).isEqualTo(SpendVerdict.SUSTAINABLE);
+        assertThat(decide(Money.of("20.95")).verdict()).isEqualTo(SpendVerdict.OVER_BUDGET);
     }
 
     /**
