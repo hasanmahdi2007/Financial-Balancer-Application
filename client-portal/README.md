@@ -27,6 +27,13 @@ npm run dev     # http://localhost:5173
 project is on 5434 (see `docker-compose.yml` for why). `API_TARGET` in the repository-root `.env`
 overrides the proxy target.
 
+**8090 is the gateway's port**, as `api-gateway/happy-path.http` uses it. `budget-core` borrows it
+only while the gateway is not running — the two cannot both hold it, and once the gateway is up it
+is the one the browser should be talking to anyway, since it is what validates the token this client
+issues (`Authorization: Bearer <supabase access token>`, which is what every request here already
+sends). Run `budget-core` on any other port then, or let Compose run it with no published port at
+all, which is the arrangement it is designed for.
+
 ## Keys
 
 `SUPABASE_URL` and `SUPABASE_ANON_KEY` come from the `.env` at the **repository root** — there is no
