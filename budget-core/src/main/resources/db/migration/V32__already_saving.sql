@@ -1,14 +1,13 @@
--- What the user already moves into savings each month.
+-- What the user says they already move into savings each month.
 --
 -- It lives beside income and balance because it is the same kind of answer: something the user types
--- about their own money, not something derived. It is reported beside the plan and never subtracted
--- from it - putting money away is not spending it, and charging the user for it would understate
--- what they have left by exactly the amount they are already doing right.
+-- about their own money. It is reported beside the plan and never subtracted from it - putting money
+-- away is not spending it, and charging the user for it would understate what they have left by
+-- exactly the amount they are already doing right.
 --
--- Measuring it instead would need the kind of account each transfer went to: money moving into
--- savings and money paying off a credit card are both internal transfers, and only the destination
--- account tells them apart. `bank_transaction` does not keep that, so until it does, asking is the
--- honest source. NOT NULL DEFAULT 0 because "we have not asked yet" and "nothing" lead to the same
--- plan, and a nullable column would invite a null check in the arithmetic.
+-- Nullable on purpose. NULL means "not answered", and that is different from 0: a connected bank can
+-- measure savings transfers (V21), and it should fill in the figure only for someone who has not
+-- stated one. A user who types 0 is telling us they save nothing, and that outranks the bank the same
+-- way their stated spending does.
 ALTER TABLE planning_money
-    ADD COLUMN already_saving NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (already_saving >= 0);
+    ADD COLUMN already_saving NUMERIC(12, 2) CHECK (already_saving >= 0);

@@ -188,10 +188,10 @@ class DecisionServiceTest {
         }
 
         @Override
-        public MeasuredSpending measuredSpending(String userId, java.time.YearMonth month) {
+        public MeasuredMonth measuredMonth(String userId, java.time.YearMonth month) {
             // Nothing here: what a finished month cost belongs to the plan, and these tests are about
             // the decision on top of it. PlanAssemblerTest is where the measured month is exercised.
-            return MeasuredSpending.none(month);
+            return MeasuredMonth.none(month);
         }
     }
 

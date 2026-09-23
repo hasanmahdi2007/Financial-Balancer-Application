@@ -79,7 +79,7 @@ public class JdbcPlanningProfileStore implements PlanningProfileStore {
                 .query((rs, row) -> new StatedMoney(
                         new Money(rs.getBigDecimal("monthly_income")),
                         new Money(rs.getBigDecimal("balance")),
-                        new Money(rs.getBigDecimal("already_saving"))))
+                        rs.getBigDecimal("already_saving") == null ? null : new Money(rs.getBigDecimal("already_saving"))))
                 .optional();
     }
 
@@ -97,7 +97,7 @@ public class JdbcPlanningProfileStore implements PlanningProfileStore {
                 .param("userId", userId)
                 .param("income", money.monthlyIncome().amount())
                 .param("balance", money.balance().amount())
-                .param("saving", money.alreadySaving().amount())
+                .param("saving", money.alreadySaving() == null ? null : money.alreadySaving().amount())
                 .update();
     }
 }

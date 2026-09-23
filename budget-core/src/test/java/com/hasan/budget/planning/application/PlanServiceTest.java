@@ -240,9 +240,9 @@ class PlanServiceTest {
                     .isEqualTo(without.breakdown().surplus());
         }
 
-        /** Nobody has to answer it, and not answering means the same plan with nothing claimed. */
+        /** Nobody has to answer it. With no answer and no bank, nothing is claimed on their behalf. */
         @Test
-        void notAnsweringItIsAnAnswer() {
+        void notAnsweringItAndHavingNoBankClaimsNothing() {
             fixture.onboard("quiet", Money.of(1_000));
 
             assertThat(plans.assemble("quiet").breakdown().alreadySaving()).isEqualTo(Money.ZERO);
@@ -266,6 +266,51 @@ class PlanServiceTest {
             assertThat(plan.measuredSpending()).contains(SpendCategory.UTILITIES);
         }
 
+        /** Unanswered, the bank answers it - and the plan says the figure came from the bank, and when. */
+        @Test
+        void aBankSuppliesWhatTheUserSavesWhenTheyHaveNotSaid() {
+            PlanningFixture connected = new PlanningFixture(TODAY, new RecordingBank(Map.of(), Money.of(250)));
+            connected.onboard("banked", Money.of(1_000));
+
+            AssembledPlan plan = connected.plans().assemble("banked");
+
+            assertThat(plan.breakdown().alreadySaving()).isEqualTo(Money.of(250));
+            assertThat(plan.inputs().savingWasMeasured()).isTrue();
+            assertThat(PlanViews.from(plan, "id", java.time.Instant.EPOCH, "a test").surplus()
+                            .alreadySavingExplanation())
+                    .contains("February 2026", "from your bank");
+        }
+
+        /**
+         * Answered, the user wins, even when the answer is zero. Zero is the user telling us they save
+         * nothing; it is not a gap for the bank to fill.
+         */
+        @Test
+        void whatTheUserSaysTheySaveOutranksTheBankEvenWhenItIsZero() {
+            PlanningFixture connected = new PlanningFixture(TODAY, new RecordingBank(Map.of(), Money.of(250)));
+            connected.onboard("banked", Money.of(1_000));
+            connected.plans().saveMoney("banked", new StatedMoney(Money.of(2_000), Money.of(1_000), Money.ZERO));
+
+            AssembledPlan plan = connected.plans().assemble("banked");
+
+            assertThat(plan.breakdown().alreadySaving()).isEqualTo(Money.ZERO);
+            assertThat(plan.inputs().savingWasMeasured()).isFalse();
+        }
+
+        /** A month that drew savings down is reported as one, not hidden behind a zero. */
+        @Test
+        void aMonthThatDrewSavingsDownIsShownAsNegative() {
+            PlanningFixture connected = new PlanningFixture(TODAY, new RecordingBank(Map.of(), Money.of(-400)));
+            connected.onboard("banked", Money.of(1_000));
+
+            AssembledPlan plan = connected.plans().assemble("banked");
+
+            assertThat(plan.breakdown().alreadySaving()).isEqualTo(Money.of(-400));
+            assertThat(plan.breakdown().surplus())
+                    .as("shown, never subtracted - in either direction")
+                    .isEqualTo(withoutTheSavingHabit().breakdown().surplus());
+        }
+
         private AssembledPlan withoutTheSavingHabit() {
             PlanningFixture plain = new PlanningFixture(TODAY);
             plain.onboard("plain", Money.of(1_000));
@@ -277,10 +322,16 @@ class PlanServiceTest {
     private static final class RecordingBank implements BankSpending {
 
         private final Map<SpendCategory, Money> month;
+        private final Money saved;
         private YearMonth asked;
 
         private RecordingBank(Map<SpendCategory, Money> month) {
+            this(month, null);
+        }
+
+        private RecordingBank(Map<SpendCategory, Money> month, Money saved) {
             this.month = month;
+            this.saved = saved;
         }
 
         @Override
@@ -295,9 +346,9 @@ class PlanServiceTest {
         }
 
         @Override
-        public MeasuredSpending measuredSpending(String userId, YearMonth month) {
+        public MeasuredMonth measuredMonth(String userId, YearMonth month) {
             this.asked = month;
-            return new MeasuredSpending(month, this.month);
+            return new MeasuredMonth(month, this.month, saved);
         }
     }
 }

@@ -62,7 +62,7 @@ final class IngestionBankSpending implements BankSpending {
     }
 
     /**
-     * A finished month, as the bank recorded it.
+     * A finished month, as the bank recorded it: what each category cost, and what went into savings.
      *
      * <p>The same summary as above, read for a different purpose, so the two can never disagree about
      * what a month cost. An empty month comes back empty rather than as a row of zeroes: a user who
@@ -70,10 +70,10 @@ final class IngestionBankSpending implements BankSpending {
      * be the most damaging kind of wrong this product can be.
      */
     @Override
-    public MeasuredSpending measuredSpending(String userId, YearMonth month) {
+    public MeasuredMonth measuredMonth(String userId, YearMonth month) {
         var summary = ingestion.summaryFor(userId, month);
         if (summary.transactionCount() == 0) {
-            return MeasuredSpending.none(month);
+            return MeasuredMonth.none(month);
         }
         // Tax held back is worked out from the user's tax rate, never read off a statement, and the
         // planning inputs reject it outright - so it is dropped here rather than allowed to arrive as
@@ -81,7 +81,7 @@ final class IngestionBankSpending implements BankSpending {
         Map<SpendCategory, Money> measured = summary.spendingByCategory().entrySet().stream()
                 .filter(entry -> entry.getKey() != SpendCategory.TAX_RESERVE)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        return new MeasuredSpending(month, measured);
+        return new MeasuredMonth(month, measured, summary.alreadySaving());
     }
 
     private static ObservedTicket asTicket(MerchantAverage average) {

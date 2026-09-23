@@ -81,7 +81,7 @@ public final class PlanAssembler {
 
         DiscretionaryFloor floor = floors.floorFor(floorRequest(inputs, income, observations));
         SurplusBreakdown breakdown = SurplusCalculation.compute(new SurplusInput(
-                income, observations, inputs.lineItems(), inputs.alreadySaving(), floor.monthly(), inputs.asOf()));
+                income, observations, inputs.lineItems(), inputs.savingEachMonth(), floor.monthly(), inputs.asOf()));
 
         Earmarks earmarks = Earmarking.earmark(
                 inputs.funds().consideredBalance(), inputs.goals(), inputs.finishFirst());
@@ -138,7 +138,7 @@ public final class PlanAssembler {
             ResolvedBaseline baseline = inputs.baselines().get(category);
             Money localFigure = baseline == null ? null : baseline.amount();
             Money stated = inputs.statedSpending().get(category);
-            Money fromBank = inputs.measuredSpending().in(category);
+            Money fromBank = inputs.measuredMonth().in(category);
             if (stated != null) {
                 observations.add(new CategoryObservation(category, stated, localFigure));
             } else if (fromBank != null) {
@@ -181,7 +181,7 @@ public final class PlanAssembler {
         // Built with a zero floor only to ask the input which declared commitments count, because that
         // filter lives next to the data and must not be re-derived here.
         SurplusInput probe = new SurplusInput(
-                income, List.of(), inputs.lineItems(), inputs.alreadySaving(), Money.ZERO, inputs.asOf());
+                income, List.of(), inputs.lineItems(), inputs.savingEachMonth(), Money.ZERO, inputs.asOf());
         request = request.in(inputs.cityLabel(), protectedBaselines)
                 .withDeclaredCommitments(probe.declaredDiscretionaryCommitments());
         return inputs.leastForEnjoyingLife() == null ? request : request.statedBy(inputs.leastForEnjoyingLife());

@@ -283,7 +283,7 @@ public final class PlanService {
                 money.asFunds().resolve(),
                 baselines,
                 spending.spending(userId),
-                bank.measuredSpending(userId, lastCompleteMonth(asOf)),
+                bank.measuredMonth(userId, lastCompleteMonth(asOf)),
                 spending.lineItems(userId),
                 money.alreadySaving(),
                 tax.monthlyReserve(profile, money.monthlyIncome()),

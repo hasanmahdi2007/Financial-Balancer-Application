@@ -116,8 +116,9 @@ Authorization: Bearer {{token}}
 ### 8. The money the plan may work with, typed by the user (no bank connected).
 # "balance" is taken whole: there is no share question on this path, because the user already chose
 # what to type. Lowering it later takes money back out of the plan on the next run.
-# "alreadySaving" is optional and defaults to 0. It is what the user already moves into savings each
-# month: shown beside the plan, never subtracted, because putting money away is not spending it.
+# "alreadySaving" is optional: what the user already moves into savings each month, shown beside the
+# plan and never subtracted. Left out is not zero - left out lets a connected bank supply it from the
+# last complete month, while "0.00" is the user saying they save nothing, which outranks the bank.
 # -> {"monthlyIncome":"2000.00","balance":"20000.00","setAside":"0.00",
 #     "explanation":"We plan with exactly what you told us you have. ...",
 #     "alreadySaving":"150.00","alreadySavingExplanation":"What you already move into savings ..."}
@@ -214,7 +215,7 @@ Content-Type: application/json
 #             "lines":[{"id":"groceries","label":"Groceries","category":{"key":"groceries","label":"Groceries"},
 #                       "spent":"380.00","localFigure":"300.00","counted":"300.00","assumed":false,
 #                       "basis":{"label":"Your own figure","explanation":"...","gathered":"2026-09-22","ageing":null}}],
-#             "leastForEnjoyingLife":"250.00","alreadySaving":"0.00"},
+#             "leastForEnjoyingLife":"250.00","alreadySaving":"150.00"},
 #  "goals":[{"id":"...","name":"Emergency fund","priority":{"key":"critical","label":"Must happen"},
 #            "target":"6000.00","fromBalance":"6000.00","stillNeeded":"0.00","deadline":"2027-03-31",
 #            "monthlyNeeded":"0.00","monthlyFunded":"0.00","shortBy":"0.00","finishFirst":false,

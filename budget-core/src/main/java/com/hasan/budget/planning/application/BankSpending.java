@@ -46,7 +46,7 @@ public interface BankSpending {
      * <p>Empty when no bank is connected or that month holds nothing, which is not a failure: the
      * plan falls back to what the user said, and then to the local figure.
      */
-    MeasuredSpending measuredSpending(String userId, YearMonth month);
+    MeasuredMonth measuredMonth(String userId, YearMonth month);
 
     /** For a user with no bank connected, and for tests about anything other than bank data. */
     BankSpending NONE = new BankSpending() {
@@ -62,8 +62,8 @@ public interface BankSpending {
         }
 
         @Override
-        public MeasuredSpending measuredSpending(String userId, YearMonth month) {
-            return MeasuredSpending.none(month);
+        public MeasuredMonth measuredMonth(String userId, YearMonth month) {
+            return MeasuredMonth.none(month);
         }
     };
 

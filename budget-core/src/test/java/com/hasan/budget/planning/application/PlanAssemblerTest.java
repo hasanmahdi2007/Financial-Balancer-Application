@@ -50,7 +50,7 @@ class PlanAssemblerTest {
     private static final LocalDate GATHERED = LocalDate.of(2025, 11, 1);
 
     /** No bank connected: every figure is one the user typed, or the city's for what they did not. */
-    private static final MeasuredSpending NO_BANK = MeasuredSpending.none(YearMonth.from(AS_OF).minusMonths(1));
+    private static final MeasuredMonth NO_BANK = MeasuredMonth.none(YearMonth.from(AS_OF).minusMonths(1));
 
     /** A fixed $300 floor, stated outright so the composition is what varies, not the floor policy. */
     private static final PlanAssembler.FloorSource THREE_HUNDRED =
@@ -523,20 +523,20 @@ class PlanAssemblerTest {
 
     private static PlanningInputs withSpending(
             PlanningInputs in, Map<SpendCategory, Money> spending, List<UserLineItem> lineItems) {
-        return new PlanningInputs(in.funds(), in.baselines(), spending, in.measuredSpending(),
+        return new PlanningInputs(in.funds(), in.baselines(), spending, in.measuredMonth(),
                 lineItems.isEmpty() ? in.lineItems() : lineItems, in.alreadySaving(), in.taxReserve(),
                 in.lifestyle(), in.leastForEnjoyingLife(), in.cityLabel(), in.goals(), in.finishFirst(),
                 in.asOf());
     }
 
     private static PlanningInputs withBaselines(PlanningInputs in, Map<SpendCategory, ResolvedBaseline> baselines) {
-        return new PlanningInputs(in.funds(), baselines, in.statedSpending(), in.measuredSpending(),
+        return new PlanningInputs(in.funds(), baselines, in.statedSpending(), in.measuredMonth(),
                 in.lineItems(), in.alreadySaving(), in.taxReserve(), in.lifestyle(), in.leastForEnjoyingLife(),
                 in.cityLabel(), in.goals(), in.finishFirst(), in.asOf());
     }
 
     private static PlanningInputs withFunds(PlanningInputs in, ManualConsideredFunds funds) {
-        return new PlanningInputs(funds.resolve(), in.baselines(), in.statedSpending(), in.measuredSpending(),
+        return new PlanningInputs(funds.resolve(), in.baselines(), in.statedSpending(), in.measuredMonth(),
                 in.lineItems(), in.alreadySaving(), in.taxReserve(), in.lifestyle(), in.leastForEnjoyingLife(),
                 in.cityLabel(), in.goals(), in.finishFirst(), in.asOf());
     }
@@ -544,7 +544,7 @@ class PlanAssemblerTest {
     /** The same inputs, with a connected bank having recorded the month before. */
     private static PlanningInputs withMeasured(PlanningInputs in, Map<SpendCategory, Money> measured) {
         return new PlanningInputs(in.funds(), in.baselines(), in.statedSpending(),
-                new MeasuredSpending(YearMonth.from(in.asOf()).minusMonths(1), measured), in.lineItems(),
+                new MeasuredMonth(YearMonth.from(in.asOf()).minusMonths(1), measured, null), in.lineItems(),
                 in.alreadySaving(), in.taxReserve(), in.lifestyle(), in.leastForEnjoyingLife(), in.cityLabel(),
                 in.goals(), in.finishFirst(), in.asOf());
     }

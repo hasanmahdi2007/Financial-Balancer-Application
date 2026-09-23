@@ -96,8 +96,13 @@ public final class PlanViews {
                 text(breakdown.discretionaryFloor()),
                 plan.floor().basis(),
                 text(breakdown.alreadySaving()),
-                "What you already move into savings each month. It is shown, never subtracted, because "
-                        + "it is not spending.");
+                plan.inputs().savingWasMeasured()
+                        ? "What went into your savings in "
+                                + plan.inputs().measuredMonth().month().format(MONTH_AND_YEAR)
+                                + ", from your bank, less anything you took back out. It is shown, never "
+                                + "subtracted, because it is not spending."
+                        : "What you already move into savings each month. It is shown, never subtracted, "
+                                + "because it is not spending.");
     }
 
     private static PlanView.Reduction reduction(Reduction reduction) {
@@ -117,7 +122,7 @@ public final class PlanViews {
                 text(line.counted()),
                 wholeCategory && plan.assumedSpending().contains(line.category()),
                 wholeCategory && plan.measuredSpending().contains(line.category())
-                        ? "what you spent in " + plan.inputs().measuredSpending().month().format(MONTH_AND_YEAR)
+                        ? "what you spent in " + plan.inputs().measuredMonth().month().format(MONTH_AND_YEAR)
                         : null,
                 howWilling(line.rigidity()),
                 source == null ? null : basis(source));
