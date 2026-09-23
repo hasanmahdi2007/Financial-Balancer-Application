@@ -45,16 +45,57 @@ describe('the rest of setup', () => {
     expect(within(rent.closest('fieldset')!).getByText(/Leave it blank to use \$/)).toBeInTheDocument();
   });
 
-  it('will not make a plan until the questions with no suggestion are answered', async () => {
-    const { server } = renderApp('/setup/questions', signedIn());
+  it('leaves what the server needs to the server, and shows its sentence when something is missing', async () => {
+    // Whether a question may be skipped cannot be read off it - "already saving" has no suggestion
+    // and is optional, income has none and is not - so the client does not guess. The server's
+    // refusal (recorded from the live 409) says exactly what is missing.
+    const needs = 'Tell us how much comes in each month, and how much you already have, first.';
+    const server = new FakeServer().on('POST /api/v1/plan', { status: 409, body: { detail: needs } });
+    renderApp('/setup/questions', signedIn(), server);
     const user = userEvent.setup();
     await screen.findByLabelText(question('monthly-income').question);
     await user.click(screen.getByRole('button', { name: 'Make my plan' }));
 
-    expect(screen.getAllByRole('alert').map((a) => a.textContent)).toEqual(
-      expect.arrayContaining(['Pick the one that fits you best.', 'We need this one to make your plan.']),
-    );
+    expect(await screen.findByText(needs)).toBeInTheDocument();
+    expect(screen.getByTestId('path')).toHaveTextContent('/setup/questions');
+    // Nothing was typed, so nothing was sent as though it had been.
+    expect(server.requests.filter((r) => r.method === 'PUT')).toEqual([]);
+  });
+
+  it('still checks the form of whatever is typed', async () => {
+    const { server } = renderApp('/setup/questions', signedIn());
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText(question('monthly-income').question), 'about 2000');
+    await user.click(screen.getByRole('button', { name: 'Make my plan' }));
+
+    expect(screen.getAllByRole('alert')[0]).toHaveTextContent(/Enter an amount in dollars/);
     expect(server.requests.filter((r) => r.method !== 'GET')).toEqual([]);
+  });
+
+  it('lets "already saving" stay empty, so a connected bank can answer it', async () => {
+    // Sending 0 instead would be the user saying they save nothing, which outranks the bank.
+    const { server } = renderApp('/setup/questions', signedIn());
+    const user = userEvent.setup();
+    await answerTheRequiredOnes(user);
+    await user.click(screen.getByRole('button', { name: 'Make my plan' }));
+    await screen.findByRole('heading', { name: 'Your plan' });
+
+    expect(server.sentTo('PUT', '/api/v1/money')[0]).not.toHaveProperty('alreadySaving');
+  });
+
+  it('keeps a savings figure already on file when the money is sent again', async () => {
+    // PUT /api/v1/money with alreadySaving left out *clears* it (checked against the live server).
+    const onFile = { monthlyIncome: '1800.00', balance: '1000.00', setAside: '0.00', explanation: '', alreadySaving: '150.00', alreadySavingExplanation: '' };
+    const server = new FakeServer().on('/api/v1/money', { status: 200, body: onFile });
+    renderApp('/setup/questions', signedIn(), server);
+    const user = userEvent.setup();
+    await answerTheRequiredOnes(user);
+    await user.click(screen.getByRole('button', { name: 'Make my plan' }));
+    await screen.findByRole('heading', { name: 'Your plan' });
+
+    expect(server.sentTo('PUT', '/api/v1/money')).toEqual([
+      { monthlyIncome: '2000', balance: '5000.50', alreadySaving: '150.00' },
+    ]);
   });
 
   it('sends spending as one complete map, keeping what the server already held', async () => {

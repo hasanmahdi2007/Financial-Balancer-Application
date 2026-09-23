@@ -1,6 +1,6 @@
 {
   "goal": {
-    "id": "951d25e3-0915-4e23-ac1b-3bcad44f5fba",
+    "id": "5b8962b0-9932-4cb4-ae4a-f6cd25fa15b3",
     "name": "Emergency fund",
     "priority": {
       "key": "critical",
@@ -11,8 +11,8 @@
     "finishFirst": false
   },
   "plan": {
-    "id": "ec40d50f-a398-400b-9705-04c31a506abe",
-    "takenAt": "2026-09-23T15:33:50.683761800Z",
+    "id": "eb4fe26d-36da-44be-9b7c-afdc5a206aaf",
+    "takenAt": "2026-09-23T20:54:06.062311900Z",
     "asOf": "2026-09-23",
     "reason": "You added a goal: Emergency fund",
     "money": {
@@ -57,6 +57,7 @@
           "localFigure": "600.00",
           "counted": "500.00",
           "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "locked",
             "label": "Cannot be changed"
@@ -79,6 +80,7 @@
           "localFigure": "90.00",
           "counted": "90.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -101,6 +103,7 @@
           "localFigure": "25.00",
           "counted": "40.00",
           "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -123,6 +126,7 @@
           "localFigure": "180.00",
           "counted": "180.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -145,6 +149,7 @@
           "localFigure": "300.00",
           "counted": "300.00",
           "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -167,6 +172,7 @@
           "localFigure": "120.00",
           "counted": "120.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -189,6 +195,7 @@
           "localFigure": "150.00",
           "counted": "0.00",
           "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "flexible",
             "label": "Flexible"
@@ -211,6 +218,7 @@
           "localFigure": "80.00",
           "counted": "0.00",
           "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "disposable",
             "label": "Not very important"
@@ -233,6 +241,7 @@
           "localFigure": "60.00",
           "counted": "0.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "flexible",
             "label": "Flexible"
@@ -255,6 +264,7 @@
           "localFigure": "70.00",
           "counted": "0.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "flexible",
             "label": "Flexible"
@@ -277,6 +287,7 @@
           "localFigure": null,
           "counted": "0.00",
           "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "locked",
             "label": "Cannot be changed"
@@ -291,7 +302,7 @@
     },
     "goals": [
       {
-        "id": "f6ade929-7c48-4ee9-aa03-5fa5bf2fa37e",
+        "id": "7e28801f-3d00-41fc-b2db-a74374b5939c",
         "name": "Car",
         "priority": {
           "key": "high",
@@ -311,7 +322,7 @@
         }
       },
       {
-        "id": "951d25e3-0915-4e23-ac1b-3bcad44f5fba",
+        "id": "5b8962b0-9932-4cb4-ae4a-f6cd25fa15b3",
         "name": "Emergency fund",
         "priority": {
           "key": "critical",

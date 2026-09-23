@@ -217,7 +217,11 @@ function SpendingSection({ plan }: { plan: Plan }) {
                 </th>
                 <td>
                   {formatMoney(line.spent)}
-                  {line.assumed ? <span className="aside"> (our estimate - you have not told us yours)</span> : null}
+                  {line.measuredFrom ? (
+                    <span className="aside"> ({line.measuredFrom})</span>
+                  ) : line.assumed ? (
+                    <span className="aside"> (our estimate - you have not told us yours)</span>
+                  ) : null}
                 </td>
                 <td>{line.localFigure === null ? '-' : formatMoney(line.localFigure)}</td>
                 <td>{line.basis ? line.basis.label : '-'}</td>

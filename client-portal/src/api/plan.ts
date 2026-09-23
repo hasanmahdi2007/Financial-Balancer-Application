@@ -105,6 +105,24 @@ export interface Money {
   balance: string;
   setAside: string;
   explanation: string;
+  /**
+   * What the user said they already move into savings each month, or null when they have not said -
+   * in which case a connected bank supplies it. Null is not zero: "0.00" is the user saying they save
+   * nothing, which outranks the bank.
+   */
+  alreadySaving: string | null;
+  alreadySavingExplanation: string;
+}
+
+/**
+ * The body of `PUT /api/v1/money`. `alreadySaving` left out *clears* a saved figure (checked against
+ * the live server), so anything that rewrites the money must carry it through unless the user
+ * emptied it.
+ */
+export interface MoneyEdit {
+  monthlyIncome: string;
+  balance: string;
+  alreadySaving?: string;
 }
 
 export interface Override {
@@ -144,6 +162,11 @@ export interface PlanLine {
   counted: string;
   /** True when nobody told us, so the local figure stands in. Say so on the line. */
   assumed: boolean;
+  /**
+   * The month this figure was read off the user's own account, worded for them ("what you spent in
+   * February 2026"), or null when it did not come from a bank.
+   */
+  measuredFrom: string | null;
   howWilling: Labelled;
   basis: Basis | null;
 }
@@ -361,7 +384,7 @@ export const plan = {
   questions: (api: ApiClient, signal?: AbortSignal) => api.getJson<OpenQuestion[]>('/api/v1/questions', signal),
 
   money: (api: ApiClient, signal?: AbortSignal) => api.getJson<Money>('/api/v1/money', signal),
-  saveMoney: (api: ApiClient, body: { monthlyIncome: string; balance: string }) =>
+  saveMoney: (api: ApiClient, body: MoneyEdit) =>
     api.sendJson<Money>('PUT', '/api/v1/money', body),
 
   spending: (api: ApiClient, signal?: AbortSignal) => api.getJson<Record<string, string>>('/api/v1/spending', signal),

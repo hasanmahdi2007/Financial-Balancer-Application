@@ -2,5 +2,7 @@
   "monthlyIncome": "2000.00",
   "balance": "20000.00",
   "setAside": "0.00",
-  "explanation": "We plan with exactly what you told us you have. Nothing is set aside, because nothing beyond this figure was ever visible to us."
+  "explanation": "We plan with exactly what you told us you have. Nothing is set aside, because nothing beyond this figure was ever visible to us.",
+  "alreadySaving": null,
+  "alreadySavingExplanation": "What you already move into savings every month. We show it beside your plan and never take it off what you have left, because putting money away is not spending it. Leave it empty and, once a bank is connected, we read it from there."
 }

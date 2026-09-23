@@ -56,6 +56,19 @@ describe('the plan', () => {
     expect(row('Rent')).not.toHaveTextContent('our estimate');
   });
 
+  it('names the month a figure was read off the bank, instead of calling it our estimate', async () => {
+    // Worded by the server ("what you spent in February 2026") - a figure the user can check against
+    // a statement is the only kind they have reason to believe, so the month is shown, not a flag.
+    const measured: Plan = structuredClone(planFixture);
+    const healthcare = measured.surplus.lines.find((l) => l.id === 'healthcare')!;
+    healthcare.measuredFrom = 'what you spent in August 2026';
+    renderApp('/plan', signedIn(), new FakeServer().on('/api/v1/plan', { status: 200, body: measured }));
+    await screen.findByRole('heading', { name: 'What you spend' });
+
+    expect(row('Healthcare')).toHaveTextContent('(what you spent in August 2026)');
+    expect(row('Healthcare')).not.toHaveTextContent('our estimate');
+  });
+
   it('raises a staleness warning, once, when the server says figures are ageing', async () => {
     // Exactly the shape `PlanView.Basis` sends, with `Wording`'s own words for a stale figure. Every
     // recorded fixture is too new to be ageing, so this is the only place the shape is exercised -

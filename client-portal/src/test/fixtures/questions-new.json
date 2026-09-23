@@ -47,6 +47,16 @@
     "choices": []
   },
   {
+    "key": "already-saving",
+    "answerWith": "PUT /api/v1/money alreadySaving",
+    "question": "How much do you already put into savings each month?",
+    "why": "We show it beside your plan and never take it off what you have left, because putting money away is not spending it. It is here so your plan reflects what you are already doing rather than starting from nothing. Leave it empty and, once a bank is connected, we read it from there.",
+    "covers": [],
+    "suggested": null,
+    "basis": null,
+    "choices": []
+  },
+  {
     "key": "spending:rent",
     "answerWith": "PUT /api/v1/spending rent",
     "question": "About how much do you spend on rent each month?",

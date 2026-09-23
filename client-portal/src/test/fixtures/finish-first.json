@@ -1,7 +1,7 @@
 {
   "plan": {
-    "id": "44895c18-b6ad-450a-8259-6e7551193692",
-    "takenAt": "2026-09-23T15:49:17.153532800Z",
+    "id": "51f71e45-7461-4ca4-99c2-557fec4af658",
+    "takenAt": "2026-09-23T20:54:13.672232600Z",
     "asOf": "2026-09-23",
     "reason": "You chose Car to finish first",
     "money": {
@@ -16,16 +16,22 @@
       }
     },
     "surplus": {
-      "amount": "235.00",
+      "amount": "220.00",
       "explanation": "What is left each month for your goals, if your spending comes down to the figures below. It is not money you have today.",
-      "assumedReduction": "110.00",
+      "assumedReduction": "280.00",
       "assumedReductionExplanation": "The monthly figure above already assumes you make these changes. Following only the suggested cuts, without these, would leave you this much short.",
       "reductions": [
         {
+          "label": "Groceries",
+          "from": "380.00",
+          "to": "300.00",
+          "by": "80.00"
+        },
+        {
           "label": "Eating out, Going out and fun, Clothes, Everything else",
-          "from": "360.00",
+          "from": "450.00",
           "to": "250.00",
-          "by": "110.00"
+          "by": "200.00"
         }
       ],
       "lines": [
@@ -39,7 +45,8 @@
           "spent": "600.00",
           "localFigure": "600.00",
           "counted": "600.00",
-          "assumed": true,
+          "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "locked",
             "label": "Cannot be changed"
@@ -62,6 +69,7 @@
           "localFigure": "90.00",
           "counted": "90.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -80,10 +88,11 @@
             "key": "subscriptions",
             "label": "Subscriptions"
           },
-          "spent": "25.00",
+          "spent": "40.00",
           "localFigure": "25.00",
-          "counted": "25.00",
-          "assumed": true,
+          "counted": "40.00",
+          "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -106,6 +115,7 @@
           "localFigure": "180.00",
           "counted": "180.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -124,10 +134,11 @@
             "key": "groceries",
             "label": "Groceries"
           },
-          "spent": "300.00",
+          "spent": "380.00",
           "localFigure": "300.00",
           "counted": "300.00",
-          "assumed": true,
+          "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -150,6 +161,7 @@
           "localFigure": "120.00",
           "counted": "120.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -168,10 +180,11 @@
             "key": "dining-out",
             "label": "Eating out"
           },
-          "spent": "150.00",
+          "spent": "200.00",
           "localFigure": "150.00",
           "counted": "0.00",
-          "assumed": true,
+          "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "flexible",
             "label": "Flexible"
@@ -190,10 +203,11 @@
             "key": "entertainment",
             "label": "Going out and fun"
           },
-          "spent": "80.00",
+          "spent": "120.00",
           "localFigure": "80.00",
           "counted": "0.00",
-          "assumed": true,
+          "assumed": false,
+          "measuredFrom": null,
           "howWilling": {
             "key": "disposable",
             "label": "Not very important"
@@ -216,6 +230,7 @@
           "localFigure": "60.00",
           "counted": "0.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "flexible",
             "label": "Flexible"
@@ -238,6 +253,7 @@
           "localFigure": "70.00",
           "counted": "0.00",
           "assumed": true,
+          "measuredFrom": null,
           "howWilling": {
             "key": "flexible",
             "label": "Flexible"
@@ -257,7 +273,7 @@
     },
     "goals": [
       {
-        "id": "64dcd26e-e31d-460f-bdcd-ab948f1231a3",
+        "id": "e1ab7df4-ad36-4c96-bdc9-fae1eb0b1501",
         "name": "Car",
         "priority": {
           "key": "high",
@@ -277,7 +293,7 @@
         }
       },
       {
-        "id": "2fce264a-9471-4dfe-9d69-57cc6f0f6701",
+        "id": "3b2239c3-551d-4143-babb-9c9dcaee7fe4",
         "name": "Emergency fund",
         "priority": {
           "key": "critical",
@@ -288,8 +304,8 @@
         "stillNeeded": "6000.00",
         "deadline": "2027-03-31",
         "monthlyNeeded": "1000.00",
-        "monthlyFunded": "235.00",
-        "shortBy": "765.00",
+        "monthlyFunded": "220.00",
+        "shortBy": "780.00",
         "finishFirst": false,
         "status": {
           "label": "Behind",
@@ -305,7 +321,7 @@
             "key": "subscriptions",
             "label": "Subscriptions"
           },
-          "by": "25.00",
+          "by": "40.00",
           "howWilling": {
             "key": "essential",
             "label": "Very important"
@@ -315,9 +331,9 @@
           ]
         }
       ],
-      "suggestedTotal": "25.00",
-      "alreadyAssumed": "110.00",
-      "totalChange": "135.00",
+      "suggestedTotal": "40.00",
+      "alreadyAssumed": "280.00",
+      "totalChange": "320.00",
       "totalChangeExplanation": "Everything you would change to make this plan work: the changes the monthly figure already assumes, plus the cuts suggested on top.",
       "stillShort": "1962.23",
       "options": [

@@ -70,13 +70,19 @@ function NothingLeft() {
   );
 }
 
-/** A question with a suggestion may be left to it; one without must be answered. */
+/**
+ * Only the form of an answer is checked here, never whether one was needed. Which questions may be
+ * left empty is the server's call, and it cannot be read off the question: "How much do you already
+ * put into savings?" has no suggestion and is still optional (empty lets a bank answer it), while
+ * income has none and is not. An empty answer is left out, and if the plan truly needs it the server
+ * refuses with a sentence saying so, which is shown as-is.
+ */
 function problemWith(question: OpenQuestion, value: string): string | null {
   const given = value.trim();
+  if (given === '') return null;
   if (isChoice(question)) {
     return question.choices.some((c) => c.key === given) ? null : 'Pick the one that fits you best.';
   }
-  if (given === '') return question.suggested === null ? 'We need this one to make your plan.' : null;
   return isAmount(given) ? null : AMOUNT_PROBLEM;
 }
 
@@ -287,9 +293,12 @@ export async function sendAnswers(api: ApiClient, answers: Answer[]): Promise<vo
   const moneyAnswers = grouped.get('/api/v1/money');
   if (moneyAnswers) {
     const existing = await orNothing(plan.money(api));
+    const alreadySaving = moneyAnswers.alreadySaving ?? existing?.alreadySaving ?? null;
     await plan.saveMoney(api, {
       monthlyIncome: moneyAnswers.monthlyIncome ?? existing?.monthlyIncome ?? '',
       balance: moneyAnswers.balance ?? existing?.balance ?? '',
+      // Left out, the route clears it - so a saved figure travels again unless this answers it.
+      ...(alreadySaving === null ? {} : { alreadySaving }),
     });
   }
 
