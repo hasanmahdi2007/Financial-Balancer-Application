@@ -3,8 +3,19 @@ import { useAuth } from '../auth/AuthProvider';
 
 /** One answer from the "my city isn't listed" form, kept as the decimal string the user typed. */
 export interface ManualAnswer {
+  /**
+   * The category key the answer is sent back under. This is what makes the draft submittable:
+   * `PUT /api/v1/overrides/{category}` is keyed by it, and the question text is not a key of anything.
+   */
+  category: string;
+  /** Kept only so the answer can be shown back beside the question it answered. */
   question: string;
   amount: string;
+  /**
+   * What we pre-filled. An answer still equal to it is our estimate, not the user's figure, and is
+   * never sent back as theirs.
+   */
+  suggested: string;
 }
 
 export type ChosenLocation =

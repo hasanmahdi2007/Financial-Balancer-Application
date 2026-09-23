@@ -1,0 +1,45 @@
+{
+  "verdict": {
+    "label": "This is more than you have room for",
+    "meaning": "Buying this puts you past what is left for the rest of the month."
+  },
+  "category": {
+    "key": "dining-out",
+    "label": "Eating out"
+  },
+  "purchase": {
+    "label": "A normal meal out",
+    "covers": "a regular restaurant or cafe lunch",
+    "price": "7.50",
+    "basis": {
+      "label": "Our estimate",
+      "meaning": "We have no payments of yours to go on yet, so this is worked out from typical prices in your city."
+    }
+  },
+  "allowance": "129.31",
+  "allowanceBasis": "The part of what you set aside for enjoying life that goes on eating out.",
+  "spentThisMonth": "120.00",
+  "left": "9.31",
+  "daysLeft": 8,
+  "perDay": "1.16",
+  "catchUp": {
+    "perDayAfter": "0.25",
+    "lessPerDay": "0.91",
+    "days": 7,
+    "fitsThisMonth": true,
+    "runsIntoNextMonth": "0.00"
+  },
+  "cheaper": {
+    "label": "Cheap and cheerful",
+    "covers": "a sandwich shop, a food court, or a casual local place",
+    "price": "4.50",
+    "basis": {
+      "label": "Our estimate",
+      "meaning": "We have no payments of yours to go on yet, so this is worked out from typical prices in your city."
+    },
+    "verdict": {
+      "label": "This is more than you have room for",
+      "meaning": "Buying this puts you past what is left for the rest of the month."
+    }
+  }
+}

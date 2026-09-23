@@ -1,0 +1,62 @@
+{
+  "outcome": {
+    "label": "Done - here is what gives",
+    "meaning": "We found the whole increase in your other spending, and nothing dropped below what your city says it costs."
+  },
+  "granted": "50.00",
+  "stillShort": "0.00",
+  "changes": [
+    {
+      "id": "dining-out",
+      "label": "Eating out",
+      "from": "200.00",
+      "to": "250.00",
+      "by": "50.00"
+    },
+    {
+      "id": "entertainment",
+      "label": "Going out and fun",
+      "from": "120.00",
+      "to": "70.00",
+      "by": "-50.00"
+    }
+  ],
+  "hints": [
+    {
+      "id": "rent",
+      "label": "Rent",
+      "hint": "a roommate, or renegotiating the lease at renewal, is the only real lever here - the monthly figure itself will not move"
+    },
+    {
+      "id": "healthcare",
+      "label": "Healthcare",
+      "hint": "comparing plans at renewal, and asking for generic medication, are where this actually moves"
+    },
+    {
+      "id": "utilities",
+      "label": "Utilities",
+      "hint": "off-peak tariffs and replacing the bulbs you leave on typically cut 10-15%, and comparing providers is worth an hour once a year"
+    },
+    {
+      "id": "groceries",
+      "label": "Groceries",
+      "hint": "own-brand staples and one planned weekly shop instead of several small ones is where this moves, not skipping meals"
+    },
+    {
+      "id": "transport-fuel",
+      "label": "Transport",
+      "hint": "a monthly pass usually beats single fares once you travel more than about three days a week"
+    },
+    {
+      "id": "other",
+      "label": "Everything else",
+      "hint": "we could not tell what this spending was, so the first lever is naming it - once it has a name there is something to decide about"
+    },
+    {
+      "id": "gym",
+      "label": "Gym membership",
+      "hint": "off-peak or annual-paid memberships are usually 20-30% cheaper than the monthly rate for exactly the same thing"
+    }
+  ],
+  "options": []
+}

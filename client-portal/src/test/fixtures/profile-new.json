@@ -1,0 +1,17 @@
+{
+  "country": {
+    "code": "LB",
+    "name": "Lebanon"
+  },
+  "city": {
+    "id": "beirut",
+    "name": "Beirut",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-09-01"
+  },
+  "cityNotListed": null,
+  "lifestyle": null,
+  "incomeArrivesTaxed": true,
+  "leastForEnjoyingLife": null
+}

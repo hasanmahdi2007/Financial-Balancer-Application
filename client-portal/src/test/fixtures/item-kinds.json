@@ -1,0 +1,12 @@
+[
+  {
+    "key": "already-counted",
+    "label": "Part of what I already spend on Subscriptions",
+    "covers": "we will not add it again - naming it just lets us tell you which thing to cut"
+  },
+  {
+    "key": "on-top",
+    "label": "Extra, on top of my Subscriptions",
+    "covers": "we will add it to what you spend, because nothing else has counted it yet"
+  }
+]

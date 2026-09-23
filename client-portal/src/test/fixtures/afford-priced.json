@@ -1,0 +1,33 @@
+{
+  "verdict": {
+    "label": "This is more than you have room for",
+    "meaning": "Buying this puts you past what is left for the rest of the month."
+  },
+  "category": {
+    "key": "clothing",
+    "label": "Clothes"
+  },
+  "purchase": {
+    "label": "Winter jacket",
+    "covers": "the price you gave us",
+    "price": "200.00",
+    "basis": {
+      "label": "The price you gave us",
+      "meaning": "You told us what this costs, so we use your figure."
+    }
+  },
+  "allowance": "51.72",
+  "allowanceBasis": "The part of what you set aside for enjoying life that goes on clothes.",
+  "spentThisMonth": "0.00",
+  "left": "51.72",
+  "daysLeft": 8,
+  "perDay": "6.46",
+  "catchUp": {
+    "perDayAfter": "0.00",
+    "lessPerDay": "6.46",
+    "days": 7,
+    "fitsThisMonth": false,
+    "runsIntoNextMonth": "148.28"
+  },
+  "cheaper": null
+}

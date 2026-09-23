@@ -1,0 +1,157 @@
+{
+  "categories": [
+    {
+      "key": "rent",
+      "label": "Rent",
+      "covers": "your rent or mortgage payment"
+    },
+    {
+      "key": "debt-payment",
+      "label": "Loan payments",
+      "covers": "car loans, student loans, instalment plans"
+    },
+    {
+      "key": "tax-reserve",
+      "label": "Tax set aside",
+      "covers": "money kept back for a tax bill you pay yourself"
+    },
+    {
+      "key": "healthcare",
+      "label": "Healthcare",
+      "covers": "insurance premiums, medication, appointments"
+    },
+    {
+      "key": "subscriptions",
+      "label": "Subscriptions",
+      "covers": "streaming, gym, apps, anything billed monthly"
+    },
+    {
+      "key": "utilities",
+      "label": "Utilities",
+      "covers": "electricity, water, internet, phone"
+    },
+    {
+      "key": "groceries",
+      "label": "Groceries",
+      "covers": "food and household shopping you use at home"
+    },
+    {
+      "key": "transport-fuel",
+      "label": "Transport",
+      "covers": "fuel, taxis, bus and metro fares"
+    },
+    {
+      "key": "dining-out",
+      "label": "Eating out",
+      "covers": "restaurants, cafes, takeaway, snacks and coffee"
+    },
+    {
+      "key": "entertainment",
+      "label": "Going out and fun",
+      "covers": "nights out, cinema, games, sports, hobbies"
+    },
+    {
+      "key": "clothing",
+      "label": "Clothes",
+      "covers": "clothing, shoes and personal items"
+    },
+    {
+      "key": "other",
+      "label": "Everything else",
+      "covers": "spending we could not identify"
+    }
+  ],
+  "howWilling": [
+    {
+      "key": "disposable",
+      "label": "Not very important",
+      "covers": "We suggest cutting this first, and it can go all the way to zero."
+    },
+    {
+      "key": "flexible",
+      "label": "Flexible",
+      "covers": "A normal place to find money, but not below what it typically costs where you live."
+    },
+    {
+      "key": "essential",
+      "label": "Very important",
+      "covers": "Only touched as a last resort, and never below what it typically costs where you live."
+    },
+    {
+      "key": "locked",
+      "label": "Cannot be changed",
+      "covers": "We will never suggest cutting it. At most we mention a way to make the thing itself cheaper."
+    }
+  ],
+  "priorities": [
+    {
+      "key": "low",
+      "label": "Nice to have",
+      "covers": "Funded from whatever is left once everything else is on track."
+    },
+    {
+      "key": "medium",
+      "label": "Important",
+      "covers": "Funded once the goals you marked as more important are on track."
+    },
+    {
+      "key": "high",
+      "label": "Very important",
+      "covers": "Funded before anything you marked as less important."
+    },
+    {
+      "key": "critical",
+      "label": "Must happen",
+      "covers": "Funded before every other goal."
+    }
+  ],
+  "lifestyles": [
+    {
+      "key": "homebody",
+      "label": "Mostly at home",
+      "covers": "Typical for someone who rarely goes out."
+    },
+    {
+      "key": "occasional",
+      "label": "Out now and then",
+      "covers": "Typical for someone who goes out now and then."
+    },
+    {
+      "key": "regular",
+      "label": "Out regularly",
+      "covers": "Typical for someone who goes out regularly."
+    },
+    {
+      "key": "frequent",
+      "label": "Out most days",
+      "covers": "Typical for someone who is out most days."
+    }
+  ],
+  "mealBands": [
+    {
+      "key": "fast-food",
+      "label": "Fast food",
+      "covers": "a quick takeaway, street food, or a coffee and a pastry"
+    },
+    {
+      "key": "low",
+      "label": "Cheap and cheerful",
+      "covers": "a sandwich shop, a food court, or a casual local place"
+    },
+    {
+      "key": "medium",
+      "label": "A normal meal out",
+      "covers": "a regular restaurant or cafe lunch"
+    },
+    {
+      "key": "high",
+      "label": "Somewhere nicer",
+      "covers": "a proper dinner out, with a drink"
+    },
+    {
+      "key": "fancy",
+      "label": "A special occasion",
+      "covers": "fine dining, or a big night out"
+    }
+  ]
+}

@@ -2,10 +2,21 @@ import { render } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router';
 import { App } from '../App';
 import { AuthFailure, type AuthGateway, type AuthSession, type SignUpOutcome } from '../auth/AuthGateway';
+import affordBand from './fixtures/afford-band.json';
+import choices from './fixtures/choices.json';
 import cities_LB from './fixtures/cities-LB.json';
 import cities_US from './fixtures/cities-US.json';
 import countries from './fixtures/countries.json';
+import goalCar from './fixtures/goal-car.json';
+import goalsFixture from './fixtures/goals.json';
 import manualForm_LB from './fixtures/manual-form-LB.json';
+import money from './fixtures/money.json';
+import planFixture from './fixtures/plan.json';
+import planHistory from './fixtures/plan-history.json';
+import profile from './fixtures/profile.json';
+import questionsFixture from './fixtures/questions-new.json';
+import rebalance from './fixtures/rebalance.json';
+import spending from './fixtures/spending.json';
 
 /**
  * An identity provider held in memory: the second implementation of `AuthGateway`, standing in for
@@ -79,35 +90,68 @@ export class FakeAuth implements AuthGateway {
 }
 
 export interface Recorded {
+  method: string;
   path: string;
   authorization: string | null;
+  /** What was sent, already parsed, or null for a request with no body. */
+  body: unknown;
 }
 
 type Reply = { status: number; body?: unknown } | (() => Promise<Response>);
 
 /**
- * Answers the catalogue routes from fixtures recorded against a real budget-core, and records every
- * request so a test can check what was sent.
+ * Answers the routes from fixtures recorded against a real budget-core, and records every request so
+ * a test can check what was sent.
+ *
+ * Routes are keyed by method and path together, because the second half of this client writes as
+ * well as reads and `PUT /api/v1/profile` is not the same route as `GET /api/v1/profile`. A bare
+ * path still registers a GET, which is what every catalogue route is.
  */
 export class FakeServer {
   readonly requests: Recorded[] = [];
   private readonly routes = new Map<string, Reply>([
-    ['/api/catalogue/countries', { status: 200, body: countries }],
-    ['/api/catalogue/countries/LB/cities', { status: 200, body: cities_LB }],
-    ['/api/catalogue/countries/US/cities', { status: 200, body: cities_US }],
-    ['/api/catalogue/countries/LB/manual-form', { status: 200, body: manualForm_LB }],
+    ['GET /api/catalogue/countries', { status: 200, body: countries }],
+    ['GET /api/catalogue/countries/LB/cities', { status: 200, body: cities_LB }],
+    ['GET /api/catalogue/countries/US/cities', { status: 200, body: cities_US }],
+    ['GET /api/catalogue/countries/LB/manual-form', { status: 200, body: manualForm_LB }],
+    ['GET /api/v1/choices', { status: 200, body: choices }],
+    ['GET /api/v1/questions', { status: 200, body: questionsFixture }],
+    ['GET /api/v1/profile', { status: 200, body: profile }],
+    ['PUT /api/v1/profile', { status: 200, body: profile }],
+    ['PUT /api/v1/money', { status: 200, body: money }],
+    ['PUT /api/v1/spending', { status: 200, body: spending }],
+    ['GET /api/v1/plan', { status: 200, body: planFixture }],
+    ['POST /api/v1/plan', { status: 200, body: planFixture }],
+    ['GET /api/v1/plan/history', { status: 200, body: planHistory }],
+    ['GET /api/v1/goals', { status: 200, body: goalsFixture }],
+    ['POST /api/v1/goals', { status: 201, body: goalCar }],
+    ['POST /api/v1/decisions/afford', { status: 200, body: affordBand }],
+    ['POST /api/v1/decisions/rebalance', { status: 200, body: rebalance }],
   ]);
 
-  on(path: string, reply: Reply): this {
-    this.routes.set(path, reply);
+  /** `on('/api/x', …)` registers a GET; `on('PUT /api/x', …)` registers that method. */
+  on(route: string, reply: Reply): this {
+    this.routes.set(route.includes(' ') ? route : `GET ${route}`, reply);
     return this;
+  }
+
+  /** Every request made to one route, in order, so a test can assert what was actually sent. */
+  sentTo(method: string, path: string): unknown[] {
+    return this.requests.filter((r) => r.method === method && r.path === path).map((r) => r.body);
   }
 
   readonly fetch: typeof fetch = async (input, init) => {
     const path = String(input);
+    const method = (init?.method ?? 'GET').toUpperCase();
     const headers = new Headers(init?.headers);
-    this.requests.push({ path, authorization: headers.get('Authorization') });
-    const reply = this.routes.get(path);
+    const raw = typeof init?.body === 'string' ? init.body : null;
+    this.requests.push({
+      method,
+      path,
+      authorization: headers.get('Authorization'),
+      body: raw === null ? null : JSON.parse(raw),
+    });
+    const reply = this.routes.get(`${method} ${path}`);
     if (!reply) return new Response(null, { status: 404 });
     if (typeof reply === 'function') return reply();
     return new Response(reply.body === undefined ? null : JSON.stringify(reply.body), {

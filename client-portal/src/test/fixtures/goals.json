@@ -1,0 +1,24 @@
+[
+  {
+    "id": "f6ade929-7c48-4ee9-aa03-5fa5bf2fa37e",
+    "name": "Car",
+    "priority": {
+      "key": "high",
+      "label": "Very important"
+    },
+    "target": "12000.00",
+    "deadline": "2027-06-30",
+    "finishFirst": false
+  },
+  {
+    "id": "951d25e3-0915-4e23-ac1b-3bcad44f5fba",
+    "name": "Emergency fund",
+    "priority": {
+      "key": "critical",
+      "label": "Must happen"
+    },
+    "target": "6000.00",
+    "deadline": "2027-03-31",
+    "finishFirst": false
+  }
+]

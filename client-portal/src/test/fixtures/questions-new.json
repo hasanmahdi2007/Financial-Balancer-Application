@@ -1,0 +1,169 @@
+[
+  {
+    "key": "lifestyle",
+    "answerWith": "PUT /api/v1/profile lifestyle",
+    "question": "How often do you go out?",
+    "why": "It gives us a sensible starting point for the least you would want to spend on enjoying life. You can always set that figure yourself.",
+    "covers": [],
+    "suggested": null,
+    "basis": null,
+    "choices": [
+      {
+        "key": "homebody",
+        "label": "Mostly at home"
+      },
+      {
+        "key": "occasional",
+        "label": "Out now and then"
+      },
+      {
+        "key": "regular",
+        "label": "Out regularly"
+      },
+      {
+        "key": "frequent",
+        "label": "Out most days"
+      }
+    ]
+  },
+  {
+    "key": "monthly-income",
+    "answerWith": "PUT /api/v1/money monthlyIncome",
+    "question": "How much arrives in your account each month?",
+    "why": "Your plan is built from what you actually receive, so use the amount that lands in your account rather than your salary before deductions.",
+    "covers": [],
+    "suggested": null,
+    "basis": null,
+    "choices": []
+  },
+  {
+    "key": "balance",
+    "answerWith": "PUT /api/v1/money balance",
+    "question": "How much money do you already have that this plan may use?",
+    "why": "Only what you enter here is used. It goes toward your goals first, so they need less each month. Lower it at any time and the next plan hands the money back.",
+    "covers": [],
+    "suggested": null,
+    "basis": null,
+    "choices": []
+  },
+  {
+    "key": "spending:rent",
+    "answerWith": "PUT /api/v1/spending rent",
+    "question": "About how much do you spend on rent each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Rent - your rent or mortgage payment"
+    ],
+    "suggested": "600.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  },
+  {
+    "key": "spending:healthcare",
+    "answerWith": "PUT /api/v1/spending healthcare",
+    "question": "About how much do you spend on healthcare each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Healthcare - insurance premiums, medication, appointments"
+    ],
+    "suggested": "90.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  },
+  {
+    "key": "spending:subscriptions",
+    "answerWith": "PUT /api/v1/spending subscriptions",
+    "question": "About how much do you spend on subscriptions each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Subscriptions - streaming, gym, apps, anything billed monthly"
+    ],
+    "suggested": "25.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  },
+  {
+    "key": "spending:utilities",
+    "answerWith": "PUT /api/v1/spending utilities",
+    "question": "About how much do you spend on utilities each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Utilities - electricity, water, internet, phone"
+    ],
+    "suggested": "180.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  },
+  {
+    "key": "spending:groceries",
+    "answerWith": "PUT /api/v1/spending groceries",
+    "question": "About how much do you spend on groceries each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Groceries - food and household shopping you use at home"
+    ],
+    "suggested": "300.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  },
+  {
+    "key": "spending:transport-fuel",
+    "answerWith": "PUT /api/v1/spending transport-fuel",
+    "question": "About how much do you spend on transport each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Transport - fuel, taxis, bus and metro fares"
+    ],
+    "suggested": "120.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  },
+  {
+    "key": "spending:dining-out",
+    "answerWith": "PUT /api/v1/spending dining-out",
+    "question": "About how much do you spend on eating out each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Eating out - restaurants, cafes, takeaway, snacks and coffee"
+    ],
+    "suggested": "150.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  },
+  {
+    "key": "spending:entertainment",
+    "answerWith": "PUT /api/v1/spending entertainment",
+    "question": "About how much do you spend on going out and fun each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Going out and fun - nights out, cinema, games, sports, hobbies"
+    ],
+    "suggested": "80.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  },
+  {
+    "key": "spending:clothing",
+    "answerWith": "PUT /api/v1/spending clothing",
+    "question": "About how much do you spend on clothes each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Clothes - clothing, shoes and personal items"
+    ],
+    "suggested": "60.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  },
+  {
+    "key": "spending:other",
+    "answerWith": "PUT /api/v1/spending other",
+    "question": "About how much do you spend on everything else each month?",
+    "why": "If you leave this, we assume the typical figure for Beirut. Your own number makes the plan fit your life rather than an average one.",
+    "covers": [
+      "Everything else - spending we could not identify"
+    ],
+    "suggested": "70.00",
+    "basis": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic. Gathered September 2026.",
+    "choices": []
+  }
+]

@@ -60,3 +60,37 @@ jobs:
       - name: Verify the gateway, including its integration test
         working-directory: api-gateway
         run: mvn --batch-mode verify -DskipITs=false
+
+  # The browser client. No Java, no database, no Docker: the suite replaces `fetch` with one that
+  # throws, so it answers from recorded fixtures and cannot quietly reach for whatever is listening.
+  # `npm ci` rather than `npm install`, so CI builds the lockfile's tree and not a newer one.
+  client:
+    name: Client tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: client-portal/package-lock.json
+
+      - name: Install
+        working-directory: client-portal
+        run: npm ci
+
+      - name: Types
+        working-directory: client-portal
+        run: npm run typecheck
+
+      - name: Tests
+        working-directory: client-portal
+        run: npm test
+
+      # The build is a check in its own right: `vite.config.ts` refuses to bundle a Supabase key that
+      # is a secret one rather than the publishable one, and that guard only runs here. No keys are
+      # set in CI, which is the case it must also survive.
+      - name: Build
+        working-directory: client-portal
+        run: npm run build

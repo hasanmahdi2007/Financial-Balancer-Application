@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { Link, Outlet } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 
 export function Layout() {
@@ -6,7 +6,9 @@ export function Layout() {
   return (
     <div className="shell">
       <header className="shell__header">
-        <span className="shell__brand">Financial Balancer</span>
+        <Link to="/plan" className="shell__brand">
+          Financial Balancer
+        </Link>
         {status === 'signed-in' ? (
           <div className="shell__account">
             {session?.email ? <span className="shell__email">{session.email}</span> : null}

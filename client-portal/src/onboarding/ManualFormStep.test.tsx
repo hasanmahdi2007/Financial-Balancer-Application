@@ -59,7 +59,12 @@ describe('the form for a city we do not hold figures for', () => {
     expect(saved.cityLabel).toBe('Zahlé');
     // A string, never a number: parsing money into a binary float is the representation the server
     // refuses to use.
-    expect(saved.answers[0]).toEqual({ question: rent.question, amount: '410.50' });
+    expect(saved.answers[0]).toEqual({
+      category: rent.category,
+      question: rent.question,
+      amount: '410.50',
+      suggested: rent.suggested,
+    });
     expect(saved.answers).toHaveLength(questions.length);
   });
 
