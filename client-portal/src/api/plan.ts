@@ -258,10 +258,14 @@ export interface GoalEdit {
  * The answer to adding or changing a goal. `plan` is null and `waitingFor` is a sentence when the
  * goal is saved but no plan can be made yet - before any income is known, for instance.
  */
-export interface GoalSaved {
-  goal: SavedGoal;
+/** A recomputed plan, or - when one cannot be made yet - the sentence saying what is missing. */
+export interface PlanOrWaiting {
   plan: Plan | null;
   waitingFor: string | null;
+}
+
+export interface GoalSaved extends PlanOrWaiting {
+  goal: SavedGoal;
 }
 
 export interface PlanChange {
@@ -380,10 +384,10 @@ export const plan = {
   addGoal: (api: ApiClient, edit: GoalEdit) => api.sendJson<GoalSaved>('POST', '/api/v1/goals', edit),
   changeGoal: (api: ApiClient, id: string, edit: GoalEdit) =>
     api.sendJson<GoalSaved>('PUT', `/api/v1/goals/${key(id)}`, edit),
-  removeGoal: (api: ApiClient, id: string) => api.sendJson<void>('DELETE', `/api/v1/goals/${key(id)}`),
+  removeGoal: (api: ApiClient, id: string) => api.sendJson<PlanOrWaiting>('DELETE', `/api/v1/goals/${key(id)}`),
   /** Send `null` to go back to priority order. */
   finishFirst: (api: ApiClient, goalId: string | null) =>
-    api.sendJson<Plan>('PUT', '/api/v1/goals/finish-first', { goalId }),
+    api.sendJson<PlanOrWaiting>('PUT', '/api/v1/goals/finish-first', { goalId }),
 
   afford: (api: ApiClient, ask: AffordAsk) => api.sendJson<Affordability>('POST', '/api/v1/decisions/afford', ask),
   rebalance: (api: ApiClient, ask: RebalanceAsk) =>

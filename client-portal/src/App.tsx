@@ -9,6 +9,13 @@ import { LocationStep } from './onboarding/LocationStep';
 import { ManualFormStep } from './onboarding/ManualFormStep';
 import { NextStepsPage } from './onboarding/NextStepsPage';
 import { OnboardingDraftProvider } from './onboarding/OnboardingDraft';
+import { AffordPage } from './decisions/AffordPage';
+import { RebalancePage } from './decisions/RebalancePage';
+import { GoalFormPage } from './goals/GoalForm';
+import { Dashboard } from './plan/Dashboard';
+import { HistoryPage, PastPlanPage } from './plan/HistoryPages';
+import { MoneyPage } from './plan/MoneyPage';
+import { QuestionsStep } from './setup/QuestionsStep';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { Layout } from './ui/Layout';
 
@@ -30,8 +37,17 @@ export function App({ auth, fetchImpl }: { auth: AuthGateway; fetchImpl?: typeof
                   <Route path="/setup/location" element={<LocationStep />} />
                   <Route path="/setup/:countryCode/my-city" element={<ManualFormStep />} />
                   <Route path="/setup/next" element={<NextStepsPage />} />
+                  <Route path="/setup/questions" element={<QuestionsStep />} />
+                  <Route path="/plan" element={<Dashboard />} />
+                  <Route path="/plan/history" element={<HistoryPage />} />
+                  <Route path="/plan/history/:planId" element={<PastPlanPage />} />
+                  <Route path="/money" element={<MoneyPage />} />
+                  <Route path="/goals/new" element={<GoalFormPage />} />
+                  <Route path="/goals/:goalId" element={<GoalFormPage />} />
+                  <Route path="/afford" element={<AffordPage />} />
+                  <Route path="/rebalance" element={<RebalancePage />} />
                 </Route>
-                <Route path="*" element={<Navigate to="/setup/location" replace />} />
+                <Route path="*" element={<Navigate to="/plan" replace />} />
               </Route>
             </Routes>
           </OnboardingDraftProvider>

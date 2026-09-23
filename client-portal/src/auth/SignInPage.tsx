@@ -7,7 +7,8 @@ const FALLBACK = "We couldn't sign you in just now. Check your connection, then 
 
 export function destinationAfterSignIn(state: unknown): string {
   const from = (state as { from?: unknown } | null)?.from;
-  return typeof from === 'string' && from.startsWith('/') ? from : '/setup/location';
+  // Someone signing back in wants their plan; the plan page sends anyone without one to setup.
+  return typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') ? from : '/plan';
 }
 
 export function SignInPage() {

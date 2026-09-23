@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, isAmount } from './amount';
+import { formatMoney, isAmount, sameAmount } from './amount';
 
 describe('amounts', () => {
   it('accepts what money looks like', () => {
@@ -29,5 +29,19 @@ describe('amounts', () => {
 
   it('shows a figure it cannot parse exactly as it arrived', () => {
     expect(formatMoney('not a number')).toBe('not a number');
+  });
+});
+
+describe('telling a changed answer from one left at the suggestion', () => {
+  it('treats the ways of writing one amount as that amount', () => {
+    expect(sameAmount('350', '350.00')).toBe(true);
+    expect(sameAmount('350.5', '350.50')).toBe(true);
+    expect(sameAmount('0350.00', '350')).toBe(true);
+    expect(sameAmount(' 350 ', '350.00')).toBe(true);
+  });
+
+  it('notices a real change, however small', () => {
+    expect(sameAmount('350.01', '350.00')).toBe(false);
+    expect(sameAmount('35', '350')).toBe(false);
   });
 });

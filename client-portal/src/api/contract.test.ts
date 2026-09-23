@@ -6,8 +6,10 @@ import type {
   Money,
   OpenQuestion,
   Override,
+  GoalSaved,
   Plan,
   PlanHistoryEntry,
+  PlanOrWaiting,
   Profile,
   Rebalance,
   SavedGoal,
@@ -16,6 +18,9 @@ import affordBand from '../test/fixtures/afford-band.json';
 import affordPriced from '../test/fixtures/afford-priced.json';
 import choices from '../test/fixtures/choices.json';
 import goalCar from '../test/fixtures/goal-car.json';
+import finishFirst from '../test/fixtures/finish-first.json';
+import goalRemoved from '../test/fixtures/goal-removed.json';
+import goalWaiting from '../test/fixtures/goal-waiting.json';
 import goals from '../test/fixtures/goals.json';
 import lineItem from '../test/fixtures/line-item.json';
 import money from '../test/fixtures/money.json';
@@ -51,7 +56,10 @@ describe('the recorded fixtures match the types the client reads them at', () =>
     const typedOverride: Override = override;
     const typedLineItem: LineItem = lineItem;
     const typedGoals: SavedGoal[] = goals;
-    const typedSaved: { goal: SavedGoal; plan: Plan | null; waitingFor: string | null } = goalCar;
+    const typedSaved: GoalSaved = goalCar;
+    const typedWaiting: GoalSaved = goalWaiting;
+    const typedFinishFirst: PlanOrWaiting = finishFirst;
+    const typedRemoved: PlanOrWaiting = goalRemoved;
     const typedPlan: Plan = planFixture;
     const typedTightPlan: Plan = tightPlan;
     const typedHistory: PlanHistoryEntry[] = planHistory;
@@ -69,6 +77,9 @@ describe('the recorded fixtures match the types the client reads them at', () =>
       typedLineItem,
       typedGoals,
       typedSaved,
+      typedWaiting,
+      typedFinishFirst,
+      typedRemoved,
       typedPlan,
       typedTightPlan,
       typedHistory,
@@ -113,5 +124,13 @@ describe('the recorded fixtures match the types the client reads them at', () =>
     const demoted = entry.changes?.goals.find((g) => g.before.monthlyFunded !== g.after.monthlyFunded);
     expect(demoted).toBeDefined();
     expect(tightHistoryTyped.at(-1)?.changes).toBeNull();
+  });
+});
+
+describe('a goal saved before a plan can be made', () => {
+  it('comes back without a plan and with a sentence saying what is missing', () => {
+    const saved: GoalSaved = goalWaiting;
+    expect(saved.plan).toBeNull();
+    expect(saved.waitingFor).toBeTruthy();
   });
 });

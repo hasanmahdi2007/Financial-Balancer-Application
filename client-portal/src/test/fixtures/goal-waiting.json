@@ -1,0 +1,15 @@
+{
+  "goal": {
+    "id": "ec874588-318d-4421-86d4-e318c95c41d0",
+    "name": "Car",
+    "priority": {
+      "key": "high",
+      "label": "Very important"
+    },
+    "target": "12000.00",
+    "deadline": "2027-06-30",
+    "finishFirst": false
+  },
+  "plan": null,
+  "waitingFor": "Tell us how much comes in each month, and how much you already have, first."
+}

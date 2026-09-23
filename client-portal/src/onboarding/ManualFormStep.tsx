@@ -87,7 +87,12 @@ function ManualForm({ countryCode, questions }: { countryCode: string; questions
       kind: 'unlisted',
       countryCode,
       cityLabel: cityLabel.trim(),
-      answers: questions.map((q, i) => ({ category: q.category, question: q.question, amount: amounts[i]!.trim() })),
+      answers: questions.map((q, i) => ({
+        category: q.category,
+        question: q.question,
+        amount: amounts[i]!.trim(),
+        suggested: q.suggested,
+      })),
     });
     navigate('/setup/next');
   }
