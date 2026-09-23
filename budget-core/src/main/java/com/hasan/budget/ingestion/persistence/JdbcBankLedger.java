@@ -2,6 +2,7 @@ package com.hasan.budget.ingestion.persistence;
 
 import com.hasan.budget.ingestion.domain.Classification;
 import com.hasan.budget.ingestion.domain.Frequency;
+import com.hasan.budget.ingestion.domain.AccountSnapshot;
 import com.hasan.budget.ingestion.domain.LedgerEntry;
 import com.hasan.budget.ingestion.domain.NormalisedTransaction;
 import com.hasan.budget.ingestion.domain.RecurringStream;
@@ -79,6 +80,7 @@ public class JdbcBankLedger implements BankLedger {
             page.modified().forEach(transaction -> upsert(connectionId, transaction));
             page.removedExternalIds().forEach(externalId -> remove(connectionId, externalId));
         }
+        replaceAccounts(connectionId, pages.get(pages.size() - 1).accounts());
         return true;
     }
 
@@ -93,9 +95,9 @@ public class JdbcBankLedger implements BankLedger {
                         """
                         INSERT INTO bank_transaction (connection_id, external_id, account_id, txn_date, amount,
                                                       merchant_name, merchant_entity_id, latitude, longitude,
-                                                      kind, category, pending)
+                                                      kind, category, pending, towards_savings)
                         VALUES (:connectionId, :externalId, :accountId, :date, :amount, :merchantName,
-                                :merchantEntityId, :latitude, :longitude, :kind, :category, :pending)
+                                :merchantEntityId, :latitude, :longitude, :kind, :category, :pending, :towardsSavings)
                         ON CONFLICT (connection_id, external_id) DO UPDATE SET
                             account_id = EXCLUDED.account_id,
                             txn_date = EXCLUDED.txn_date,
@@ -106,7 +108,8 @@ public class JdbcBankLedger implements BankLedger {
                             longitude = EXCLUDED.longitude,
                             kind = EXCLUDED.kind,
                             category = EXCLUDED.category,
-                            pending = EXCLUDED.pending
+                            pending = EXCLUDED.pending,
+                            towards_savings = EXCLUDED.towards_savings
                         """)
                 .param("connectionId", connectionId)
                 .param("externalId", transaction.externalId())
@@ -120,6 +123,58 @@ public class JdbcBankLedger implements BankLedger {
                 .param("kind", classification.kind().name())
                 .param("category", classification.category() == null ? null : classification.category().name())
                 .param("pending", transaction.pending())
+                .param("towardsSavings", classification.towardsSavings())
+                .update();
+    }
+
+    /**
+     * The accounts a connection has now, replacing whatever it had before.
+     *
+     * <p>The provider reports every account on the connection each time, so the answer is a
+     * replacement rather than an addition. An account the user has since closed simply stops being
+     * listed, and if it were merely left behind its last balance would go on counting towards their
+     * funds forever - money the plan can see and they cannot spend, which is the direction of error
+     * that flatters a plan.
+     *
+     * <p>An empty list is treated as "nothing new to say" rather than "everything is gone", because
+     * a page that happens to carry no account information must not wipe the balances.
+     */
+    private void replaceAccounts(long connectionId, List<AccountSnapshot> accounts) {
+        if (accounts.isEmpty()) {
+            return;
+        }
+        jdbc.sql("DELETE FROM bank_account WHERE connection_id = :connectionId AND NOT (account_id = ANY (:kept))")
+                .param("connectionId", connectionId)
+                .param("kept", accounts.stream().map(AccountSnapshot::accountId).toArray(String[]::new))
+                .update();
+        accounts.forEach(account -> upsertAccount(connectionId, account));
+    }
+
+    /**
+     * The latest reading of one account, replacing whatever the last sync recorded.
+     *
+     * <p>Replaced rather than appended: this table answers "how much is there now", and a history
+     * of balances would be a different feature with a different shape.
+     */
+    private void upsertAccount(long connectionId, AccountSnapshot account) {
+        jdbc.sql(
+                        """
+                        INSERT INTO bank_account (connection_id, account_id, label, role,
+                                                  current_balance, available_balance, observed_at)
+                        VALUES (:connectionId, :accountId, :label, :role, :current, :available, now())
+                        ON CONFLICT (connection_id, account_id) DO UPDATE SET
+                            label = EXCLUDED.label,
+                            role = EXCLUDED.role,
+                            current_balance = EXCLUDED.current_balance,
+                            available_balance = EXCLUDED.available_balance,
+                            observed_at = EXCLUDED.observed_at
+                        """)
+                .param("connectionId", connectionId)
+                .param("accountId", account.accountId())
+                .param("label", account.label())
+                .param("role", account.role().name())
+                .param("current", account.current().amount())
+                .param("available", account.available() == null ? null : account.available().amount())
                 .update();
     }
 
@@ -179,7 +234,7 @@ public class JdbcBankLedger implements BankLedger {
         return jdbc.sql(
                         """
                         SELECT t.connection_id, t.external_id, t.account_id, t.txn_date, t.amount, t.merchant_name,
-                               t.merchant_entity_id, t.latitude, t.longitude, t.kind, t.category, t.pending
+                               t.merchant_entity_id, t.latitude, t.longitude, t.kind, t.category, t.pending, t.towards_savings
                           FROM bank_transaction t
                           JOIN bank_connection c ON c.id = t.connection_id
                          WHERE c.user_id = :userId
@@ -213,11 +268,36 @@ public class JdbcBankLedger implements BankLedger {
                 .list();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<AccountSnapshot> accountsForUser(String userId) {
+        return jdbc.sql(
+                        """
+                        SELECT a.account_id, a.label, a.role, a.current_balance, a.available_balance
+                          FROM bank_account a
+                          JOIN bank_connection c ON c.id = a.connection_id
+                         WHERE c.user_id = :userId
+                         ORDER BY a.role, a.label
+                        """)
+                .param("userId", userId)
+                .query(JdbcBankLedger::readAccount)
+                .list();
+    }
+
+    private static AccountSnapshot readAccount(ResultSet rs, int row) throws SQLException {
+        java.math.BigDecimal available = rs.getBigDecimal("available_balance");
+        return new AccountSnapshot(
+                rs.getString("account_id"),
+                rs.getString("label"),
+                com.hasan.budget.ingestion.domain.AccountRole.valueOf(rs.getString("role")),
+                new Money(rs.getBigDecimal("current_balance")),
+                // Null rather than zero: a bank that reports no available balance has not told us it
+                // is empty, and zero would read as an account with nothing in it.
+                available == null ? null : new Money(available));
+    }
+
     private static LedgerEntry readEntry(ResultSet rs, int row) throws SQLException {
-        String category = rs.getString("category");
-        Classification classification = category == null
-                ? Classification.notSpending(TransactionKind.valueOf(rs.getString("kind")))
-                : Classification.spend(SpendCategory.valueOf(category));
+        Classification classification = readClassification(rs);
         return new LedgerEntry(
                 rs.getLong("connection_id"),
                 new NormalisedTransaction(
@@ -246,6 +326,21 @@ public class JdbcBankLedger implements BankLedger {
                 rs.getObject("next_expected", LocalDate.class),
                 rs.getBoolean("active"),
                 List.of(memberIds));
+    }
+
+    /**
+     * Rebuilds the three facts the classification holds, from the three columns that store them.
+     *
+     * <p>Stored as names rather than ordinals, so reordering either enum can never silently change
+     * what existing rows mean - the one database mistake that produces no error and no clue.
+     */
+    private static Classification readClassification(ResultSet rs) throws SQLException {
+        String category = rs.getString("category");
+        if (category != null) {
+            return Classification.spend(SpendCategory.valueOf(category));
+        }
+        TransactionKind kind = TransactionKind.valueOf(rs.getString("kind"));
+        return rs.getBoolean("towards_savings") ? Classification.savings() : Classification.notSpending(kind);
     }
 
     /** getDouble returns 0.0 for SQL NULL, which would put every unlocated transaction off West Africa. */

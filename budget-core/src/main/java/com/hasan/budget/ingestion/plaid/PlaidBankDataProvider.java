@@ -1,6 +1,7 @@
 package com.hasan.budget.ingestion.plaid;
 
 import com.hasan.budget.ingestion.domain.AccountRole;
+import com.hasan.budget.ingestion.domain.AccountSnapshot;
 import com.hasan.budget.ingestion.domain.NormalisedTransaction;
 import com.hasan.budget.ingestion.domain.RecurringStream;
 import com.hasan.budget.ingestion.domain.SyncResult;
@@ -86,6 +87,7 @@ public class PlaidBankDataProvider implements BankDataProvider, BankLinkProvider
                 normalise(response.added(), roles),
                 normalise(response.modified(), roles),
                 removedIds(response.removed()),
+                snapshots(response.accounts()),
                 response.nextCursor(),
                 response.hasMore());
     }
@@ -108,18 +110,41 @@ public class PlaidBankDataProvider implements BankDataProvider, BankLinkProvider
             return;
         }
         for (PlaidWire.Stream stream : source) {
+            Money amount = amountOf(stream);
+            if (amount == null) {
+                // A stream with no amount at all cannot become a commitment or a figure, and it must
+                // not take a sync down with it either: the transactions it groups are already stored
+                // and counted, so skipping it loses a label rather than any money.
+                continue;
+            }
             target.add(new RecurringStream(
                     stream.streamId(),
                     stream.accountId(),
                     direction,
                     label(stream),
                     com.hasan.budget.ingestion.domain.Frequency.parse(stream.frequency()),
-                    new Money(stream.lastAmount().amount()),
+                    amount,
                     stream.lastDate(),
                     stream.predictedNextDate(),
                     isLive(stream),
                     stream.transactionIds() == null ? List.of() : stream.transactionIds()));
         }
+    }
+
+    /**
+     * The latest amount, falling back to the average where the provider sends only that.
+     *
+     * <p>The latest is preferred because a subscription that went up in price costs the new price
+     * next month, and an average including the old one is already out of date.
+     */
+    private static Money amountOf(PlaidWire.Stream stream) {
+        if (stream.lastAmount() != null && stream.lastAmount().amount() != null) {
+            return new Money(stream.lastAmount().amount());
+        }
+        if (stream.averageAmount() != null && stream.averageAmount().amount() != null) {
+            return new Money(stream.averageAmount().amount());
+        }
+        return null;
     }
 
     /** The merchant where Plaid cleaned one up, because that is the name the user would recognise. */
@@ -136,6 +161,40 @@ public class PlaidBankDataProvider implements BankDataProvider, BankLinkProvider
      */
     private static boolean isLive(PlaidWire.Stream stream) {
         return stream.isActive() && !"TOMBSTONED".equals(stream.status());
+    }
+
+    /**
+     * The balances that arrived with the transactions, kept rather than discarded.
+     *
+     * <p>An account whose balance the bank did not report is left out entirely, because a missing
+     * balance recorded as zero is money the user has that the plan cannot see.
+     */
+    private static List<AccountSnapshot> snapshots(List<PlaidWire.Account> accounts) {
+        if (accounts == null) {
+            return List.of();
+        }
+        return accounts.stream()
+                .filter(account -> account.balances() != null && account.balances().current() != null)
+                .map(account -> new AccountSnapshot(
+                        account.accountId(),
+                        label(account),
+                        roleOf(account.type()),
+                        new Money(account.balances().current()),
+                        account.balances().available() == null
+                                ? null
+                                : new Money(account.balances().available())))
+                .toList();
+    }
+
+    /** The bank's own name for the account, with the last digits where it sends them. */
+    private static String label(PlaidWire.Account account) {
+        String name = account.name() != null && !account.name().isBlank()
+                ? account.name()
+                : account.officialName();
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        return account.mask() == null || account.mask().isBlank() ? name : name + " ••" + account.mask();
     }
 
     private Map<String, AccountRole> rolesByAccount(List<PlaidWire.Account> accounts) {

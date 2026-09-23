@@ -105,6 +105,27 @@ class PlaidBankDataProviderTest {
     }
 
     @Test
+    @DisplayName("an unknown credit does not quietly reduce somebody's spending")
+    void anUnmappedInflowIsNotBookedAsNegativeSpending() {
+        // The fallback for an unknown payment is spending in "Everything else". Sending a credit the
+        // same way stores a negative amount in a category, which subtracts from that category's
+        // total - so an unrecognised deposit would shrink apparent spending and inflate the surplus,
+        // the one direction of error this module exists to prevent. It is not income either: money
+        // arriving unidentified is as likely to be borrowed as earned.
+        RecordedSandbox sandbox = RecordedSandbox.serving(aCreditCategorised("SOMETHING_NEW_AND_INCOMING"));
+
+        SyncResult result = sandbox.provider().sync(TOKEN, null);
+
+        assertThat(result.added()).singleElement().satisfies(transaction -> {
+            assertThat(transaction.classification().kind())
+                    .isEqualTo(com.hasan.budget.shared.TransactionKind.TRANSFER_EXTERNAL);
+            assertThat(transaction.classification().category()).isNull();
+            assertThat(transaction.amount()).isEqualTo(Money.of("-250.00"));
+        });
+        assertThat(sandbox.unmappedCategoryCount()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("retractions are read from the page and reported as identifiers")
     void removalsArriveAsIds() {
         SyncResult result = RecordedSandbox.serving(
@@ -114,6 +135,56 @@ class PlaidBankDataProviderTest {
 
         assertThat(result.removedExternalIds()).hasSize(1);
         assertThat(result.added()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("the balances that come with the transactions are kept, and labelled by kind")
+    void accountBalancesArriveWithTheSync() {
+        SyncResult result = RecordedSandbox.withRecordedHistory().provider().sync(TOKEN, null);
+
+        assertThat(result.accounts()).isNotEmpty();
+        assertThat(result.accounts())
+                .filteredOn(account -> account.role() == com.hasan.budget.ingestion.domain.AccountRole.CASH)
+                .isNotEmpty()
+                .allSatisfy(account -> {
+                    assertThat(account.holdsMoney()).isTrue();
+                    assertThat(account.label()).isNotBlank();
+                    assertThat(account.current()).isNotNull();
+                });
+        // The card and the loans are in the list too, and none of them holds spendable money:
+        // adding what is owed on them to somebody's funds would invent money that is not there.
+        assertThat(result.accounts())
+                .filteredOn(account -> !account.holdsMoney())
+                .isNotEmpty()
+                .allSatisfy(account -> assertThat(account.role())
+                        .isIn(
+                                com.hasan.budget.ingestion.domain.AccountRole.CARD,
+                                com.hasan.budget.ingestion.domain.AccountRole.LOAN));
+    }
+
+    @Test
+    @DisplayName("a stream with no amount is skipped rather than taking the sync down")
+    void aStreamWithoutAnAmountCannotBreakAnImport() {
+        RecordedSandbox sandbox = RecordedSandbox.servingRecurring(
+                """
+                        {"inflow_streams":[],"outflow_streams":[
+                          {"stream_id":"s-average-only","account_id":"acc-1","description":"Gym",
+                           "merchant_name":"Planet Fitness","frequency":"MONTHLY","status":"MATURE",
+                           "is_active":true,"last_date":"2026-09-01","transaction_ids":["t-1"],
+                           "average_amount":{"amount":29.00,"iso_currency_code":"USD"}},
+                          {"stream_id":"s-no-amount-at-all","account_id":"acc-1","description":"Mystery",
+                           "frequency":"MONTHLY","status":"MATURE","is_active":true,
+                           "transaction_ids":["t-2"]}]}""",
+                RecordedSandbox.fixture("sync-initial-page-1.json"));
+
+        var streams = sandbox.provider().recurringStreams(TOKEN);
+
+        // The one that can be valued survives, at its average; the one that cannot is dropped, and
+        // its transactions are stored and counted regardless, so only a label is lost.
+        assertThat(streams).singleElement().satisfies(stream -> {
+            assertThat(stream.streamId()).isEqualTo("s-average-only");
+            assertThat(stream.monthlyAmount()).isEqualTo(Money.of("29.00"));
+        });
     }
 
     @Test
@@ -217,6 +288,15 @@ class PlaidBankDataProviderTest {
                  "name":"Groceries","pending":false,
                  "personal_finance_category":{"primary":"FOOD_AND_DRINK","detailed":"FOOD_AND_DRINK_GROCERIES"}}"""
                         .formatted(posted, authorised));
+    }
+
+    private static String aCreditCategorised(String detailedCategory) {
+        return onePage(
+                """
+                {"transaction_id":"t-1","account_id":"acc-1","amount":-250.00,"date":"2026-09-15",
+                 "name":"Money from somewhere","pending":false,
+                 "personal_finance_category":{"primary":"NEW","detailed":"%s"}}"""
+                        .formatted(detailedCategory));
     }
 
     private static String aPageWithNoCategory() {

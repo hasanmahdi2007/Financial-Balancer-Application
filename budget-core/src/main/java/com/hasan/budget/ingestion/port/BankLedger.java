@@ -1,5 +1,6 @@
 package com.hasan.budget.ingestion.port;
 
+import com.hasan.budget.ingestion.domain.AccountSnapshot;
 import com.hasan.budget.ingestion.domain.LedgerEntry;
 import com.hasan.budget.ingestion.domain.RecurringStream;
 import com.hasan.budget.ingestion.domain.SyncResult;
@@ -50,4 +51,13 @@ public interface BankLedger {
     List<LedgerEntry> entriesForUser(String userId);
 
     List<RecurringStream> streamsForUser(String userId);
+
+    /**
+     * Where this user's money sits, as of each connection's last sync.
+     *
+     * <p>Written by {@link #apply} from what the provider sends alongside the transactions, so that
+     * asking "how much do you have" costs a database read rather than a call to somebody else's API
+     * while a page is loading.
+     */
+    List<AccountSnapshot> accountsForUser(String userId);
 }

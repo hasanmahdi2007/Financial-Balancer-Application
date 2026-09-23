@@ -26,7 +26,7 @@ Target user: a single person (not a household) with an income, a city, and goals
 | ID | Feature | State |
 |---|---|---|
 | F1 | Account, profile, city, income, lifestyle tier | Designed |
-| F2 | Bank connection and transaction import, strictly read-only | **Built, 92 tests passing** |
+| F2 | Bank connection and transaction import, strictly read-only | **Built, 151 tests passing** |
 | F3 | Cost-of-living benchmark against the user's own city | Designed |
 | F4 | Monthly plan: fixed / flexible / discretionary / surplus | **Built, served over HTTP** |
 | F5 | Goals, recompute, and tradeoffs | **Built, 27 tests passing** |

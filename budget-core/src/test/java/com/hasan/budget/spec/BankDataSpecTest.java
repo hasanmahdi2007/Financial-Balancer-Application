@@ -200,10 +200,12 @@ class BankDataSpecTest {
 
             assertThat(toSavings.classification().kind()).isEqualTo(TransactionKind.TRANSFER_INTERNAL);
             assertThat(toSavings.classification().category()).isNull();
-            assertThat(Ledger.of(List.of(toSavings), List.of())
-                            .summaryFor(YearMonth.from(toSavings.transaction().date()))
-                            .totalSpending())
-                    .isEqualTo(Money.ZERO);
+
+            SpendingSummary summary = Ledger.of(List.of(toSavings), List.of())
+                    .summaryFor(YearMonth.from(toSavings.transaction().date()));
+            assertThat(summary.totalSpending()).isEqualTo(Money.ZERO);
+            // Not spending, and not nothing either: it is money the user put by, and shown as such.
+            assertThat(summary.alreadySaving()).isEqualTo(Money.of("250.00"));
         }
 
         /**
@@ -226,6 +228,8 @@ class BankDataSpecTest {
                     .summaryFor(YearMonth.from(paidFromChecking.transaction().date()));
             assertThat(summary.totalSpending()).isEqualTo(Money.ZERO);
             assertThat(summary.income()).isEqualTo(Money.ZERO);
+            // Nor is clearing a card balance money put by, though it is equally "not spending".
+            assertThat(summary.alreadySaving()).isEqualTo(Money.ZERO);
         }
 
         /**
@@ -260,8 +264,10 @@ class BankDataSpecTest {
 
             List<LedgerEntry> survivors = Ledger.of(List.of(toSavings), List.of()).entries();
 
+            // Its category alone still says everything: an internal transfer, and one that adds to
+            // savings rather than settling a debt - with no second half to corroborate it.
             assertThat(survivors).singleElement().satisfies(kept -> assertThat(kept.classification())
-                    .isEqualTo(Classification.notSpending(TransactionKind.TRANSFER_INTERNAL)));
+                    .isEqualTo(Classification.savings()));
         }
     }
 
@@ -316,20 +322,25 @@ class BankDataSpecTest {
         /** A removed transaction disappears from the plan; Plaid does report these. */
         @Test
         void aRemovedTransactionIsRemovedFromTheBreakdown() {
-            sandbox = RecordedSandbox.serving(
-                    RecordedSandbox.fixture("sync-initial-page-1.json"),
-                    RecordedSandbox.fixture("constructed/sync-removes-one-purchase.json"));
+            sandbox = RecordedSandbox.serving(RecordedSandbox.fixture("sync-initial-page-1.json"));
             IngestionService ingestion = serviceUsing(sandbox.provider(), TestExecutors.immediate());
             long connectionId = ingestion.connect(USER, "public-token").id();
-            String retracted = removedIdInTheConstructedFixture();
-            NormalisedTransaction doomed = find(entry -> entry.transaction().externalId().equals(retracted));
+
+            // A real meal out of this user's real history, retracted the way a bank retracts one.
+            NormalisedTransaction doomed = find(entry -> entry.classification()
+                            .equals(Classification.spend(SpendCategory.DINING_OUT))
+                    && entry.transaction().isOutflow()
+                    && !entry.transaction().pending());
             YearMonth month = YearMonth.from(doomed.date());
             Money diningBefore = summaryFor(month).spentOn(SpendCategory.DINING_OUT);
 
-            ingestion.syncNow(connectionId);
+            sandbox = RecordedSandbox.serving(
+                    RecordedSandbox.fixture("sync-initial-page-1.json"), retractionOf(doomed));
+            serviceUsing(sandbox.provider(), TestExecutors.immediate()).syncNow(connectionId);
 
             assertThat(store.entriesForUser(USER))
-                    .noneSatisfy(entry -> assertThat(entry.transaction().externalId()).isEqualTo(retracted));
+                    .noneSatisfy(entry ->
+                            assertThat(entry.transaction().externalId()).isEqualTo(doomed.externalId()));
             assertThat(summaryFor(month).spentOn(SpendCategory.DINING_OUT))
                     .isEqualTo(diningBefore.minus(doomed.amount()));
         }
@@ -352,7 +363,7 @@ class BankDataSpecTest {
             store.apply(
                     theConnection().id(),
                     store.cursor(theConnection().id()).orElseThrow(),
-                    List.of(new SyncResult(List.of(), List.of(settled), List.of(), "cursor-after-settling", false)));
+                    List.of(SyncResult.of(List.of(), List.of(settled), List.of(), "cursor-after-settling", false)));
 
             assertThat(store.entriesForUser(USER)).hasSize(countBefore);
             NormalisedTransaction now =
@@ -507,14 +518,26 @@ class BankDataSpecTest {
         return ingestion;
     }
 
-    /** As above, against the recurring answer that includes the constructed rent stream. */
+    /**
+     * As above, then a rent stream over the rent payment that was actually imported.
+     *
+     * <p>The stream fixture names its member by placeholder rather than by a recorded identifier,
+     * and it is filled in here from the transaction this run really loaded. Pinning it to an
+     * identifier from one particular recording would mean re-recording the fixtures broke this test
+     * with a message about a missing transaction rather than about rent.
+     */
     private IngestionService loadEverythingWithRent() {
+        IngestionService ingestion = loadEverything();
+        NormalisedTransaction rent = find(entry -> entry.classification().category() == SpendCategory.RENT);
+
         sandbox = RecordedSandbox.servingRecurring(
-                RecordedSandbox.fixture("constructed/transactions-recurring-get-with-rent.json"),
-                RecordedSandbox.fixture("sync-initial-page-1.json"),
-                RecordedSandbox.fixture("sync-after-refresh-page-1.json"),
-                RecordedSandbox.fixture("sync-scenarios-page-1.json"));
-        return loadEverything();
+                RecordedSandbox.fixture("constructed/transactions-recurring-get-with-rent.json")
+                        .replace("__RENT_TRANSACTION_ID__", rent.externalId())
+                        .replace("__RENT_ACCOUNT_ID__", rent.accountId()),
+                RecordedSandbox.fixture("sync-initial-page-1.json"));
+        IngestionService withStreams = serviceUsing(sandbox.provider(), TestExecutors.immediate());
+        withStreams.refreshRecurring(theConnection().id());
+        return ingestion;
     }
 
     private Ledger ledger() {
@@ -607,13 +630,13 @@ class BankDataSpecTest {
                 .collect(Collectors.toSet());
     }
 
-    private static String removedIdInTheConstructedFixture() {
-        Matcher matcher = Pattern.compile("\"transaction_id\"\\s*:\\s*\"([^\"]+)\"")
-                .matcher(RecordedSandbox.fixture("constructed/sync-removes-one-purchase.json"));
-        if (!matcher.find()) {
-            throw new AssertionError("that fixture removes nothing");
-        }
-        return matcher.group(1);
+    /** A page in which the bank says one transaction it sent before is gone, in its own format. */
+    private static String retractionOf(NormalisedTransaction doomed) {
+        return """
+                {"accounts":[],"added":[],"modified":[],
+                 "removed":[{"account_id":"%s","transaction_id":"%s"}],
+                 "next_cursor":"cursor-after-the-retraction","has_more":false}"""
+                .formatted(doomed.accountId(), doomed.externalId());
     }
 
     private static String aPageCategorised(String detailedCategory) {
