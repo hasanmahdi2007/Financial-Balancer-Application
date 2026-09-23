@@ -1,5 +1,6 @@
 [
   {
+    "category": "rent",
     "question": "About how much do you spend on rent each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [
@@ -9,6 +10,7 @@
     "basis": "A rough middle figure for Lebanon, gathered September 2026. It is a starting point rather than a measurement of your life."
   },
   {
+    "category": "healthcare",
     "question": "About how much do you spend on healthcare each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [
@@ -18,6 +20,7 @@
     "basis": "A rough middle figure for Lebanon, gathered September 2026. It is a starting point rather than a measurement of your life."
   },
   {
+    "category": "subscriptions",
     "question": "About how much do you spend on subscriptions each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [
@@ -27,6 +30,7 @@
     "basis": "A rough middle figure for Lebanon, gathered September 2026. It is a starting point rather than a measurement of your life."
   },
   {
+    "category": "utilities",
     "question": "About how much do you spend on utilities each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [
@@ -36,6 +40,7 @@
     "basis": "A rough middle figure for Lebanon, gathered September 2026. It is a starting point rather than a measurement of your life."
   },
   {
+    "category": "groceries",
     "question": "About how much do you spend on groceries each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [
@@ -45,6 +50,7 @@
     "basis": "A rough middle figure for Lebanon, gathered September 2026. It is a starting point rather than a measurement of your life."
   },
   {
+    "category": "transport-fuel",
     "question": "About how much do you spend on transport each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [
@@ -54,6 +60,7 @@
     "basis": "A rough middle figure for Lebanon, gathered September 2026. It is a starting point rather than a measurement of your life."
   },
   {
+    "category": "dining-out",
     "question": "About how much do you spend on eating out each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [
@@ -63,6 +70,7 @@
     "basis": "A rough middle figure for Lebanon, gathered September 2026. It is a starting point rather than a measurement of your life."
   },
   {
+    "category": "entertainment",
     "question": "About how much do you spend on going out and fun each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [
@@ -72,6 +80,7 @@
     "basis": "A rough middle figure for Lebanon, gathered September 2026. It is a starting point rather than a measurement of your life."
   },
   {
+    "category": "clothing",
     "question": "About how much do you spend on clothes each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [
@@ -81,6 +90,7 @@
     "basis": "A rough middle figure for Lebanon, gathered September 2026. It is a starting point rather than a measurement of your life."
   },
   {
+    "category": "other",
     "question": "About how much do you spend on everything else each month?",
     "why": "We do not have figures for your city yet, so we have started you from a typical figure for Lebanon. Changing it here only affects your own plan. Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent.",
     "covers": [

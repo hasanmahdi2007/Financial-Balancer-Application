@@ -1,0 +1,40 @@
+[
+  {
+    "id": "ec40d50f-a398-400b-9705-04c31a506abe",
+    "takenAt": "2026-09-23T15:33:50.683761800Z",
+    "reason": "You added a goal: Emergency fund",
+    "changes": {
+      "goalsAdded": [
+        "Emergency fund"
+      ],
+      "goalsRemoved": [],
+      "surplus": {
+        "before": "520.00",
+        "after": "520.00"
+      },
+      "goals": []
+    }
+  },
+  {
+    "id": "e244a884-7e88-4798-b2ea-f73df992bf46",
+    "takenAt": "2026-09-23T15:33:50.381071Z",
+    "reason": "You added a goal: Car",
+    "changes": {
+      "goalsAdded": [
+        "Car"
+      ],
+      "goalsRemoved": [],
+      "surplus": {
+        "before": "520.00",
+        "after": "520.00"
+      },
+      "goals": []
+    }
+  },
+  {
+    "id": "a2e879b7-1f8c-4f0a-932d-41969b8dd23d",
+    "takenAt": "2026-09-23T15:33:50.048604Z",
+    "reason": "You asked for a fresh plan",
+    "changes": null
+  }
+]

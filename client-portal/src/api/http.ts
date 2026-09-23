@@ -40,6 +40,13 @@ export interface ApiClientDeps {
 
 export interface ApiClient {
   getJson<T>(path: string, signal?: AbortSignal): Promise<T>;
+  /**
+   * A write. `body` is serialised as JSON; pass `undefined` for a route that takes none.
+   *
+   * Resolves to `undefined` when the server answers with no body, which is what a 204 from
+   * `DELETE /api/v1/line-items/{id}` is. Callers that expect nothing back type `T` as `void`.
+   */
+  sendJson<T>(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, signal?: AbortSignal): Promise<T>;
 }
 
 /**
@@ -57,37 +64,64 @@ async function problemMessage(response: Response): Promise<string | null> {
   return null;
 }
 
+/**
+ * A body the server sent but did not fill. `DELETE` answers 204, and a 200 with an empty body is
+ * indistinguishable from it here; both mean "nothing to read", not "malformed JSON".
+ */
+async function readBody<T>(response: Response): Promise<T> {
+  if (response.status === 204) return undefined as T;
+  const text = await response.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
+}
+
 export function createApiClient(deps: ApiClientDeps): ApiClient {
   const fetchImpl = deps.fetchImpl ?? ((input, init) => fetch(input, init));
 
+  /**
+   * Every request goes through here, so the token, the refusal handling and the wording for a
+   * failure are decided once. A second path would eventually forget one of the three.
+   */
+  async function request<T>(method: string, path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+    const token = await deps.getAccessToken();
+    if (!token) {
+      deps.onUnauthorized(SESSION_ENDED_NOTICE);
+      throw new SessionEndedError();
+    }
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+
+    let response: Response;
+    try {
+      response = await fetchImpl(path, {
+        method,
+        signal,
+        headers,
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') throw error;
+      throw new ApiError(UNREACHABLE, null);
+    }
+
+    if (response.status === 401) {
+      deps.onUnauthorized(SESSION_ENDED_NOTICE);
+      throw new SessionEndedError();
+    }
+    if (!response.ok) {
+      const fallback = response.status >= 500 ? SERVER_FAULT : REQUEST_REFUSED;
+      throw new ApiError((await problemMessage(response)) ?? fallback, response.status);
+    }
+    return readBody<T>(response);
+  }
+
   return {
-    async getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
-      const token = await deps.getAccessToken();
-      if (!token) {
-        deps.onUnauthorized(SESSION_ENDED_NOTICE);
-        throw new SessionEndedError();
-      }
-
-      let response: Response;
-      try {
-        response = await fetchImpl(path, {
-          signal,
-          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-        });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') throw error;
-        throw new ApiError(UNREACHABLE, null);
-      }
-
-      if (response.status === 401) {
-        deps.onUnauthorized(SESSION_ENDED_NOTICE);
-        throw new SessionEndedError();
-      }
-      if (!response.ok) {
-        const fallback = response.status >= 500 ? SERVER_FAULT : REQUEST_REFUSED;
-        throw new ApiError((await problemMessage(response)) ?? fallback, response.status);
-      }
-      return (await response.json()) as T;
-    },
+    getJson: <T,>(path: string, signal?: AbortSignal) => request<T>('GET', path, undefined, signal),
+    sendJson: <T,>(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, signal?: AbortSignal) =>
+      request<T>(method, path, body, signal),
   };
 }

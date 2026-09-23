@@ -1,0 +1,39 @@
+[
+  {
+    "id": "f9ba744c-f071-4bb6-9983-a492eee7668b",
+    "takenAt": "2026-09-23T15:34:22.094643600Z",
+    "reason": "You added a goal: Emergency fund",
+    "changes": {
+      "goalsAdded": [
+        "Emergency fund"
+      ],
+      "goalsRemoved": [],
+      "surplus": {
+        "before": "220.00",
+        "after": "220.00"
+      },
+      "goals": [
+        {
+          "id": "df11f4a7-d7a6-47b4-88b6-5871e3896cc9",
+          "name": "Car",
+          "before": {
+            "status": "Behind",
+            "monthlyFunded": "220.00",
+            "fromBalance": "1000.00"
+          },
+          "after": {
+            "status": "Not funded yet",
+            "monthlyFunded": "0.00",
+            "fromBalance": "0.00"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "641e7ab8-d1ce-4aaf-95b6-a3c120dbc786",
+    "takenAt": "2026-09-23T15:34:21.785398700Z",
+    "reason": "You added a goal: Car",
+    "changes": null
+  }
+]

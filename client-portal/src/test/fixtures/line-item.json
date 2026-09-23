@@ -1,0 +1,18 @@
+{
+  "id": "gym",
+  "label": "Gym membership",
+  "category": {
+    "key": "subscriptions",
+    "label": "Subscriptions"
+  },
+  "amount": "30.00",
+  "howWilling": {
+    "key": "locked",
+    "label": "Cannot be changed"
+  },
+  "kind": {
+    "key": "already-counted",
+    "label": "Part of what I already spend on Subscriptions",
+    "meaning": "we will not add it again - naming it just lets us tell you which thing to cut"
+  }
+}
