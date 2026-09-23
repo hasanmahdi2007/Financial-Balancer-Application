@@ -70,6 +70,9 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                 .andExpect(jsonPath("$.cuts.alreadyAssumed").exists())
                 .andExpect(jsonPath("$.cuts.totalChange").exists())
                 .andExpect(jsonPath("$.money.runway.label").exists())
+                // What they already put away, stored in its own column and read back over the real
+                // schema: shown beside the plan, and taken off nothing.
+                .andExpect(jsonPath("$.surplus.alreadySaving").value("150.00"))
                 // Nothing internal reaches the payload, exactly as the catalogue promises.
                 .andExpect(content().string(not(containsString("DINING_OUT"))))
                 .andExpect(content().string(not(containsString("CROWDSOURCED"))))
@@ -345,8 +348,9 @@ class PlanningApiIT extends PlanningDatabaseFixture {
 
         mockMvc.perform(as(userId, put("/api/v1/money"))
                         .content("""
-                                {"monthlyIncome":"2000.00","balance":"12000.00"}"""))
-                .andExpect(status().isOk());
+                                {"monthlyIncome":"2000.00","balance":"12000.00","alreadySaving":"150.00"}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alreadySaving").value("150.00"));
 
         mockMvc.perform(as(userId, put("/api/v1/spending"))
                         .content("""

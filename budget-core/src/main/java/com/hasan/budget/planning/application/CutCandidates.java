@@ -46,6 +46,16 @@ import java.util.stream.Collectors;
  *       of the category's figure so the same dollars are not offered twice.
  * </ul>
  *
+ * <p><strong>The brief words that third case the other way round</strong> - "the headroom is what
+ * observed spending exceeds the floor" - and that reading is the one thing this class exists to
+ * prevent, one layer further in. Those dollars are precisely what the surplus already assumed away,
+ * so offering them again as a cut counts them twice: the plan would then ask for a bigger reduction
+ * than the largest one the user could make with fun money still standing at the floor, and the
+ * remainder could only be found below it. P7 says the same from its own side - {@code
+ * ResolutionOption} records that a plan which will not balance has exactly two honest answers, and
+ * that the engine must never instead balance the arithmetic quietly by cutting below a floor. So the
+ * arm stays at zero, and PlanAssemblerTest measures that difference rather than asserting it.
+ *
  * <p>Each line's own {@link CategoryLine#rigidity()} decides, never the category default, which is what
  * lets a gym the user marked as unchangeable reach the allocator unchangeable. The allocator reports
  * whatever it could not cover as a residual gap, and that is the honest answer: the rest can only be

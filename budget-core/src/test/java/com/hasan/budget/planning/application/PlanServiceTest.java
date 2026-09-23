@@ -11,6 +11,7 @@ import com.hasan.budget.shared.MetroId;
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.SpendCategory;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
@@ -213,6 +214,141 @@ class PlanServiceTest {
 
             assertThat(plans.latest("saver")).contains(made);
             assertThat(plans.history("saver")).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("what the plan is built from")
+    class Inputs {
+
+        /**
+         * What the user already puts away is theirs to state, and it reaches the plan as they stated
+         * it. It is never subtracted: saving is not spending, and charging them for it would make
+         * their plan look worse the more they are already doing right.
+         */
+        @Test
+        void whatTheUserAlreadyPutsAwayIsCarriedIntoThePlanAndNeverSubtracted() {
+            fixture.onboard("saver", Money.of(1_000));
+            plans.saveMoney("saver", new StatedMoney(Money.of(2_000), Money.of(1_000), Money.of(300)));
+
+            AssembledPlan plan = plans.assemble("saver");
+            AssembledPlan without = withoutTheSavingHabit();
+
+            assertThat(plan.breakdown().alreadySaving()).isEqualTo(Money.of(300));
+            assertThat(plan.breakdown().surplus())
+                    .as("stating it changes what the plan shows and nothing about what it charges")
+                    .isEqualTo(without.breakdown().surplus());
+        }
+
+        /** Nobody has to answer it. With no answer and no bank, nothing is claimed on their behalf. */
+        @Test
+        void notAnsweringItAndHavingNoBankClaimsNothing() {
+            fixture.onboard("quiet", Money.of(1_000));
+
+            assertThat(plans.assemble("quiet").breakdown().alreadySaving()).isEqualTo(Money.ZERO);
+        }
+
+        /**
+         * The month a plan reads off a bank is the last one that is over, never the one in progress.
+         * Asked on the 14th, the month in progress is half a month of spending, and a plan built on it
+         * would hand the user a surplus that does not exist.
+         */
+        @Test
+        void aPlanReadsTheLastCompleteMonthAndNotTheOneInProgress() {
+            RecordingBank bank = new RecordingBank(Map.of(SpendCategory.UTILITIES, Money.of(140)));
+            PlanningFixture connected = new PlanningFixture(TODAY, bank);
+            connected.onboard("banked", Money.of(1_000));
+
+            AssembledPlan plan = connected.plans().assemble("banked");
+
+            assertThat(bank.asked).isEqualTo(YearMonth.of(2026, 2));
+            assertThat(bank.asked).isNotEqualTo(YearMonth.from(TODAY));
+            assertThat(plan.measuredSpending()).contains(SpendCategory.UTILITIES);
+        }
+
+        /** Unanswered, the bank answers it - and the plan says the figure came from the bank, and when. */
+        @Test
+        void aBankSuppliesWhatTheUserSavesWhenTheyHaveNotSaid() {
+            PlanningFixture connected = new PlanningFixture(TODAY, new RecordingBank(Map.of(), Money.of(250)));
+            connected.onboard("banked", Money.of(1_000));
+
+            AssembledPlan plan = connected.plans().assemble("banked");
+
+            assertThat(plan.breakdown().alreadySaving()).isEqualTo(Money.of(250));
+            assertThat(plan.inputs().savingWasMeasured()).isTrue();
+            assertThat(PlanViews.from(plan, "id", java.time.Instant.EPOCH, "a test").surplus()
+                            .alreadySavingExplanation())
+                    .contains("February 2026", "from your bank");
+        }
+
+        /**
+         * Answered, the user wins, even when the answer is zero. Zero is the user telling us they save
+         * nothing; it is not a gap for the bank to fill.
+         */
+        @Test
+        void whatTheUserSaysTheySaveOutranksTheBankEvenWhenItIsZero() {
+            PlanningFixture connected = new PlanningFixture(TODAY, new RecordingBank(Map.of(), Money.of(250)));
+            connected.onboard("banked", Money.of(1_000));
+            connected.plans().saveMoney("banked", new StatedMoney(Money.of(2_000), Money.of(1_000), Money.ZERO));
+
+            AssembledPlan plan = connected.plans().assemble("banked");
+
+            assertThat(plan.breakdown().alreadySaving()).isEqualTo(Money.ZERO);
+            assertThat(plan.inputs().savingWasMeasured()).isFalse();
+        }
+
+        /** A month that drew savings down is reported as one, not hidden behind a zero. */
+        @Test
+        void aMonthThatDrewSavingsDownIsShownAsNegative() {
+            PlanningFixture connected = new PlanningFixture(TODAY, new RecordingBank(Map.of(), Money.of(-400)));
+            connected.onboard("banked", Money.of(1_000));
+
+            AssembledPlan plan = connected.plans().assemble("banked");
+
+            assertThat(plan.breakdown().alreadySaving()).isEqualTo(Money.of(-400));
+            assertThat(plan.breakdown().surplus())
+                    .as("shown, never subtracted - in either direction")
+                    .isEqualTo(withoutTheSavingHabit().breakdown().surplus());
+        }
+
+        private AssembledPlan withoutTheSavingHabit() {
+            PlanningFixture plain = new PlanningFixture(TODAY);
+            plain.onboard("plain", Money.of(1_000));
+            return plain.plans().assemble("plain");
+        }
+    }
+
+    /** A bank that records which month it was asked about, which is the whole point of these tests. */
+    private static final class RecordingBank implements BankSpending {
+
+        private final Map<SpendCategory, Money> month;
+        private final Money saved;
+        private YearMonth asked;
+
+        private RecordingBank(Map<SpendCategory, Money> month) {
+            this(month, null);
+        }
+
+        private RecordingBank(Map<SpendCategory, Money> month, Money saved) {
+            this.month = month;
+            this.saved = saved;
+        }
+
+        @Override
+        public java.util.List<com.hasan.budget.planning.domain.decision.ObservedTicket> observedTickets(
+                String userId, SpendCategory category, YearMonth month) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public Optional<Money> spentThisMonth(String userId, SpendCategory category, YearMonth month) {
+            return Optional.empty();
+        }
+
+        @Override
+        public MeasuredMonth measuredMonth(String userId, YearMonth month) {
+            this.asked = month;
+            return new MeasuredMonth(month, this.month, saved);
         }
     }
 }

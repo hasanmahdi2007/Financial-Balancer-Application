@@ -68,9 +68,15 @@ class ProfileController {
             boolean incomeArrivesTaxed,
             String leastForEnjoyingLife) {}
 
-    record MoneyRequest(BigDecimal monthlyIncome, BigDecimal balance) {}
+    record MoneyRequest(BigDecimal monthlyIncome, BigDecimal balance, BigDecimal alreadySaving) {}
 
-    record MoneyView(String monthlyIncome, String balance, String setAside, String explanation) {}
+    record MoneyView(
+            String monthlyIncome,
+            String balance,
+            String setAside,
+            String explanation,
+            String alreadySaving,
+            String alreadySavingExplanation) {}
 
     @GetMapping("/profile")
     ProfileView profile(@CurrentUser String userId) {
@@ -111,8 +117,12 @@ class ProfileController {
             throw new IllegalArgumentException(
                     "Tell us both what arrives each month and how much you already have. Enter 0 if there is none.");
         }
+        // Optional, and left out is not the same as zero: left out lets a connected bank supply the
+        // figure, where zero is the user telling us they save nothing.
         return view(plans.saveMoney(userId, new StatedMoney(
-                new Money(request.monthlyIncome()), new Money(request.balance()))));
+                new Money(request.monthlyIncome()),
+                new Money(request.balance()),
+                money(request.alreadySaving()))));
     }
 
     @GetMapping("/questions")
@@ -143,7 +153,11 @@ class ProfileController {
                 money.balance().toString(),
                 Money.ZERO.toString(),
                 "We plan with exactly what you told us you have. Nothing is set aside, because nothing "
-                        + "beyond this figure was ever visible to us.");
+                        + "beyond this figure was ever visible to us.",
+                money.alreadySaving() == null ? null : money.alreadySaving().toString(),
+                "What you already move into savings every month. We show it beside your plan and never "
+                        + "take it off what you have left, because putting money away is not spending it. "
+                        + "Leave it empty and, once a bank is connected, we read it from there.");
     }
 
     private static Money money(BigDecimal amount) {

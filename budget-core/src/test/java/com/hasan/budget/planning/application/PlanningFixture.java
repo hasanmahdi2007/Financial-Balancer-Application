@@ -46,6 +46,16 @@ public final class PlanningFixture {
     private final PlanService service;
 
     public PlanningFixture(LocalDate today) {
+        this(today, BankSpending.NONE);
+    }
+
+    /**
+     * The same user, with a bank connected.
+     *
+     * <p>A separate constructor rather than a setter because what a bank has recorded is an input to
+     * every plan this fixture makes, not something that can change halfway through one.
+     */
+    public PlanningFixture(LocalDate today, BankSpending bank) {
         Clock clock = Clock.fixed(today.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC);
         this.service = new PlanService(
                 profiles,
@@ -55,6 +65,7 @@ public final class PlanningFixture {
                 new StubPlaces(),
                 (profile, income) -> Optional.empty(),
                 new PlanAssembler(new GreedyPriorityAllocator(), PlanningFixture::floor),
+                bank,
                 clock,
                 () -> "id-" + nextId.incrementAndGet());
     }

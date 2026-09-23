@@ -74,26 +74,30 @@ public class JdbcPlanningProfileStore implements PlanningProfileStore {
 
     @Override
     public Optional<StatedMoney> money(String userId) {
-        return jdbc.sql("SELECT monthly_income, balance FROM planning_money WHERE user_id = :userId")
+        return jdbc.sql("SELECT monthly_income, balance, already_saving FROM planning_money WHERE user_id = :userId")
                 .param("userId", userId)
                 .query((rs, row) -> new StatedMoney(
-                        new Money(rs.getBigDecimal("monthly_income")), new Money(rs.getBigDecimal("balance"))))
+                        new Money(rs.getBigDecimal("monthly_income")),
+                        new Money(rs.getBigDecimal("balance")),
+                        rs.getBigDecimal("already_saving") == null ? null : new Money(rs.getBigDecimal("already_saving"))))
                 .optional();
     }
 
     @Override
     public void saveMoney(String userId, StatedMoney money) {
         jdbc.sql("""
-                        INSERT INTO planning_money (user_id, monthly_income, balance, updated_at)
-                        VALUES (:userId, :income, :balance, now())
+                        INSERT INTO planning_money (user_id, monthly_income, balance, already_saving, updated_at)
+                        VALUES (:userId, :income, :balance, :saving, now())
                         ON CONFLICT (user_id) DO UPDATE
                            SET monthly_income = EXCLUDED.monthly_income,
                                balance        = EXCLUDED.balance,
+                               already_saving = EXCLUDED.already_saving,
                                updated_at     = now()
                         """)
                 .param("userId", userId)
                 .param("income", money.monthlyIncome().amount())
                 .param("balance", money.balance().amount())
+                .param("saving", money.alreadySaving() == null ? null : money.alreadySaving().amount())
                 .update();
     }
 }

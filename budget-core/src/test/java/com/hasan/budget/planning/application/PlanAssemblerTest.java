@@ -25,7 +25,9 @@ import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.Rigidity;
 import com.hasan.budget.shared.SpendCategory;
 import java.lang.reflect.RecordComponent;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -46,6 +48,9 @@ class PlanAssemblerTest {
 
     private static final LocalDate AS_OF = LocalDate.of(2026, 1, 15);
     private static final LocalDate GATHERED = LocalDate.of(2025, 11, 1);
+
+    /** No bank connected: every figure is one the user typed, or the city's for what they did not. */
+    private static final MeasuredMonth NO_BANK = MeasuredMonth.none(YearMonth.from(AS_OF).minusMonths(1));
 
     /** A fixed $300 floor, stated outright so the composition is what varies, not the floor policy. */
     private static final PlanAssembler.FloorSource THREE_HUNDRED =
@@ -183,6 +188,157 @@ class PlanAssemblerTest {
                     .filteredOn(line -> line.category() == SpendCategory.CLOTHING)
                     .extracting(CategoryLine::actual)
                     .containsExactly(Money.of(90));
+        }
+
+        /**
+         * The brief words the discretionary arm as "the headroom is what observed spending exceeds
+         * the floor". Followed literally that reintroduces the very double count the rest of it is
+         * about, and this test is what says so rather than a comment claiming it.
+         *
+         * <p>The fun-money reduction is already inside {@code assumedReduction}: the surplus charged
+         * the floor and nothing more, so the $320 above it has been counted once already. Offer that
+         * same $320 to the allocator and the plan asks for a bigger reduction than the largest one
+         * the user could make while keeping fun money at the floor they were promised we would never
+         * go below - and P7 states outright that balancing the arithmetic that way is the one thing
+         * the engine must never do.
+         */
+        @Test
+        void offeringFunMoneyAsHeadroomWouldAskForACutNobodyCanMake() {
+            AssembledPlan plan = assembler.assemble(measuredScenario(Money.ZERO, Money.of(10_500)));
+
+            // The most the user can change without going below a local figure or below the floor.
+            Money withoutBreakingAPromise = plan.breakdown().assumedReduction().plus(takeAsIsHeadroom(plan));
+            assertThat(plan.totalChange())
+                    .as("the plan only ever asks for changes that can actually be made")
+                    .isEqualTo(withoutBreakingAPromise);
+
+            Money funAboveTheFloor = Money.of(320);
+            assertThat(plan.reductions()).extracting(Reduction::by).contains(funAboveTheFloor);
+
+            List<DiscretionarySpend> withFunOffered = new ArrayList<>(
+                    CutCandidates.from(plan.breakdown().lines(), plan.inputs().lineItems()).forAllocator());
+            withFunOffered.add(new DiscretionarySpend(SpendCategory.DINING_OUT, funAboveTheFloor, Rigidity.DISPOSABLE));
+            AllocationResult literalReading = new GreedyPriorityAllocator().allocate(new AllocationRequest(
+                    plan.breakdown().surplus(), goalsOf(plan), withFunOffered, AS_OF));
+
+            Money cuts = literalReading.tradeoffs().stream()
+                    .map(Tradeoff::suggestedReduction)
+                    .reduce(Money.ZERO, Money::plus);
+            Money asked = plan.breakdown().assumedReduction().plus(cuts);
+            assertThat(asked)
+                    .as("the same dollars, offered once as an assumption and again as a cut")
+                    .isGreaterThan(withoutBreakingAPromise);
+            assertThat(asked.minus(withoutBreakingAPromise))
+                    .as("and the difference could only be found below the floor")
+                    .isEqualTo(Money.of(60));
+        }
+    }
+
+    @Nested
+    @DisplayName("where each spending figure came from")
+    class Provenance {
+
+        /** With nothing said and nothing connected, the city's figure stands and the plan says so. */
+        @Test
+        void aCategoryNobodyCoveredFallsBackToTheLocalFigure() {
+            AssembledPlan plan = assembler.assemble(withoutGroceries(measuredScenario(Money.ZERO, Money.of(10_500))));
+
+            assertThat(plan.assumedSpending()).contains(SpendCategory.GROCERIES);
+            assertThat(plan.measuredSpending()).doesNotContain(SpendCategory.GROCERIES);
+            assertThat(spentOn(plan, SpendCategory.GROCERIES)).isEqualTo(Money.of(450));
+        }
+
+        /** A connected bank beats a city average, because it is this user's own account. */
+        @Test
+        void aBankAnswersForACategoryTheUserNeverStated() {
+            PlanningInputs inputs = withoutGroceries(measuredScenario(Money.ZERO, Money.of(10_500)));
+            AssembledPlan plan = assembler.assemble(
+                    withMeasured(inputs, Map.of(SpendCategory.GROCERIES, Money.of(612))));
+
+            assertThat(spentOn(plan, SpendCategory.GROCERIES)).isEqualTo(Money.of(612));
+            assertThat(plan.measuredSpending()).containsExactly(SpendCategory.GROCERIES);
+            assertThat(plan.assumedSpending())
+                    .as("a figure read off their own account is not an assumption")
+                    .doesNotContain(SpendCategory.GROCERIES);
+        }
+
+        /**
+         * And the user still outranks it. They may know that last month held a wedding, or that they
+         * have since moved - and nothing measured can know either.
+         */
+        @Test
+        void whatTheUserSaidOutranksWhatTheBankRecorded() {
+            PlanningInputs inputs = measuredScenario(Money.ZERO, Money.of(10_500));
+            AssembledPlan plan = assembler.assemble(
+                    withMeasured(inputs, Map.of(SpendCategory.GROCERIES, Money.of(612))));
+
+            assertThat(spentOn(plan, SpendCategory.GROCERIES)).isEqualTo(Money.of(700));
+            assertThat(plan.measuredSpending()).isEmpty();
+        }
+
+        /**
+         * Where the figure came from changes what the plan says about it and nothing about the
+         * arithmetic: a measured figure is capped at the local baseline exactly as a stated one is,
+         * and the excess lands in the reduction the surplus already assumed.
+         */
+        @Test
+        void aMeasuredFigureIsCappedLikeAnyOther() {
+            PlanningInputs inputs = withoutGroceries(measuredScenario(Money.ZERO, Money.of(10_500)));
+            AssembledPlan plan = assembler.assemble(
+                    withMeasured(inputs, Map.of(SpendCategory.GROCERIES, Money.of(612))));
+
+            assertThat(countedOn(plan, SpendCategory.GROCERIES)).isEqualTo(Money.of(450));
+            assertThat(plan.reductions())
+                    .filteredOn(reduction -> reduction.label().equals("Groceries"))
+                    .extracting(Reduction::by)
+                    .containsExactly(Money.of(162));
+        }
+
+        /** A bank with nothing to say about a month is not a bank saying the month cost nothing. */
+        @Test
+        void anEmptyMonthChangesNothing() {
+            PlanningInputs inputs = withoutGroceries(measuredScenario(Money.ZERO, Money.of(10_500)));
+            AssembledPlan measured = assembler.assemble(withMeasured(inputs, Map.of()));
+            AssembledPlan unmeasured = assembler.assemble(inputs);
+
+            assertThat(measured.breakdown().surplus()).isEqualTo(unmeasured.breakdown().surplus());
+            assertThat(measured.assumedSpending()).isEqualTo(unmeasured.assumedSpending());
+            assertThat(measured.measuredSpending()).isEmpty();
+        }
+
+        /** The month is named, so the user can check the figure against a statement rather than trust it. */
+        @Test
+        void aMeasuredLineSaysWhichMonthItCameFrom() {
+            PlanningInputs inputs = withoutGroceries(measuredScenario(Money.ZERO, Money.of(10_500)));
+            AssembledPlan plan = assembler.assemble(
+                    withMeasured(inputs, Map.of(SpendCategory.GROCERIES, Money.of(612))));
+            PlanView view = PlanViews.from(plan, "snapshot", Instant.EPOCH, "a test");
+
+            assertThat(view.surplus().lines())
+                    .filteredOn(line -> line.id().equals("groceries"))
+                    .extracting(PlanView.Line::measuredFrom)
+                    .containsExactly("what you spent in December 2025");
+        }
+
+        private PlanningInputs withoutGroceries(PlanningInputs inputs) {
+            Map<SpendCategory, Money> spending = new EnumMap<>(inputs.statedSpending());
+            spending.remove(SpendCategory.GROCERIES);
+            return withSpending(inputs, spending, List.of());
+        }
+
+        private Money spentOn(AssembledPlan plan, SpendCategory category) {
+            return lineFor(plan, category).actual();
+        }
+
+        private Money countedOn(AssembledPlan plan, SpendCategory category) {
+            return lineFor(plan, category).counted();
+        }
+
+        private CategoryLine lineFor(AssembledPlan plan, SpendCategory category) {
+            return plan.breakdown().lines().stream()
+                    .filter(line -> line.lineItemId() == null && line.category() == category)
+                    .findFirst()
+                    .orElseThrow();
         }
     }
 
@@ -329,6 +485,7 @@ class PlanAssemblerTest {
                 new ManualConsideredFunds(balance, Money.of(6000)).resolve(),
                 baselines,
                 spending,
+                NO_BANK,
                 List.of(UserLineItem.onTopOf("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(60))),
                 Money.of(400),
                 Optional.empty(),
@@ -350,6 +507,7 @@ class PlanAssemblerTest {
                 new ManualConsideredFunds(balance, Money.of(6000)).resolve(),
                 Map.of(),
                 spending,
+                NO_BANK,
                 List.of(),
                 Money.ZERO,
                 Optional.empty(),
@@ -365,19 +523,28 @@ class PlanAssemblerTest {
 
     private static PlanningInputs withSpending(
             PlanningInputs in, Map<SpendCategory, Money> spending, List<UserLineItem> lineItems) {
-        return new PlanningInputs(in.funds(), in.baselines(), spending, lineItems.isEmpty() ? in.lineItems() : lineItems,
-                in.alreadySaving(), in.taxReserve(), in.lifestyle(), in.leastForEnjoyingLife(), in.cityLabel(),
-                in.goals(), in.finishFirst(), in.asOf());
+        return new PlanningInputs(in.funds(), in.baselines(), spending, in.measuredMonth(),
+                lineItems.isEmpty() ? in.lineItems() : lineItems, in.alreadySaving(), in.taxReserve(),
+                in.lifestyle(), in.leastForEnjoyingLife(), in.cityLabel(), in.goals(), in.finishFirst(),
+                in.asOf());
     }
 
     private static PlanningInputs withBaselines(PlanningInputs in, Map<SpendCategory, ResolvedBaseline> baselines) {
-        return new PlanningInputs(in.funds(), baselines, in.statedSpending(), in.lineItems(), in.alreadySaving(),
-                in.taxReserve(), in.lifestyle(), in.leastForEnjoyingLife(), in.cityLabel(), in.goals(),
-                in.finishFirst(), in.asOf());
+        return new PlanningInputs(in.funds(), baselines, in.statedSpending(), in.measuredMonth(),
+                in.lineItems(), in.alreadySaving(), in.taxReserve(), in.lifestyle(), in.leastForEnjoyingLife(),
+                in.cityLabel(), in.goals(), in.finishFirst(), in.asOf());
     }
 
     private static PlanningInputs withFunds(PlanningInputs in, ManualConsideredFunds funds) {
-        return new PlanningInputs(funds.resolve(), in.baselines(), in.statedSpending(), in.lineItems(),
+        return new PlanningInputs(funds.resolve(), in.baselines(), in.statedSpending(), in.measuredMonth(),
+                in.lineItems(), in.alreadySaving(), in.taxReserve(), in.lifestyle(), in.leastForEnjoyingLife(),
+                in.cityLabel(), in.goals(), in.finishFirst(), in.asOf());
+    }
+
+    /** The same inputs, with a connected bank having recorded the month before. */
+    private static PlanningInputs withMeasured(PlanningInputs in, Map<SpendCategory, Money> measured) {
+        return new PlanningInputs(in.funds(), in.baselines(), in.statedSpending(),
+                new MeasuredMonth(YearMonth.from(in.asOf()).minusMonths(1), measured, null), in.lineItems(),
                 in.alreadySaving(), in.taxReserve(), in.lifestyle(), in.leastForEnjoyingLife(), in.cityLabel(),
                 in.goals(), in.finishFirst(), in.asOf());
     }
@@ -415,6 +582,15 @@ class PlanAssemblerTest {
             spend = spend.lessBy(cut.amount());
         }
         return spend.cashLeft(plan);
+    }
+
+    /**
+     * The largest reduction the user could make without going below a local figure or below the
+     * least they said they want for enjoying life: what the surplus already assumed, plus the
+     * lines it charged in full and assumed nothing about.
+     */
+    private static Money takeAsIsHeadroom(AssembledPlan plan) {
+        return CutCandidates.from(plan.breakdown().lines(), plan.inputs().lineItems()).total();
     }
 
     private static Money needed(AssembledPlan plan) {

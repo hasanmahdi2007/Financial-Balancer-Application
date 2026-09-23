@@ -82,7 +82,11 @@ public record PlanView(
      * @param localFigure what this typically costs where the user lives, or null where nothing is
      *     measured against one
      * @param counted what the monthly figure actually charged for this line
-     * @param assumed true when the user did not say what they spend here and the local figure was used
+     * @param assumed true when neither the user nor their bank said what they spend here and the
+     *     local figure was used
+     * @param measuredFrom the month this figure was read off the user's own account, worded for them,
+     *     or null when it did not come from a bank. Named rather than flagged because a figure the user
+     *     can check against a statement is the only kind they have any reason to believe.
      * @param basis where the local figure came from, or null when there is none
      */
     public record Line(
@@ -93,6 +97,7 @@ public record PlanView(
             String localFigure,
             String counted,
             boolean assumed,
+            String measuredFrom,
             KeyLabel howWilling,
             Basis basis) {}
 
