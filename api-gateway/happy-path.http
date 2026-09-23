@@ -1,0 +1,302 @@
+### The full happy path, through the gateway, with real payloads.
+#
+# This file is the contract the client is built against. Every request goes to the gateway, which is
+# the only thing with a published port; budget-core cannot be reached directly, by design.
+#
+# Conventions that hold everywhere below:
+#
+# - Money is a string with two decimals, "1570.00", in both directions. Numbers are accepted on input
+#   too, but strings are what comes back, because a JSON number cannot promise two decimals.
+# - Anything the client sends back as an identifier is a lowercase key: "groceries", "locked", "high",
+#   "regular", "medium". Keys are for machines. Every key arrives beside a "label" written for a person,
+#   and the label is what gets rendered - never the key, and never an upper-case constant.
+# - Everything under /api/v1 belongs to the signed-in user, and to nobody else. There is no user id in
+#   any URL or body: the gateway takes it from the token and budget-core scopes every query by it.
+# - Errors are RFC 9457 problem details: {"type","title","status","detail","instance"}. "detail" is
+#   written to be shown to the user as-is.
+#
+# Get a token by signing in through Supabase (the client does this with @supabase/supabase-js) and
+# paste the access token below.
+
+@gateway = http://localhost:8090
+@token = paste-a-supabase-access-token-here
+
+### 0. Without a token nothing gets past the gateway: 401, and budget-core never sees the request.
+GET {{gateway}}/api/v1/plan
+
+### 1. Countries we hold figures for.
+# -> [{"code":"LB","name":"Lebanon","note":"Prices in Lebanon are quoted in US dollars ..."}, ...]
+GET {{gateway}}/api/catalogue/countries
+Authorization: Bearer {{token}}
+
+### 2. Cities in one country. "id" is the only lookup key there is; send it back exactly.
+# -> [{"id":"beirut","name":"Beirut","region":"Beirut","basis":"Researched by us",
+#      "explanation":"We gathered this from listings and local prices. ...","gathered":"2026-09-01"}]
+GET {{gateway}}/api/catalogue/countries/LB/cities
+Authorization: Bearer {{token}}
+
+### 3. For "my city isn't listed": the manual form, already filled in from the country estimate.
+# "category" is the key to send the answer back under (step 7).
+# -> [{"category":"rent","question":"About how much do you spend on rent each month?",
+#      "why":"We do not have figures for your city yet, ...",
+#      "covers":["Rent - your rent or mortgage payment"],"suggested":"350.00",
+#      "basis":"A rough middle figure for Lebanon, gathered ... It is a starting point ..."}, ...]
+GET {{gateway}}/api/catalogue/countries/LB/manual-form
+Authorization: Bearer {{token}}
+
+### 4. Every choice the client offers, with the words to offer it in.
+# -> {"categories":[{"key":"groceries","label":"Groceries","covers":"food and household shopping ..."}],
+#     "howWilling":[{"key":"locked","label":"Cannot be changed","meaning":"We will never suggest ..."}],
+#     "priorities":[{"key":"high","label":"Very important","meaning":"..."}],
+#     "lifestyles":[{"key":"regular","label":"Out regularly"}],
+#     "itemKinds":[{"key":"part-of","label":"Part of what I already spend on %s","meaning":"..."}],
+#     "mealBands":[{"key":"medium","label":"A normal meal out","covers":"a regular restaurant ..."}]}
+# itemKinds labels contain "%s": fill it with the chosen category's label.
+GET {{gateway}}/api/v1/choices
+Authorization: Bearer {{token}}
+
+### 5. Where the user lives and how they live. Send "city" for a listed city, or "cityNotListed" with
+# the name they typed (display only - it never selects a city) when theirs is not in the list.
+# "lifestyle" and "leastForEnjoyingLife" may be null until asked; step 6 supplies the questions.
+# -> 200 with the saved profile:
+#    {"country":{"code":"LB","name":"Lebanon"},
+#     "city":{"id":"beirut","name":"Beirut","basis":"Researched by us","explanation":"...","gathered":"2026-09-01"},
+#     "cityNotListed":null,"lifestyle":{"key":"regular","label":"Out regularly"},
+#     "incomeArrivesTaxed":true,"leastForEnjoyingLife":"250.00"}
+PUT {{gateway}}/api/v1/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "country": "LB",
+  "city": "beirut",
+  "cityNotListed": null,
+  "lifestyle": "regular",
+  "incomeArrivesTaxed": true,
+  "leastForEnjoyingLife": null
+}
+
+### 6. The questions still to ask, each explaining itself and pre-filled wherever we can.
+# Money questions carry {question, why, covers, suggested, basis}; "key" says where the answer goes.
+# -> [{"key":"least-for-enjoying-life","answerWith":"PUT /api/v1/profile leastForEnjoyingLife",
+#      "question":"What is the least you would want to spend each month on enjoying life?",
+#      "why":"We will never suggest cutting below this, even to reach a goal faster.",
+#      "covers":["Going out and fun - nights out, ...","Eating out - ...","Clothes - ..."],
+#      "suggested":"240.00","basis":"typical for someone in Beirut who goes out regularly ..."},
+#     {"key":"spending:groceries","answerWith":"PUT /api/v1/spending groceries", ...}, ...]
+GET {{gateway}}/api/v1/questions
+Authorization: Bearer {{token}}
+
+### 7. The user's own figure for a category - a manual-form answer, or a correction to ours.
+# Applies to their plan immediately and to nobody else's, and beats every other source.
+# -> {"category":{"key":"groceries","label":"Groceries"},"amount":"300.00","setOn":"2026-09-22",
+#     "basis":{"label":"Your own figure","explanation":"..."}}
+PUT {{gateway}}/api/v1/overrides/groceries
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "amount": "300.00" }
+
+###
+GET {{gateway}}/api/v1/overrides
+Authorization: Bearer {{token}}
+
+### 8. The money the plan may work with, typed by the user (no bank connected).
+# "balance" is taken whole: there is no share question on this path, because the user already chose
+# what to type. Lowering it later takes money back out of the plan on the next run.
+# -> {"monthlyIncome":"2000.00","balance":"20000.00","setAside":"0.00",
+#     "explanation":"We plan with exactly what you told us you have. ..."}
+PUT {{gateway}}/api/v1/money
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "monthlyIncome": "2000.00", "balance": "20000.00" }
+
+### 9. What the user actually spends each month, by category key. Leave a category out and the plan
+# assumes the local figure for it - and says so on that line ("assumed": true).
+# -> {"rent":"500.00","groceries":"380.00","dining-out":"200.00","entertainment":"120.00"}
+PUT {{gateway}}/api/v1/spending
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rent": "500.00",
+  "groceries": "380.00",
+  "subscriptions": "40.00",
+  "dining-out": "200.00",
+  "entertainment": "120.00"
+}
+
+### 10. A named commitment, so advice can name it. "kind" is "part-of" (already inside that category's
+# figure - naming it changes no total) or "on-top" (extra, nothing else has counted it).
+# "howWilling" is the user's own answer; "locked" means the plan never suggests cutting it.
+# -> {"id":"gym","label":"Gym membership","category":{"key":"subscriptions","label":"Subscriptions"},
+#     "amount":"30.00","howWilling":{"key":"locked","label":"Cannot be changed"},
+#     "kind":{"key":"part-of","label":"Part of what I already spend on Subscriptions"}}
+PUT {{gateway}}/api/v1/line-items/gym
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label": "Gym membership",
+  "category": "subscriptions",
+  "amount": "30.00",
+  "howWilling": "locked",
+  "kind": "part-of"
+}
+
+###
+GET {{gateway}}/api/v1/line-items
+Authorization: Bearer {{token}}
+
+### 11. The first plan. Every recompute appends a snapshot; nothing ever edits an old one.
+# -> 201, Location: /api/v1/plan/history/{id}, body is the plan (shape under step 13).
+POST {{gateway}}/api/v1/plan
+Authorization: Bearer {{token}}
+
+### 12. Add a goal. There is no "already saved" field, on purpose: what a goal has already is worked
+# out from the balance in step 8, so the same dollars can never be counted towards a goal twice.
+# Adding a goal recomputes the whole plan and returns it.
+# -> 201 {"goal":{"id":"...","name":"Car","target":"12000.00","deadline":"2027-06-30",
+#                 "priority":{"key":"high","label":"Very important"},"finishFirst":false},
+#         "plan":{ ...the new plan... }}
+POST {{gateway}}/api/v1/goals
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Car", "target": "12000.00", "deadline": "2027-06-30", "priority": "high" }
+
+### 13. A competing, higher-priority goal. Watch the re-ranking in the returned plan.
+#
+# The plan, which is also what GET /api/v1/plan and GET /api/v1/plan/history/{id} return:
+# {"id":"...","takenAt":"2026-09-22T10:15:30Z","asOf":"2026-09-22",
+#  "reason":"You added a goal: Emergency fund",
+#  "money":{"monthlyIncome":"2000.00","balanceInScope":"20000.00","setAside":"0.00",
+#           "putTowardGoals":"20000.00","leftUnassigned":"0.00",
+#           "runway":{"label":"Your money is not running down","months":null}},
+#  "surplus":{"amount":"610.00",
+#             "explanation":"What is left each month if spending comes down to the figures below. ...",
+#             "assumedReduction":"70.00",
+#             "assumedReductionExplanation":"The monthly figure above already assumes you make these changes. ...",
+#             "reductions":[{"label":"Eating out, going out and clothes","from":"320.00","to":"250.00","by":"70.00"}],
+#             "lines":[{"id":"groceries","label":"Groceries","category":{"key":"groceries","label":"Groceries"},
+#                       "spent":"380.00","localFigure":"300.00","counted":"300.00","assumed":false,
+#                       "basis":{"label":"Your own figure","explanation":"...","gathered":"2026-09-22","ageing":null}}],
+#             "leastForEnjoyingLife":"250.00","alreadySaving":"0.00"},
+#  "goals":[{"id":"...","name":"Emergency fund","priority":{"key":"critical","label":"Must happen"},
+#            "target":"6000.00","fromBalance":"6000.00","stillNeeded":"0.00","deadline":"2027-03-31",
+#            "monthlyNeeded":"0.00","monthlyFunded":"0.00","shortBy":"0.00","finishFirst":false,
+#            "status":{"label":"Already covered","meaning":"..."}}, ...],
+#  "cuts":{"suggested":[{"label":"Subscriptions","category":{"key":"subscriptions","label":"Subscriptions"},
+#                        "by":"10.00","howWilling":{"key":"essential","label":"Very important"}}],
+#          "suggestedTotal":"10.00","alreadyAssumed":"70.00","totalChange":"80.00",
+#          "totalChangeExplanation":"Everything you would change to make this plan work. ...",
+#          "stillShort":"0.00","options":[]},
+#  "hints":[{"label":"Rent","hint":"a roommate, or renegotiating the lease at renewal, ..."}],
+#  "leftOver":{"amount":"0.00","explanation":"..."}}
+#
+# "cuts.suggested" is never shown without "alreadyAssumed" and "totalChange" beside it: the monthly
+# figure is not money in hand, and the suggested cuts are only the part on top of what it assumed.
+# "hints" are sentences, never numbers - do not render them in a total.
+POST {{gateway}}/api/v1/goals
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Emergency fund", "target": "6000.00", "deadline": "2027-03-31", "priority": "critical" }
+
+### 14. Let the car take the balance first, ahead of priority order. Returns the recomputed plan.
+# Send {"goalId": null} to go back to priority order.
+PUT {{gateway}}/api/v1/goals/finish-first
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "goalId": "paste-the-car-goal-id" }
+
+### 15. Change a goal - for example, give it more time. Returns {"goal":..., "plan":...}.
+PUT {{gateway}}/api/v1/goals/paste-the-car-goal-id
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "Car", "target": "12000.00", "deadline": "2027-12-31", "priority": "high" }
+
+###
+GET {{gateway}}/api/v1/goals
+Authorization: Bearer {{token}}
+
+### 16. Take money back out of the plan. The next plan hands it back - a new snapshot, never an edit.
+PUT {{gateway}}/api/v1/money
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "monthlyIncome": "2000.00", "balance": "5000.00" }
+
+###
+POST {{gateway}}/api/v1/plan
+Authorization: Bearer {{token}}
+
+### 17. The latest plan, without recomputing. 404 until the first plan exists.
+GET {{gateway}}/api/v1/plan
+Authorization: Bearer {{token}}
+
+### 18. Every plan ever made, newest first, each saying why it was made and what it changed.
+# -> [{"id":"...","takenAt":"...","reason":"You added a goal: Emergency fund",
+#      "changes":{"goalsAdded":["Emergency fund"],"goalsRemoved":[],
+#                 "surplus":{"before":"610.00","after":"610.00"},
+#                 "goals":[{"id":"...","name":"Car",
+#                           "before":{"status":"On track","monthlyFunded":"0.00","fromBalance":"12000.00"},
+#                           "after":{"status":"Behind","monthlyFunded":"520.00","fromBalance":"0.00"}}]}}]
+# The oldest entry has "changes": null - there was nothing before it.
+GET {{gateway}}/api/v1/plan/history
+Authorization: Bearer {{token}}
+
+### 19. One past plan, exactly as it was.
+GET {{gateway}}/api/v1/plan/history/paste-a-snapshot-id
+Authorization: Bearer {{token}}
+
+### 20. "Can I afford this today?" Pick a meal band from /choices, or price something yourself with
+# "price" and "label". "spentThisMonth" is what has already gone on that category this month; it is
+# asked for because no bank is connected yet to work it out.
+# -> {"verdict":{"label":"This works if you ease off afterwards","meaning":"..."},
+#     "category":{"key":"dining-out","label":"Eating out"},
+#     "purchase":{"label":"A normal meal out","covers":"...","price":"10.00",
+#                 "basis":{"label":"Our estimate","meaning":"..."}},
+#     "allowance":"200.00","allowanceBasis":"...","spentThisMonth":"120.00","left":"80.00",
+#     "daysLeft":9,"perDay":"8.88",
+#     "catchUp":{"perDayAfter":"8.75","lessPerDay":"0.13","days":8,"fitsThisMonth":true,
+#                "runsIntoNextMonth":"0.00"},
+#     "cheaper":{"label":"Cheap and cheerful","covers":"...","price":"6.00","basis":{...},
+#                "verdict":{"label":"You can afford this","meaning":"..."}}}
+# "cheaper" is always shown beside a warning: a warning on its own is a scold.
+POST {{gateway}}/api/v1/decisions/afford
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "category": "dining-out", "band": "medium", "spentThisMonth": "120.00" }
+
+###
+POST {{gateway}}/api/v1/decisions/afford
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "category": "clothing", "label": "Winter jacket", "price": "200.00", "spentThisMonth": "0.00" }
+
+### 21. "Give me more for this, and take it from the rest." Raise a line by dollars ("amount") or by a
+# whole percentage of the balance in scope ("percentOfBalance") - one or the other. Line ids are the
+# category keys and the line-item ids from step 10. This is a proposal; nothing is saved.
+# -> {"outcome":{"label":"Done - here is what gives","meaning":"..."},
+#     "granted":"50.00","stillShort":"0.00",
+#     "changes":[{"id":"dining-out","label":"Eating out","from":"200.00","to":"250.00","by":"50.00"},
+#                {"id":"entertainment","label":"Going out and fun","from":"120.00","to":"70.00","by":"-50.00"}],
+#     "hints":[{"id":"gym","label":"Gym membership","hint":"off-peak or annual-paid memberships ..."}],
+#     "options":[]}
+# When "stillShort" is above zero, "options" carries the two real ways out, each with the request that
+# acts on it: {"label":"Use more of your savings this month","meaning":"...","answerWith":"PUT /api/v1/money"}
+POST {{gateway}}/api/v1/decisions/rebalance
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "raise": "dining-out", "amount": "50.00" }
+
+### 22. Removing a goal also recomputes, and the history shows what freeing its money did.
+DELETE {{gateway}}/api/v1/goals/paste-a-goal-id
+Authorization: Bearer {{token}}

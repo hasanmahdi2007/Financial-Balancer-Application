@@ -1,0 +1,34 @@
+[
+  {
+    "id": "new-york",
+    "name": "New York",
+    "region": "New York",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-01-01"
+  },
+  {
+    "id": "san-francisco",
+    "name": "San Francisco",
+    "region": "California",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-01-01"
+  },
+  {
+    "id": "austin",
+    "name": "Austin",
+    "region": "Texas",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-01-01"
+  },
+  {
+    "id": "wichita",
+    "name": "Wichita",
+    "region": "Kansas",
+    "basis": "Researched by us",
+    "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+    "gathered": "2026-01-01"
+  }
+]
