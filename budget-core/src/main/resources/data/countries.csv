@@ -11,4 +11,4 @@
 # never be offered, because selecting it is a dead end.
 code,name,currency,annual_inflation_pct,inflation_as_of,listed,data_note
 LB,Lebanon,USD,17.30,2026-01-01,true,"Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent."
-US,United States,USD,3.00,2026-01-01,true,"Figures are for a single person renting alone. The official BLS/BEA derivation is deferred, so these are curated estimates like every other row here."
+US,United States,USD,3.00,2026-01-01,true,"Figures are for a single person renting alone. They are our own researched estimates, not official statistics."
