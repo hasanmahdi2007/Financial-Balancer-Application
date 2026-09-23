@@ -9,7 +9,10 @@ import { liftSharedEnding } from './sharedWording';
 
 /** Whole dollars or dollars and cents, never negative. Kept as text so no amount becomes a float. */
 const AMOUNT = /^\d{1,7}(\.\d{1,2})?$/;
-const AMOUNT_PROBLEM = 'Enter an amount in dollars, like 350 or 350.50.';
+// Says what a valid answer looks like rather than only that this one is not, and rules out the
+// separators people reach for - "1,000" and "1 000" mean different amounts in different countries,
+// so they are refused rather than guessed at.
+const AMOUNT_PROBLEM = 'Enter an amount in dollars, like 350 or 350.50 - digits only, no commas or spaces.';
 
 export function ManualFormStep() {
   const { countryCode = '' } = useParams();
@@ -30,7 +33,25 @@ export function ManualFormStep() {
       {questions.state === 'loading' ? <Loading what="the questions" /> : null}
       {questions.state === 'failed' ? <Failure message={questions.message} retry={questions.retry} /> : null}
       {questions.state === 'ready' ? (
-        <ManualForm key={countryCode} countryCode={countryCode} questions={questions.data} />
+        questions.data.length === 0 ? (
+          <>
+            <div className="banner banner--warning" role="note">
+              <strong>We have nothing to ask you about yet.</strong>
+              <p>We hold no figures for that country, so there is nothing to start you from. Pick another country.</p>
+            </div>
+            <Link to="/setup/location" className="button button--secondary">
+              Back
+            </Link>
+          </>
+        ) : (
+          // Keyed by the questions themselves, not just the country: answers are held by position,
+          // so a form that changed underneath a half-filled one would put one in the wrong box.
+          <ManualForm
+            key={`${countryCode}|${questions.data.map((q) => q.question).join('|')}`}
+            countryCode={countryCode}
+            questions={questions.data}
+          />
+        )
       ) : null}
     </section>
   );

@@ -19,7 +19,12 @@ export function useRemote<T>(key: string | null, load: (signal: AbortSignal) => 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   useEffect(() => {
-    if (key === null) return;
+    // Nothing to load yet. Falling through with the previous result would leave one country's
+    // answer on screen while the question it answered is gone.
+    if (key === null) {
+      setResult({ state: 'loading' });
+      return;
+    }
     const controller = new AbortController();
     setResult({ state: 'loading' });
     load(controller.signal).then(
