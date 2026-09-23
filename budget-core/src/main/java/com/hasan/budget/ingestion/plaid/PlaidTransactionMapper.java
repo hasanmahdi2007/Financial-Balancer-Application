@@ -5,6 +5,7 @@ import com.hasan.budget.ingestion.domain.Classification;
 import com.hasan.budget.ingestion.domain.NormalisedTransaction;
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.SpendCategory;
+import com.hasan.budget.shared.TransactionKind;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.LocalDate;
 import java.util.Map;
@@ -16,11 +17,14 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Three decisions live here, and each of them is a way of being wrong that produces no error.
  *
- * <p><strong>An unrecognised category is never dropped.</strong> It becomes ordinary spending in
- * "Everything else", increments a counter and is logged with the value that was missing. Dropping it
- * instead would remove real spending from the plan, and a plan that has lost spending reports a
- * larger surplus than the user has - the one direction of error they must never be shown. The
- * counter means the gap is visible in metrics rather than waiting to be noticed.
+ * <p><strong>An unrecognised category is never dropped, and what it becomes depends on which way the
+ * money went.</strong> An unknown payment becomes ordinary spending in "Everything else", because
+ * dropping it would remove real spending from the plan and report a larger surplus than the user
+ * has. An unknown credit becomes an external movement instead: recorded as spending it would carry a
+ * negative amount and <em>reduce</em> a category total, which flatters the plan in exactly the same
+ * way, and calling it income would invent earnings out of money that might be borrowed. Either way
+ * the counter increments and the value is logged, so the gap shows up in metrics rather than waiting
+ * to be noticed.
  *
  * <p><strong>The sign is left exactly as Plaid sends it.</strong> Positive is money out. Flipping it
  * here would look tidier and would quietly invert every figure in the product.
@@ -46,7 +50,7 @@ public class PlaidTransactionMapper {
         Money amount = new Money(source.amount());
         boolean moneyIn = amount.isNegative();
         AccountRole role = roles.getOrDefault(source.accountId(), AccountRole.CASH);
-        Classification classification = role.settle(classify(source), moneyIn);
+        Classification classification = role.settle(classify(source, moneyIn), moneyIn);
 
         return new NormalisedTransaction(
                 source.transactionId(),
@@ -70,7 +74,7 @@ public class PlaidTransactionMapper {
         return source.authorizedDate() != null ? source.authorizedDate() : source.date();
     }
 
-    private Classification classify(PlaidWire.Transaction source) {
+    private Classification classify(PlaidWire.Transaction source, boolean moneyIn) {
         String detailed = source.personalFinanceCategory() == null
                 ? null
                 : source.personalFinanceCategory().detailed();
@@ -80,17 +84,34 @@ public class PlaidTransactionMapper {
                 return known.get();
             }
         }
-        return unmapped(detailed == null ? NO_CATEGORY_AT_ALL : detailed, source.transactionId());
+        return unmapped(detailed == null ? NO_CATEGORY_AT_ALL : detailed, source.transactionId(), moneyIn);
     }
 
-    private Classification unmapped(String detailed, String transactionId) {
+    /**
+     * What to do with a category nobody has mapped, which depends on which way the money went.
+     *
+     * <p>Money out becomes ordinary spending, so it is still subtracted and the plan is never
+     * flattered by a purchase it could not name.
+     *
+     * <p>Money in must <strong>not</strong> take the same route, and this is subtle enough to have
+     * been wrong here first time round. An unrecognised credit recorded as spending carries a
+     * negative amount, which <em>reduces</em> that category's total - so an unknown deposit would
+     * quietly shrink someone's apparent spending and inflate their surplus, which is the one
+     * direction of error this module exists to prevent. Nor can it be called income, since money
+     * arriving unidentified is as likely to be borrowed. Recorded as an external movement, it
+     * touches neither total, and the counter still says it needs a row.
+     */
+    private Classification unmapped(String detailed, String transactionId, boolean moneyIn) {
         meters.counter(UNMAPPED_METRIC, "category", detailed).increment();
+        Classification fallback = moneyIn
+                ? Classification.notSpending(TransactionKind.TRANSFER_EXTERNAL)
+                : Classification.spend(SpendCategory.OTHER);
         log.warn(
-                "Plaid category {} is not in the mapping table; counting transaction {} as {} so the "
-                        + "spending is not lost. Add a row to pfc-mapping.csv.",
+                "Plaid category {} is not in the mapping table; transaction {} counted as {} so "
+                        + "nothing is lost and nothing is invented. Add a row to pfc-mapping.csv.",
                 detailed,
                 transactionId,
-                SpendCategory.OTHER.label());
-        return Classification.spend(SpendCategory.OTHER);
+                moneyIn ? "money in of an unknown kind" : SpendCategory.OTHER.label());
+        return fallback;
     }
 }
