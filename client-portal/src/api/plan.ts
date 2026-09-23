@@ -48,8 +48,12 @@ export interface Basis {
   explanation: string;
   /** ISO date the figures were recorded. */
   gathered: string;
-  /** The staleness sentence, or null when the figures are current enough not to warrant one. */
-  ageing: string | null;
+  /**
+   * How far prices have probably moved since, as a label and the sentence behind it - null while the
+   * figure is still current, so only a figure worth questioning is flagged. An object, not a string:
+   * the server sends `{label, meaning}` (`PlanView.Basis`).
+   */
+  ageing: Meaning | null;
 }
 
 export interface CityBasis {
