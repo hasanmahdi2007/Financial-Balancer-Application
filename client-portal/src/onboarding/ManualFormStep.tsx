@@ -3,16 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { useApi } from '../api/ApiProvider';
 import { catalogue, type SpendingQuestion } from '../api/catalogue';
 import { useRemote } from '../api/useRemote';
+import { AMOUNT_PROBLEM, isAmount } from '../ui/amount';
 import { Failure, Loading } from '../ui/Feedback';
 import { useOnboardingDraft, type ManualAnswer } from './OnboardingDraft';
 import { liftSharedEnding } from './sharedWording';
-
-/** Whole dollars or dollars and cents, never negative. Kept as text so no amount becomes a float. */
-const AMOUNT = /^\d{1,7}(\.\d{1,2})?$/;
-// Says what a valid answer looks like rather than only that this one is not, and rules out the
-// separators people reach for - "1,000" and "1 000" mean different amounts in different countries,
-// so they are refused rather than guessed at.
-const AMOUNT_PROBLEM = 'Enter an amount in dollars, like 350 or 350.50 - digits only, no commas or spaces.';
 
 export function ManualFormStep() {
   const { countryCode = '' } = useParams();
@@ -44,10 +38,11 @@ export function ManualFormStep() {
             </Link>
           </>
         ) : (
-          // Keyed by the questions themselves, not just the country: answers are held by position,
-          // so a form that changed underneath a half-filled one would put one in the wrong box.
+          // Keyed by which categories are being asked about, not just the country: answers are held
+          // by position, so a form that gained or lost a question underneath a half-filled one would
+          // put an answer in the wrong box.
           <ManualForm
-            key={`${countryCode}|${questions.data.map((q) => q.question).join('|')}`}
+            key={`${countryCode}|${questions.data.map((q) => q.category).join('|')}`}
             countryCode={countryCode}
             questions={questions.data}
           />
@@ -58,9 +53,10 @@ export function ManualFormStep() {
 }
 
 function initialAnswers(questions: SpendingQuestion[], saved: ManualAnswer[] | undefined): string[] {
-  // Keep what the user already typed if they come back, but only answer-for-question: if the form
-  // changed underneath them, a stale answer would land in the wrong box.
-  return questions.map((q) => saved?.find((a) => a.question === q.question)?.amount ?? q.suggested);
+  // Keep what the user already typed if they come back, matched on the category rather than on the
+  // question's wording: the category is what the answer is *about*, so a reworded question should
+  // still give someone back their own figure rather than silently replacing it with our suggestion.
+  return questions.map((q) => saved?.find((a) => a.category === q.category)?.amount ?? q.suggested);
 }
 
 function ManualForm({ countryCode, questions }: { countryCode: string; questions: SpendingQuestion[] }) {
@@ -73,7 +69,7 @@ function ManualForm({ countryCode, questions }: { countryCode: string; questions
   const [amounts, setAmounts] = useState<string[]>(() => initialAnswers(questions, previous?.answers));
   const [showProblems, setShowProblems] = useState(false);
 
-  const invalid = amounts.map((amount) => !AMOUNT.test(amount.trim()));
+  const invalid = amounts.map((amount) => !isAmount(amount));
   const cityMissing = cityLabel.trim() === '';
 
   // The server builds every question's `why` and `basis` from the same parts, so on a ten-question
@@ -91,7 +87,7 @@ function ManualForm({ countryCode, questions }: { countryCode: string; questions
       kind: 'unlisted',
       countryCode,
       cityLabel: cityLabel.trim(),
-      answers: questions.map((q, i) => ({ question: q.question, amount: amounts[i]!.trim() })),
+      answers: questions.map((q, i) => ({ category: q.category, question: q.question, amount: amounts[i]!.trim() })),
     });
     navigate('/setup/next');
   }

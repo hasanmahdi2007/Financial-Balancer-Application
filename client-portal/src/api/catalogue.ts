@@ -29,6 +29,8 @@ export interface City {
 }
 
 export interface SpendingQuestion {
+  /** The category key this answer is sent back under, e.g. "rent". Never rendered. */
+  category: string;
   question: string;
   why: string;
   /** Rendered lines such as "Rent - your rent or mortgage payment". */
