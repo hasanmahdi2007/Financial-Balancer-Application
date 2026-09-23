@@ -1,0 +1,186 @@
+package com.hasan.budget.planning.application;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.hasan.budget.planning.domain.Priority;
+import com.hasan.budget.planning.domain.surplus.UserLineItem;
+import com.hasan.budget.profile.domain.LifestyleTier;
+import com.hasan.budget.shared.CountryCode;
+import com.hasan.budget.shared.MetroId;
+import com.hasan.budget.shared.Money;
+import com.hasan.budget.shared.SpendCategory;
+import java.time.LocalDate;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Optional;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+/**
+ * What the service refuses, and what it records, with no container and no database.
+ *
+ * <p>These are the rules that keep the API honest rather than merely working: a refusal a person can
+ * act on, a snapshot that says why it exists, and an input that cannot be entered twice in two forms.
+ */
+class PlanServiceTest {
+
+    private static final LocalDate TODAY = LocalDate.of(2026, 3, 14);
+    private static final LocalDate NEXT_YEAR = LocalDate.of(2027, 3, 1);
+
+    private final PlanningFixture fixture = new PlanningFixture(TODAY);
+    private final PlanService plans = fixture.plans();
+
+    @Nested
+    @DisplayName("what it refuses, and how it says so")
+    class Refusals {
+
+        /** Every message here is shown to the user unchanged, so each has to be a sentence they can act on. */
+        @Test
+        void aPlanCannotBeMadeBeforeTheUserHasSaidWhereTheyLiveAndWhatTheyEarn() {
+            assertThatThrownBy(() -> plans.plan("newcomer"))
+                    .isInstanceOf(NeedsMoreInformationException.class)
+                    .hasMessageContaining("country and city");
+
+            plans.saveProfile("newcomer", new PlanService.ProfileChange(
+                    PlanningFixture.LEBANON, PlanningFixture.BEIRUT, null, LifestyleTier.REGULAR, true, null));
+            assertThatThrownBy(() -> plans.plan("newcomer"))
+                    .isInstanceOf(NeedsMoreInformationException.class)
+                    .hasMessageContaining("how much comes in each month");
+
+            plans.saveMoney("newcomer", new StatedMoney(Money.ZERO, Money.of(500)));
+            assertThatThrownBy(() -> plans.plan("newcomer"))
+                    .as("a plan is built from what arrives each month, so zero income is not a plan")
+                    .isInstanceOf(NeedsMoreInformationException.class)
+                    .hasMessageContaining("monthly income");
+        }
+
+        @Test
+        void aCityWeHoldNoFiguresForIsRefusedRatherThanGuessedAt() {
+            assertThatThrownBy(() -> plans.saveProfile("wanderer", new PlanService.ProfileChange(
+                            new CountryCode("FR"), null, "Lyon", LifestyleTier.REGULAR, true, null)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Choose a country from the list");
+
+            assertThatThrownBy(() -> plans.saveProfile("wanderer", new PlanService.ProfileChange(
+                            PlanningFixture.LEBANON, new MetroId("atlantis"), null, LifestyleTier.REGULAR, true, null)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("not in our list");
+        }
+
+        /** A city we do not list is a normal path, not a dead end: the typed name is kept for display. */
+        @Test
+        void aCityWeDoNotListIsRecordedByItsCountryAndShownBackByItsName() {
+            PlanningProfile saved = plans.saveProfile("wanderer", new PlanService.ProfileChange(
+                    PlanningFixture.LEBANON, null, "Zahle", LifestyleTier.OCCASIONAL, true, null));
+
+            assertThat(saved.listedCity()).isEmpty();
+            assertThat(saved.cityNotListed()).isEqualTo("Zahle");
+        }
+
+        @Test
+        void taxSetAsideIsNeverSomethingTheUserEnters() {
+            Map<SpendCategory, Money> stated = new EnumMap<>(SpendCategory.class);
+            stated.put(SpendCategory.TAX_RESERVE, Money.of(200));
+
+            assertThatThrownBy(() -> plans.saveSpending("freelancer", stated))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("worked out from your tax rate");
+        }
+
+        /**
+         * Plan lines are named in one flat space, so an item calling itself "rent" would collide with
+         * the rent line and leave rebalancing unable to say which one moved.
+         */
+        @Test
+        void aNamedItemCannotTakeTheNameOfAKindOfSpending() {
+            assertThatThrownBy(() -> plans.saveLineItem("saver", UserLineItem.onTopOf(
+                            "rent", "Parking space", SpendCategory.RENT, Money.of(50))))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("already the name of a kind of spending");
+
+            assertThatThrownBy(() -> plans.saveLineItem("saver", UserLineItem.onTopOf(
+                            "transport-fuel", "Season ticket", SpendCategory.TRANSPORT_FUEL, Money.of(50))))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void deletingSomethingThatIsNotYoursSaysOnlyThatItIsNotThere() {
+            fixture.onboard("owner", Money.of(1000));
+            plans.saveLineItem("owner", UserLineItem.onTopOf(
+                    "gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(40)));
+
+            assertThatThrownBy(() -> plans.deleteLineItem("stranger", "gym"))
+                    .isInstanceOf(NotFoundException.class)
+                    .hasMessageContaining("no named item");
+            assertThat(plans.lineItems("owner")).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("what each plan records about why it exists")
+    class Snapshots {
+
+        @Test
+        void everyChangeToAGoalAppendsASnapshotSayingWhatTheUserDid() {
+            fixture.onboard("saver", Money.of(1000));
+            GoalDraft car = plans.addGoal("saver", new PlanService.GoalChange(
+                            "Car", Money.of(9000), NEXT_YEAR, Priority.HIGH))
+                    .goal();
+            plans.updateGoal("saver", car.id(), new PlanService.GoalChange(
+                    "Car", Money.of(9000), LocalDate.of(2028, 3, 1), Priority.HIGH));
+            plans.finishFirst("saver", Optional.of(car.id()));
+            plans.finishFirst("saver", Optional.empty());
+            plans.removeGoal("saver", car.id());
+
+            assertThat(plans.history("saver")).extracting(PlanHistory.Entry::reason)
+                    .containsExactly(
+                            "You removed a goal: Car",
+                            "You went back to finishing goals in order of importance",
+                            "You chose Car to finish first",
+                            "You changed a goal: Car",
+                            "You added a goal: Car");
+        }
+
+        /** Removing the nominated goal must not leave a nomination pointing at nothing. */
+        @Test
+        void removingTheNominatedGoalTakesTheNominationWithIt() {
+            fixture.onboard("saver", Money.of(1000));
+            GoalDraft car = plans.addGoal("saver", new PlanService.GoalChange(
+                            "Car", Money.of(9000), NEXT_YEAR, Priority.HIGH))
+                    .goal();
+            plans.finishFirst("saver", Optional.of(car.id()));
+
+            plans.removeGoal("saver", car.id());
+
+            assertThat(plans.finishFirst("saver")).isEmpty();
+        }
+
+        /**
+         * A goal can be added before there is anything to plan with. It is kept, and the answer says
+         * what is still missing rather than refusing the goal or inventing a plan.
+         */
+        @Test
+        void aGoalAddedBeforeThereIsAnythingToPlanWithIsStillKept() {
+            PlanService.GoalAndPlan added = plans.addGoal("newcomer", new PlanService.GoalChange(
+                    "Car", Money.of(9000), NEXT_YEAR, Priority.HIGH));
+
+            assertThat(added.goal().name()).isEqualTo("Car");
+            assertThat(added.plan()).isNull();
+            assertThat(added.waitingFor()).contains("country and city");
+            assertThat(plans.goals("newcomer")).hasSize(1);
+        }
+
+        /** The plan a user is looking at does not change under them until they ask for a new one. */
+        @Test
+        void readingAPlanNeverRecomputesIt() {
+            fixture.onboard("saver", Money.of(1000));
+            PlanView made = plans.plan("saver");
+            plans.saveMoney("saver", new StatedMoney(Money.of(5000), Money.of(90_000)));
+
+            assertThat(plans.latest("saver")).contains(made);
+            assertThat(plans.history("saver")).hasSize(1);
+        }
+    }
+}

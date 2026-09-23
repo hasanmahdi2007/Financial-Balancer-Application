@@ -2,7 +2,6 @@ package com.hasan.budget.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import com.hasan.budget.costofliving.domain.Confidence;
 import com.hasan.budget.planning.application.GoalDraft;
@@ -48,7 +47,6 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

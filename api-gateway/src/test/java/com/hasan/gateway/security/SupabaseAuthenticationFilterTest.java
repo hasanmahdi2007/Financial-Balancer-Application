@@ -181,8 +181,11 @@ class SupabaseAuthenticationFilterTest {
         filter.filter(preflight, chain).block();
         assertThat(forwarded.get()).isNotNull();
 
+        // And a caller cannot smuggle a user id in through the paths that need no token: the header is
+        // stripped on every path through this filter, not only on the one that checks a token.
         forwarded.set(null);
-        MockServerWebExchange health = MockServerWebExchange.from(MockServerHttpRequest.get("/actuator/health"));
+        MockServerWebExchange health = MockServerWebExchange.from(MockServerHttpRequest.get("/actuator/health")
+                .header(SupabaseAuthenticationFilter.USER_HEADER, "somebody-elses-account"));
         filter.filter(health, chain).block();
         assertThat(forwarded.get()).isNotNull();
         assertThat(forwarded.get().getRequest().getHeaders().getFirst(SupabaseAuthenticationFilter.USER_HEADER))

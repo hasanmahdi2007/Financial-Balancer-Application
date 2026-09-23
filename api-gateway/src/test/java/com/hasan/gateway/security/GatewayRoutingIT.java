@@ -139,6 +139,41 @@ class GatewayRoutingIT {
                 .containsExactly(SOMEONE);
     }
 
+    /**
+     * The rate limiting came across from the gateway this was adapted from and still works - but who
+     * a caller <em>is</em> changed, from an API key they sent to the user their token proves. This is
+     * the test of that change: one person exhausting their own allowance must not touch anybody
+     * else's, which is exactly what would happen if both fell back to being tracked by address.
+     */
+    @Test
+    @DisplayName("a caller is rate-limited as themselves, and not on anyone else's behalf")
+    void oneCallersLimitIsTheirOwn() throws Exception {
+        String busy = "11111111-0000-4000-8000-aaaaaaaaaaaa";
+        String quiet = "22222222-0000-4000-8000-bbbbbbbbbbbb";
+
+        int refused = 0;
+        for (int request = 0; request < 40; request++) {
+            int status = client.get()
+                    .uri("/api/v1/plan")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(busy))
+                    .exchange()
+                    .returnResult(String.class)
+                    .getStatus()
+                    .value();
+            if (status == 429) {
+                refused++;
+            }
+        }
+        assertThat(refused).as("a caller past their allowance is turned away").isPositive();
+
+        client.get()
+                .uri("/api/v1/plan")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(quiet))
+                .exchange()
+                .expectStatus()
+                .isOk();
+    }
+
     /** The decoder, holding a key generated here rather than fetched from Supabase. */
     @TestConfiguration
     static class LocalSigningKey {

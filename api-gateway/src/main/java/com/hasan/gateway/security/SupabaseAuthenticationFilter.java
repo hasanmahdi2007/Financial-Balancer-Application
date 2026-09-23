@@ -57,8 +57,13 @@ public class SupabaseAuthenticationFilter implements WebFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
+        // Before anything else, and on every path through this filter - including the two that need no
+        // token. Whatever the caller sent under this name is gone from here on; only a checked token
+        // can put one back.
+        ServerWebExchange sanitised = withoutInjectedUser(exchange);
+
         if (HttpMethod.OPTIONS.equals(request.getMethod()) || isHealthCheck(request)) {
-            return chain.filter(exchange);
+            return chain.filter(sanitised);
         }
 
         String authorization = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
@@ -75,8 +80,8 @@ public class SupabaseAuthenticationFilter implements WebFilter, Ordered {
                     exchange.getAttributes().put(TRACKING_ID, "user:" + userId);
                     exchange.getAttributes().put(CAPACITY, capacity);
                     exchange.getAttributes().put(REFILL_RATE, refillRate);
-                    return chain.filter(exchange.mutate()
-                            .request(request.mutate()
+                    return chain.filter(sanitised.mutate()
+                            .request(sanitised.getRequest().mutate()
                                     .headers(headers -> headers.set(USER_HEADER, userId))
                                     .build())
                             .build());
@@ -88,6 +93,15 @@ public class SupabaseAuthenticationFilter implements WebFilter, Ordered {
 
     private static boolean isHealthCheck(ServerHttpRequest request) {
         return request.getURI().getPath().startsWith("/actuator/health");
+    }
+
+    /** The same request with any caller-supplied user id removed, whoever they turn out to be. */
+    private static ServerWebExchange withoutInjectedUser(ServerWebExchange exchange) {
+        return exchange.mutate()
+                .request(exchange.getRequest().mutate()
+                        .headers(headers -> headers.remove(USER_HEADER))
+                        .build())
+                .build();
     }
 
     /** RFC 9457, the same shape budget-core answers with, so a client has one error format to read. */

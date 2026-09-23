@@ -223,6 +223,77 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                 .andExpect(status().isNoContent());
     }
 
+    /**
+     * A goal the user nominates to finish first takes the balance ahead of a more important one. The
+     * route is also under test: it sits beside {@code PUT /goals/{id}} and must not be read as a goal
+     * called "finish-first".
+     */
+    @Test
+    @DisplayName("a nominated goal takes the balance ahead of a more important one")
+    void aNominatedGoalIsFundedFirst() throws Exception {
+        onboard(ana);
+        String car = goalId(post("/api/v1/goals"), """
+                {"name":"Car","target":"9000.00","deadline":"2027-06-30","priority":"medium"}""");
+        goalId(post("/api/v1/goals"), """
+                {"name":"Emergency fund","target":"6000.00","deadline":"2027-06-30","priority":"critical"}""");
+
+        // By importance, the emergency fund would take the $12,000 first.
+        mockMvc.perform(as(ana, get("/api/v1/plan")))
+                .andExpect(jsonPath("$.goals[?(@.name == 'Emergency fund')].fromBalance").value(hasItem("6000.00")));
+
+        mockMvc.perform(as(ana, put("/api/v1/goals/finish-first")).content("""
+                        {"goalId":"%s"}""".formatted(car)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.plan.goals[?(@.id == '%s')].fromBalance".formatted(car))
+                        .value(hasItem("9000.00")))
+                .andExpect(jsonPath("$.plan.goals[?(@.id == '%s')].finishFirst".formatted(car))
+                        .value(hasItem(true)));
+
+        // And it can be taken back, which returns the balance to order of importance.
+        mockMvc.perform(as(ana, put("/api/v1/goals/finish-first")).content("""
+                        {"goalId":null}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.plan.goals[?(@.name == 'Emergency fund')].fromBalance")
+                        .value(hasItem("6000.00")));
+    }
+
+    /**
+     * Lines are named in one flat space - a category key, or an item's own id - so an item calling
+     * itself "rent" is refused rather than left to collide with the rent line when money is moved.
+     */
+    @Test
+    @DisplayName("a named commitment cannot take the name of a kind of spending")
+    void aNamedItemCannotCollideWithACategory() throws Exception {
+        onboard(ana);
+
+        mockMvc.perform(as(ana, put("/api/v1/line-items/rent")).content("""
+                        {"label":"Parking space","category":"rent","amount":"50.00","kind":"on-top"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(containsString("already the name of a kind of spending")));
+    }
+
+    /** Every refusal is a problem document with a sentence in it, including Spring's own. */
+    @Test
+    @DisplayName("a request that does not make sense says what would")
+    void badRequestsExplainThemselves() throws Exception {
+        onboard(ana);
+
+        mockMvc.perform(as(ana, put("/api/v1/spending")).content("""
+                        {"groceries-and-things":"100.00"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(containsString("groceries")));
+
+        mockMvc.perform(as(ana, get("/api/v1/choices/item-kinds")))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+
+        mockMvc.perform(as(ana, post("/api/v1/goals")).content("""
+                        {"name":"Car","target":"12000.00","deadline":"next June","priority":"high"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(containsString("2027-06-30")));
+    }
+
     @Test
     @DisplayName("the affordability answer names a cheaper option rather than only warning")
     void theAffordabilityAnswerOffersSomethingThatWouldWork() throws Exception {
@@ -275,6 +346,16 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                 .andExpect(status().isOk());
 
         mockMvc.perform(as(userId, post("/api/v1/plan"))).andExpect(status().isCreated());
+    }
+
+    /** Adds a goal and returns the id the API gave it. */
+    private String goalId(MockHttpServletRequestBuilder request, String body) throws Exception {
+        String response = mockMvc.perform(as(ana, request).content(body))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return com.jayway.jsonpath.JsonPath.read(response, "$.goal.id");
     }
 
     private static MockHttpServletRequestBuilder as(String userId, MockHttpServletRequestBuilder request) {

@@ -6,6 +6,7 @@ import com.hasan.budget.costofliving.domain.Staleness;
 import com.hasan.budget.planning.domain.GreedyPriorityAllocator;
 import com.hasan.budget.planning.domain.surplus.UserLineItem;
 import com.hasan.budget.profile.domain.DiscretionaryFloor;
+import com.hasan.budget.profile.domain.FloorRequest;
 import com.hasan.budget.profile.domain.LifestyleTier;
 import com.hasan.budget.shared.CountryCode;
 import com.hasan.budget.shared.MetroId;
@@ -53,16 +54,30 @@ public final class PlanningFixture {
                 snapshots,
                 new StubPlaces(),
                 (profile, income) -> Optional.empty(),
-                new PlanAssembler(
-                        new GreedyPriorityAllocator(),
-                        request -> new DiscretionaryFloor(
-                                Money.of(250), Map.of(), "typical for someone in Beirut", false, Money.of(900))),
+                new PlanAssembler(new GreedyPriorityAllocator(), PlanningFixture::floor),
                 clock,
                 () -> "id-" + nextId.incrementAndGet());
     }
 
     public PlanService plans() {
         return service;
+    }
+
+    /**
+     * $250 a month for enjoying life, split across the categories the floor protects.
+     *
+     * <p>Stated outright rather than derived, so tests that are about planning are not also about the
+     * floor policy - and split per category, because that split is what an affordability check asks
+     * for when the question is about eating out rather than about rent.
+     */
+    private static DiscretionaryFloor floor(FloorRequest request) {
+        Map<SpendCategory, Money> perCategory = new EnumMap<>(SpendCategory.class);
+        perCategory.put(SpendCategory.DINING_OUT, Money.of(150));
+        perCategory.put(SpendCategory.ENTERTAINMENT, Money.of(80));
+        perCategory.put(SpendCategory.CLOTHING, Money.of(20));
+        return new DiscretionaryFloor(
+                Money.of(250), perCategory, "typical for someone in Beirut who goes out regularly",
+                false, Money.of(900));
     }
 
     /** One user, ready to plan: living in Beirut, $2,000 a month, $600 of rent, and a stated balance. */

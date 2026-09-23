@@ -151,6 +151,17 @@ public final class PlanService {
             throw new IllegalArgumentException(
                     "Tax set aside is worked out from your tax rate, so nothing can be named inside it.");
         }
+        // A plan's lines are named by category key or by item id, in one flat space - which is what
+        // lets advice say "your gym" and a rebalance name the line to raise. An item calling itself
+        // "rent" would collide with the rent line, and moving money between two lines with one name
+        // is not something either the user or the engine could resolve. Refused here, in words,
+        // rather than surfacing later as a failure to rebalance at all.
+        for (SpendCategory category : SpendCategory.values()) {
+            if (Keys.of(category).equals(item.id())) {
+                throw new IllegalArgumentException("\"" + item.id() + "\" is already the name of a kind of "
+                        + "spending. Give this one a name of its own, such as \"my-" + item.id() + "\".");
+            }
+        }
         spending.saveLineItem(userId, item);
         return item;
     }
@@ -265,6 +276,10 @@ public final class PlanService {
                 places.baselinesFor(profile),
                 spending.spending(userId),
                 spending.lineItems(userId),
+                // What the user already moves into savings each month, which is shown and never
+                // subtracted. It is zero until bank data exists: it comes from classifying transfers,
+                // which belongs to the ingestion module, and inventing a figure here would put a
+                // number on the screen that nothing measured.
                 Money.ZERO,
                 tax.monthlyReserve(profile, money.monthlyIncome()),
                 profile.lifestyle(),

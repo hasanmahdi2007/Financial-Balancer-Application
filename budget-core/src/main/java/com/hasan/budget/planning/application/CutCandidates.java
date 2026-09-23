@@ -68,12 +68,7 @@ public final class CutCandidates {
         Objects.requireNonNull(lines, "lines");
         Objects.requireNonNull(lineItems, "lineItems");
 
-        Map<SpendCategory, Money> namedWithin = new EnumMap<>(SpendCategory.class);
-        for (UserLineItem item : lineItems) {
-            if (!item.scope().isSubtractedInItsOwnRight()) {
-                namedWithin.merge(item.parent(), item.monthlyAmount(), Money::plus);
-            }
-        }
+        Map<SpendCategory, Money> namedWithin = NamedItems.withinCategories(lineItems);
 
         Map<Key, Group> grouped = new LinkedHashMap<>();
         for (CategoryLine line : lines) {

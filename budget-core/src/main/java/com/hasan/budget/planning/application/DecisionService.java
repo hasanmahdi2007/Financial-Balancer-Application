@@ -14,14 +14,12 @@ import com.hasan.budget.planning.domain.decision.SpendDecision;
 import com.hasan.budget.planning.domain.decision.SpendDecisionRequest;
 import com.hasan.budget.planning.domain.decision.TicketEstimate;
 import com.hasan.budget.planning.domain.surplus.CategoryLine;
-import com.hasan.budget.planning.domain.surplus.UserLineItem;
 import com.hasan.budget.shared.BaselinePolicy;
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.SpendCategory;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -179,12 +177,7 @@ public final class DecisionService {
      * the line's own - so a gym the user locked stays locked here too.
      */
     static List<BudgetLine> budgetLines(AssembledPlan plan) {
-        Map<SpendCategory, Money> namedWithin = new EnumMap<>(SpendCategory.class);
-        for (UserLineItem item : plan.inputs().lineItems()) {
-            if (!item.scope().isSubtractedInItsOwnRight()) {
-                namedWithin.merge(item.parent(), item.monthlyAmount(), Money::plus);
-            }
-        }
+        Map<SpendCategory, Money> namedWithin = NamedItems.withinCategories(plan.inputs().lineItems());
         List<BudgetLine> lines = new ArrayList<>();
         for (CategoryLine line : plan.breakdown().lines()) {
             if (line.lineItemId() != null) {

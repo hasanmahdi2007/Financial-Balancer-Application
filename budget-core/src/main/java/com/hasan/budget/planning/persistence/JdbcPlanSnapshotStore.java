@@ -44,7 +44,7 @@ public class JdbcPlanSnapshotStore implements PlanSnapshotStore {
                         SELECT body::text AS body
                           FROM plan_snapshot
                          WHERE user_id = :userId
-                         ORDER BY taken_at DESC, id DESC
+                         ORDER BY seq DESC
                          LIMIT 1
                         """)
                 .param("userId", userId)
@@ -58,7 +58,7 @@ public class JdbcPlanSnapshotStore implements PlanSnapshotStore {
                         SELECT body::text AS body
                           FROM plan_snapshot
                          WHERE user_id = :userId
-                         ORDER BY taken_at DESC, id DESC
+                         ORDER BY seq DESC
                         """)
                 .param("userId", userId)
                 .query((rs, row) -> json.readValue(rs.getString("body"), PlanView.class))

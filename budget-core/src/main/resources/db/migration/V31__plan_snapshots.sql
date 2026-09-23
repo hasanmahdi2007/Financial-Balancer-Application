@@ -11,12 +11,18 @@
 CREATE TABLE plan_snapshot (
     id        TEXT        PRIMARY KEY,
     user_id   TEXT        NOT NULL,
+    -- The order snapshots were appended in, and what history is read by. A timestamp is not enough:
+    -- two plans made in the same moment - adding a goal recomputes immediately, and a client may add
+    -- two in a second - would order arbitrarily, and "what changed when this goal was added" is
+    -- computed by comparing each snapshot with the one before it. A wrong order there does not fail,
+    -- it reports the reverse of what happened.
+    seq       BIGINT      GENERATED ALWAYS AS IDENTITY,
     taken_at  TIMESTAMPTZ NOT NULL,
     reason    TEXT        NOT NULL,
     body      JSONB       NOT NULL
 );
 
-CREATE INDEX plan_snapshot_by_user_newest_first ON plan_snapshot (user_id, taken_at DESC, id DESC);
+CREATE INDEX plan_snapshot_by_user_newest_first ON plan_snapshot (user_id, seq DESC);
 
 CREATE FUNCTION plan_snapshot_is_append_only() RETURNS trigger
     LANGUAGE plpgsql AS

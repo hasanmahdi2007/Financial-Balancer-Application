@@ -2,6 +2,7 @@ package com.hasan.budget.planning.web;
 
 import com.hasan.budget.planning.application.GoalDraft;
 import com.hasan.budget.planning.application.Keys;
+import com.hasan.budget.planning.application.NeedsMoreInformationException;
 import com.hasan.budget.planning.application.PlanService;
 import com.hasan.budget.planning.application.PlanService.GoalAndPlan;
 import com.hasan.budget.planning.application.PlanService.GoalChange;
@@ -98,11 +99,16 @@ class GoalController {
                 .orElseGet(() -> new PlanOnlyView(null, waitingFor(userId)));
     }
 
+    /**
+     * What the user still has to tell us, when a change was saved but no plan could be made from it.
+     * Only that one failure is turned into a sentence: anything else is a real fault and belongs in a
+     * problem document, not quietly inside a successful response.
+     */
     private String waitingFor(String userId) {
         try {
             plans.assemble(userId);
             return null;
-        } catch (RuntimeException waiting) {
+        } catch (NeedsMoreInformationException waiting) {
             return waiting.getMessage();
         }
     }
