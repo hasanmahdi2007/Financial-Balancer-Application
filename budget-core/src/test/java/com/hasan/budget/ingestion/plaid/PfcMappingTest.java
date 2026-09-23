@@ -6,6 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.hasan.budget.ingestion.domain.Classification;
 import com.hasan.budget.shared.SpendCategory;
 import com.hasan.budget.shared.TransactionKind;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -123,9 +129,61 @@ class PfcMappingTest {
     }
 
     @Test
+    @DisplayName("every category Plaid publishes has an answer in the table")
+    void thePublishedTaxonomyIsCoveredInFull() {
+        // Written after checking the table against Plaid's own list and finding ten values missing,
+        // five of them bank fees. Each would have landed in "Everything else" and been treated as
+        // the user's discretionary choice rather than as a charge they did not choose.
+        assertThat(publishedTaxonomy())
+                .isNotEmpty()
+                .allSatisfy(published -> assertThat(mapping.classify(published))
+                        .describedAs("Plaid publishes %s and the table has no row for it", published)
+                        .isPresent());
+    }
+
+    @Test
+    @DisplayName("no row is a category name somebody invented")
+    void everyRowIsEitherObservedOrPublished() {
+        // A row whose name does not exist matches nothing, forever, in silence. Observed values are
+        // the stronger evidence of the two: seven of them are absent from the published list,
+        // because the sandbox emits the newer taxonomy and that document is the older one.
+        Set<String> real = new HashSet<>(publishedTaxonomy());
+        real.addAll(categoriesInTheRecordedFixtures());
+
+        assertThat(mapping.knownCategories())
+                .allSatisfy(mapped -> assertThat(real)
+                        .describedAs("%s is neither in Plaid's published list nor in any recording", mapped)
+                        .contains(mapped));
+    }
+
+    @Test
     @DisplayName("the table is big enough to be worth having")
     void theTableCoversTheTaxonomyBroadly() {
         assertThat(mapping.knownCategories()).hasSizeGreaterThan(60);
+    }
+
+    /** Plaid's published taxonomy, committed so this check needs no network. */
+    private static List<String> publishedTaxonomy() {
+        return RecordedSandbox.fixture("pfc-taxonomy-published.csv")
+                .lines()
+                .skip(1)
+                .map(line -> line.split(",", 3))
+                .filter(columns -> columns.length > 1 && !columns[1].isBlank())
+                .map(columns -> columns[1].trim())
+                .toList();
+    }
+
+    private static Set<String> categoriesInTheRecordedFixtures() {
+        Pattern detailed = Pattern.compile("\"detailed\"\\s*:\\s*\"([A-Z_]+)\"");
+        return Stream.of(
+                        "sync-initial-page-1.json",
+                        "sync-after-refresh-page-1.json",
+                        "sync-scenarios-page-1.json",
+                        "transactions-recurring-get.json",
+                        "transactions-recurring-get-scenarios.json")
+                .map(RecordedSandbox::fixture)
+                .flatMap(body -> detailed.matcher(body).results().map(result -> result.group(1)))
+                .collect(Collectors.toSet());
     }
 
     @Test

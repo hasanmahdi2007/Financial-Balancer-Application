@@ -19,9 +19,16 @@
 #                  really does arrive as PERSONAL_CARE, and payroll really can arrive as a restaurant.
 # source=documented  in Plaid's published taxonomy but absent from the fixtures. Without these rows a
 #                  real user's electricity bill would land in "Everything else" and be treated as
-#                  discretionary rather than capped against their city. An unmapped value is never
-#                  dropped - it becomes (SPEND, OTHER), increments a counter and is logged - so a row
-#                  that is wrong or never matches costs nothing beyond that.
+#                  discretionary rather than capped against their city.
+#
+# Every row is one or the other, and a test enforces it against a committed copy of Plaid's published
+# taxonomy: a row that is neither observed nor published is a name somebody invented, and it would
+# sit here matching nothing forever. The same test fails if Plaid's list gains a value this table
+# does not answer for.
+#
+# Note the two lists disagree, which is the point of keeping both. Seven observed values - among them
+# INCOME_SALARY, LOAN_PAYMENTS_BNPL and LOAN_PAYMENTS_EWA - are absent from the published taxonomy
+# because the sandbox emits v2 while that document is the older list. Real traffic wins.
 #
 # Two things the account itself decides, not this table, because the same category means different
 # things depending on where it lands (see AccountRole):
@@ -29,7 +36,13 @@
 #   - a loan account only mirrors cash that moved somewhere else, so it is never spending
 #
 pfc_detailed,kind,category,savings,source,why
+
+BANK_FEES_ATM_FEES,FEE,,,documented,
+BANK_FEES_FOREIGN_TRANSACTION_FEES,FEE,,,documented,
+BANK_FEES_INSUFFICIENT_FUNDS,FEE,,,documented,
 BANK_FEES_INTEREST_CHARGE,FEE,,,observed,Interest on a carried balance is a real cost but not a purchase
+BANK_FEES_OTHER_BANK_FEES,FEE,,,documented,
+BANK_FEES_OVERDRAFT_FEES,FEE,,,documented,Charged for going overdrawn; a real cost and one worth naming rather than burying
 ENTERTAINMENT_CASINOS_AND_GAMBLING,SPEND,ENTERTAINMENT,,observed,
 ENTERTAINMENT_MUSIC_AND_AUDIO,SPEND,ENTERTAINMENT,,observed,Spotify here; becomes a subscription when it recurs
 ENTERTAINMENT_OTHER_ENTERTAINMENT,SPEND,ENTERTAINMENT,,observed,
@@ -49,12 +62,14 @@ GENERAL_MERCHANDISE_CONVENIENCE_STORES,SPEND,DINING_OUT,,observed,Convenience st
 GENERAL_MERCHANDISE_DEPARTMENT_STORES,SPEND,OTHER,,documented,
 GENERAL_MERCHANDISE_DISCOUNT_STORES,SPEND,OTHER,,documented,
 GENERAL_MERCHANDISE_ELECTRONICS,SPEND,OTHER,,documented,
+GENERAL_MERCHANDISE_GIFTS_AND_NOVELTIES,SPEND,OTHER,,documented,
 GENERAL_MERCHANDISE_OFFICE_SUPPLIES,SPEND,OTHER,,documented,
 GENERAL_MERCHANDISE_ONLINE_MARKETPLACES,SPEND,OTHER,,observed,Amazon; the basket could be anything so claiming to know is worse than saying we do not
 GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE,SPEND,OTHER,,documented,
 GENERAL_MERCHANDISE_PET_SUPPLIES,SPEND,OTHER,,documented,
 GENERAL_MERCHANDISE_SPORTING_GOODS,SPEND,OTHER,,documented,
 GENERAL_MERCHANDISE_SUPERSTORES,SPEND,OTHER,,observed,Walmart and Target mix groceries with everything else
+GENERAL_MERCHANDISE_TOBACCO_AND_VAPE,SPEND,OTHER,,documented,
 GENERAL_SERVICES_ACCOUNTING_AND_FINANCIAL_PLANNING,SPEND,OTHER,,documented,
 GENERAL_SERVICES_AUTOMOTIVE,SPEND,TRANSPORT_FUEL,,documented,
 GENERAL_SERVICES_CHILDCARE,SPEND,OTHER,,documented,
@@ -66,6 +81,7 @@ GENERAL_SERVICES_POSTAGE_AND_SHIPPING,SPEND,OTHER,,documented,
 GENERAL_SERVICES_STORAGE,SPEND,OTHER,,documented,
 GOVERNMENT_AND_NON_PROFIT_DONATIONS,SPEND,OTHER,,observed,
 GOVERNMENT_AND_NON_PROFIT_GOVERNMENT_DEPARTMENTS_AND_AGENCIES,SPEND,OTHER,,documented,
+GOVERNMENT_AND_NON_PROFIT_OTHER_GOVERNMENT_AND_NON_PROFIT,SPEND,OTHER,,documented,
 GOVERNMENT_AND_NON_PROFIT_TAX_PAYMENT,SPEND,TAX_RESERVE,,observed,Tax the user pays themselves rather than through payroll
 HOME_IMPROVEMENT_FURNITURE,SPEND,OTHER,,documented,
 HOME_IMPROVEMENT_HARDWARE,SPEND,OTHER,,documented,
@@ -82,7 +98,6 @@ INCOME_UNEMPLOYMENT,INCOME,,,documented,
 INCOME_WAGES,INCOME,,,documented,The v1 name; kept so a v1 item is not misread
 LOAN_DISBURSEMENTS_CASH_ADVANCES,TRANSFER_EXTERNAL,,,observed,Borrowed money is not income; counting it would inflate the surplus
 LOAN_DISBURSEMENTS_OTHER_DISBURSEMENT,TRANSFER_EXTERNAL,,,observed,The loan side of a payment; borrowed money is never income
-LOAN_DISBURSEMENTS_STUDENT_LOAN_DISBURSEMENT,TRANSFER_EXTERNAL,,,documented,
 LOAN_PAYMENTS_BNPL,SPEND,DEBT_PAYMENT,,observed,
 LOAN_PAYMENTS_CAR_PAYMENT,SPEND,DEBT_PAYMENT,,documented,
 LOAN_PAYMENTS_CASH_ADVANCES,SPEND,DEBT_PAYMENT,,observed,
@@ -111,8 +126,10 @@ RENT_AND_UTILITIES_SEWAGE_AND_WASTE_MANAGEMENT,SPEND,UTILITIES,,documented,
 RENT_AND_UTILITIES_TELEPHONE,SPEND,UTILITIES,,documented,
 RENT_AND_UTILITIES_WATER,SPEND,UTILITIES,,documented,
 TRANSFER_IN_ACCOUNT_TRANSFER,TRANSFER_INTERNAL,,,observed,
+TRANSFER_IN_CASH_ADVANCES_AND_LOANS,TRANSFER_EXTERNAL,,,documented,Borrowed money arriving; counting it as income would inflate the surplus
 TRANSFER_IN_DEPOSIT,INCOME,,,observed,
 TRANSFER_IN_INVESTMENT_AND_RETIREMENT_FUNDS,TRANSFER_INTERNAL,,savings,documented,
+TRANSFER_IN_OTHER_TRANSFER_IN,TRANSFER_INTERNAL,,,documented,
 TRANSFER_IN_SAVINGS,TRANSFER_INTERNAL,,savings,documented,
 TRANSFER_OUT_ACCOUNT_TRANSFER,TRANSFER_INTERNAL,,,observed,
 TRANSFER_OUT_INVESTMENT_AND_RETIREMENT_FUNDS,TRANSFER_INTERNAL,,savings,documented,

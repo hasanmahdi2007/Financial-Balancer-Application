@@ -49,6 +49,23 @@ and kept apart so nobody mistakes one for a recording.
 
 | File | Why it had to be constructed |
 |---|---|
-| `transactions-recurring-get-with-rent.json` | The real scenario response plus a rent stream over the real rent transaction. The sandbox rejects custom transactions posted more than 14 days ago, so it can never accumulate the months of rent a stream needs |
-| `sync-removes-one-purchase.json` | A later page retracting one real, settled purchase. The dynamic user's refresh modified rows but removed none |
+| `transactions-recurring-get-with-rent.json` | The real scenario response plus a rent stream. The sandbox rejects custom transactions posted more than 14 days ago, so it can never accumulate the months of rent a stream needs |
+| `sync-removes-one-purchase.json` | A page in the shape Plaid uses to retract a transaction. Used only to check that shape parses; the specification builds its own retraction from a transaction it really imported |
 | `webhook-*.json` | Payload shapes from Plaid's webhook documentation. The sandbox can only deliver webhooks to a public URL |
+
+**Nothing here pins a recorded identifier.** The rent stream names its member as
+`__RENT_TRANSACTION_ID__`, filled in at test time from the rent payment that run actually loaded.
+An earlier version hard-coded identifiers from one particular recording, which meant re-recording the
+fixtures broke tests with a message about a missing transaction rather than about rent.
+
+## `pfc-taxonomy-published.csv`
+
+Plaid's published category taxonomy, committed so the mapping table can be checked against it with no
+network. Two tests use it: every value Plaid publishes must have a row, and every row must be either
+published or observed in a recording — a row naming a category that does not exist would match
+nothing, forever, in silence.
+
+The two lists disagree, and keeping both is the point. Seven observed values — `INCOME_SALARY`,
+`LOAN_PAYMENTS_BNPL`, `LOAN_PAYMENTS_EWA` and the `LOAN_DISBURSEMENTS_*` family among them — are
+absent from the published document because the sandbox emits **v2** while that file is the older
+list. Real traffic wins; the published list is only used to catch gaps and invented names.

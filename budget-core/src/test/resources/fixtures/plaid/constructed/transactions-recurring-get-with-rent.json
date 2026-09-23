@@ -188,7 +188,7 @@
       ]
     },
     {
-      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "account_id": "__RENT_ACCOUNT_ID__",
       "average_amount": {
         "amount": 1450,
         "iso_currency_code": "USD",
@@ -221,7 +221,7 @@
       "status": "MATURE",
       "stream_id": "constructed-rent-stream",
       "transaction_ids": [
-        "83rz5P7n38sXDwvjynwms8ApqWGNVjTg1PRvP"
+        "__RENT_TRANSACTION_ID__"
       ]
     }
   ],

@@ -110,18 +110,41 @@ public class PlaidBankDataProvider implements BankDataProvider, BankLinkProvider
             return;
         }
         for (PlaidWire.Stream stream : source) {
+            Money amount = amountOf(stream);
+            if (amount == null) {
+                // A stream with no amount at all cannot become a commitment or a figure, and it must
+                // not take a sync down with it either: the transactions it groups are already stored
+                // and counted, so skipping it loses a label rather than any money.
+                continue;
+            }
             target.add(new RecurringStream(
                     stream.streamId(),
                     stream.accountId(),
                     direction,
                     label(stream),
                     com.hasan.budget.ingestion.domain.Frequency.parse(stream.frequency()),
-                    new Money(stream.lastAmount().amount()),
+                    amount,
                     stream.lastDate(),
                     stream.predictedNextDate(),
                     isLive(stream),
                     stream.transactionIds() == null ? List.of() : stream.transactionIds()));
         }
+    }
+
+    /**
+     * The latest amount, falling back to the average where the provider sends only that.
+     *
+     * <p>The latest is preferred because a subscription that went up in price costs the new price
+     * next month, and an average including the old one is already out of date.
+     */
+    private static Money amountOf(PlaidWire.Stream stream) {
+        if (stream.lastAmount() != null && stream.lastAmount().amount() != null) {
+            return new Money(stream.lastAmount().amount());
+        }
+        if (stream.averageAmount() != null && stream.averageAmount().amount() != null) {
+            return new Money(stream.averageAmount().amount());
+        }
+        return null;
     }
 
     /** The merchant where Plaid cleaned one up, because that is the name the user would recognise. */
