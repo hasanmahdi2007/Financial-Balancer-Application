@@ -93,10 +93,15 @@ public class InMemoryBankStore implements BankConnections, BankLedger {
             page.modified().forEach(transaction -> held.put(transaction.externalId(), transaction));
             page.removedExternalIds().forEach(held::remove);
         }
-        // The last page carries the freshest reading of the balances, as in the database.
-        Map<String, AccountSnapshot> heldAccounts =
-                accounts.computeIfAbsent(connectionId, id -> new LinkedHashMap<>());
-        pages.get(pages.size() - 1).accounts().forEach(account -> heldAccounts.put(account.accountId(), account));
+        // The last page carries the freshest reading of the balances, as in the database. The
+        // provider lists every account each time, so this replaces rather than accumulates: an
+        // account the user has closed must stop counting towards their funds.
+        List<AccountSnapshot> reported = pages.get(pages.size() - 1).accounts();
+        if (!reported.isEmpty()) {
+            Map<String, AccountSnapshot> heldAccounts = new LinkedHashMap<>();
+            reported.forEach(account -> heldAccounts.put(account.accountId(), account));
+            accounts.put(connectionId, heldAccounts);
+        }
         return true;
     }
 

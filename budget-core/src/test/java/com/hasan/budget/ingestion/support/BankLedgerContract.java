@@ -237,6 +237,42 @@ public abstract class BankLedgerContract {
     }
 
     @Test
+    @DisplayName("an account the user has closed stops counting towards their money")
+    void accountsNoLongerReportedAreDropped() {
+        String userId = someUserId();
+        BankConnection connection = connect(userId, "item-closed");
+        AccountSnapshot kept = new AccountSnapshot(
+                "acc-kept", "Checking", AccountRole.CASH, Money.of("500.00"), Money.of("500.00"));
+        AccountSnapshot closed = new AccountSnapshot(
+                "acc-closed", "Old savings", AccountRole.CASH, Money.of("2000.00"), Money.of("2000.00"));
+        ledger().apply(connection.id(), null, List.of(
+                new SyncResult(List.of(), List.of(), List.of(), List.of(kept, closed), "cursor-1", false)));
+
+        // The next sync reports only the account that still exists.
+        ledger().apply(connection.id(), "cursor-1", List.of(
+                new SyncResult(List.of(), List.of(), List.of(), List.of(kept), "cursor-2", false)));
+
+        // Left behind, its $2,000 would go on counting as money the plan can see and the user
+        // cannot spend - the direction of error that flatters a plan.
+        assertThat(ledger().accountsForUser(userId)).containsExactly(kept);
+    }
+
+    @Test
+    @DisplayName("a page carrying no account information leaves the balances alone")
+    void silenceAboutAccountsIsNotNews() {
+        String userId = someUserId();
+        BankConnection connection = connect(userId, "item-quiet");
+        AccountSnapshot checking = new AccountSnapshot(
+                "acc-1", "Checking", AccountRole.CASH, Money.of("500.00"), Money.of("500.00"));
+        ledger().apply(connection.id(), null, List.of(
+                new SyncResult(List.of(), List.of(), List.of(), List.of(checking), "cursor-1", false)));
+
+        ledger().apply(connection.id(), "cursor-1", List.of(page("cursor-2", purchase("t-1", "12.34"))));
+
+        assertThat(ledger().accountsForUser(userId)).containsExactly(checking);
+    }
+
+    @Test
     @DisplayName("a transfer remembers whether it was money put by")
     void savingSurvivesStorage() {
         String userId = someUserId();

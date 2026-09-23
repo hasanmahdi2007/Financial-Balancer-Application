@@ -80,9 +80,7 @@ public class JdbcBankLedger implements BankLedger {
             page.modified().forEach(transaction -> upsert(connectionId, transaction));
             page.removedExternalIds().forEach(externalId -> remove(connectionId, externalId));
         }
-        // Balances come from the last page: every page of one sync reports the same accounts, and
-        // the last is the freshest reading of them.
-        pages.get(pages.size() - 1).accounts().forEach(account -> upsertAccount(connectionId, account));
+        replaceAccounts(connectionId, pages.get(pages.size() - 1).accounts());
         return true;
     }
 
@@ -127,6 +125,29 @@ public class JdbcBankLedger implements BankLedger {
                 .param("pending", transaction.pending())
                 .param("towardsSavings", classification.towardsSavings())
                 .update();
+    }
+
+    /**
+     * The accounts a connection has now, replacing whatever it had before.
+     *
+     * <p>The provider reports every account on the connection each time, so the answer is a
+     * replacement rather than an addition. An account the user has since closed simply stops being
+     * listed, and if it were merely left behind its last balance would go on counting towards their
+     * funds forever - money the plan can see and they cannot spend, which is the direction of error
+     * that flatters a plan.
+     *
+     * <p>An empty list is treated as "nothing new to say" rather than "everything is gone", because
+     * a page that happens to carry no account information must not wipe the balances.
+     */
+    private void replaceAccounts(long connectionId, List<AccountSnapshot> accounts) {
+        if (accounts.isEmpty()) {
+            return;
+        }
+        jdbc.sql("DELETE FROM bank_account WHERE connection_id = :connectionId AND NOT (account_id = ANY (:kept))")
+                .param("connectionId", connectionId)
+                .param("kept", accounts.stream().map(AccountSnapshot::accountId).toArray(String[]::new))
+                .update();
+        accounts.forEach(account -> upsertAccount(connectionId, account));
     }
 
     /**
