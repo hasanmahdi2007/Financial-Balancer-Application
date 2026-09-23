@@ -20,7 +20,11 @@ import java.util.Set;
  *
  * @param reductions what the surplus has already assumed the user will change, line by line. Shown
  *     beside {@code suggestedCuts} always, because the surplus is not money in hand.
- * @param assumedSpending categories the user did not state, which the plan took at their local figure
+ * @param assumedSpending categories neither the user nor a bank covered, which the plan took at
+ *     their local figure
+ * @param measuredSpending categories the user did not state and a connected bank did, taken as the
+ *     bank recorded them. Kept apart from the assumed ones because the plan says something different
+ *     about each: one is a figure read off the user's own account, the other is a city average.
  * @param provenance where each local figure came from. Reaches the view and never the arithmetic.
  */
 public record AssembledPlan(
@@ -34,6 +38,7 @@ public record AssembledPlan(
         List<Hint> hints,
         Runway runway,
         Set<SpendCategory> assumedSpending,
+        Set<SpendCategory> measuredSpending,
         Map<SpendCategory, ResolvedBaseline> provenance) {
 
     public AssembledPlan {
@@ -47,6 +52,7 @@ public record AssembledPlan(
         reductions = List.copyOf(reductions);
         hints = List.copyOf(hints);
         assumedSpending = Set.copyOf(assumedSpending);
+        measuredSpending = Set.copyOf(measuredSpending);
         provenance = Map.copyOf(provenance);
     }
 

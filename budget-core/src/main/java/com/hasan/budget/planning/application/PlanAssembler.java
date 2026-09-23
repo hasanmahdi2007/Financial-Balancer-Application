@@ -76,7 +76,8 @@ public final class PlanAssembler {
         Money income = inputs.funds().monthlyIncome();
 
         Set<SpendCategory> assumed = EnumSet.noneOf(SpendCategory.class);
-        List<CategoryObservation> observations = observations(inputs, assumed);
+        Set<SpendCategory> measured = EnumSet.noneOf(SpendCategory.class);
+        List<CategoryObservation> observations = observations(inputs, assumed, measured);
 
         DiscretionaryFloor floor = floors.floorFor(floorRequest(inputs, income, observations));
         SurplusBreakdown breakdown = SurplusCalculation.compute(new SurplusInput(
@@ -105,25 +106,44 @@ public final class PlanAssembler {
                 hints(breakdown),
                 runway(inputs.funds(), earmarks, breakdown),
                 assumed,
+                measured,
                 inputs.baselines());
     }
 
     /**
-     * One observation per category the user stated or we hold a local figure for. A category they did
-     * not state is taken at its local figure, which is the honest default for someone with no bank
-     * connected - and the category is recorded as assumed so the plan says so on that line.
+     * One observation per category anything at all is known about, in one order of precedence.
+     *
+     * <ol>
+     *   <li><b>What the user said.</b> It outranks a bank, not despite the bank being measured but
+     *       because of what it measures: one particular month. Only the user knows that last month
+     *       held a wedding, or that they have since moved.
+     *   <li><b>What a connected bank recorded for a finished month.</b> Better than an average of the
+     *       city for someone who has not answered, and the plan names the month so it can be checked.
+     *   <li><b>The local figure</b>, which is the honest default for someone who has told us nothing
+     *       and connected nothing - and the category is recorded as assumed so the plan says so.
+     * </ol>
+     *
+     * <p>The local figure still travels alongside as the baseline in all three cases, because it is
+     * what a capped category is capped at. Where the spending figure came from changes what the plan
+     * says about it, and never what the arithmetic does with it.
      */
-    private static List<CategoryObservation> observations(PlanningInputs inputs, Set<SpendCategory> assumed) {
+    private static List<CategoryObservation> observations(
+            PlanningInputs inputs, Set<SpendCategory> assumed, Set<SpendCategory> measured) {
+
         List<CategoryObservation> observations = new ArrayList<>();
         for (SpendCategory category : SpendCategory.values()) {
             if (category == SpendCategory.TAX_RESERVE) {
                 continue;
             }
-            Money stated = inputs.statedSpending().get(category);
             ResolvedBaseline baseline = inputs.baselines().get(category);
             Money localFigure = baseline == null ? null : baseline.amount();
+            Money stated = inputs.statedSpending().get(category);
+            Money fromBank = inputs.measuredSpending().in(category);
             if (stated != null) {
                 observations.add(new CategoryObservation(category, stated, localFigure));
+            } else if (fromBank != null) {
+                measured.add(category);
+                observations.add(new CategoryObservation(category, fromBank, localFigure));
             } else if (localFigure != null) {
                 assumed.add(category);
                 observations.add(new CategoryObservation(category, localFigure, localFigure));

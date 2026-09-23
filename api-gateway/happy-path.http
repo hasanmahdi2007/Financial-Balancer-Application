@@ -116,20 +116,25 @@ Authorization: Bearer {{token}}
 ### 8. The money the plan may work with, typed by the user (no bank connected).
 # "balance" is taken whole: there is no share question on this path, because the user already chose
 # what to type. Lowering it later takes money back out of the plan on the next run.
+# "alreadySaving" is optional and defaults to 0. It is what the user already moves into savings each
+# month: shown beside the plan, never subtracted, because putting money away is not spending it.
 # -> {"monthlyIncome":"2000.00","balance":"20000.00","setAside":"0.00",
-#     "explanation":"We plan with exactly what you told us you have. ..."}
+#     "explanation":"We plan with exactly what you told us you have. ...",
+#     "alreadySaving":"150.00","alreadySavingExplanation":"What you already move into savings ..."}
 PUT {{gateway}}/api/v1/money
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "monthlyIncome": "2000.00", "balance": "20000.00" }
+{ "monthlyIncome": "2000.00", "balance": "20000.00", "alreadySaving": "150.00" }
 
 ### 8b. What the plan is currently working with. 404 until step 8.
 GET {{gateway}}/api/v1/money
 Authorization: Bearer {{token}}
 
 ### 9. What the user actually spends each month, by category key. Leave a category out and the plan
-# assumes the local figure for it - and says so on that line ("assumed": true).
+# fills it in, in this order: a connected bank's figure for the last complete month, which the line
+# then names ("measuredFrom": "what you spent in February 2026"), and failing that the local figure,
+# which the line flags ("assumed": true). What the user states here outranks both.
 # -> {"rent":"500.00","groceries":"380.00","dining-out":"200.00","entertainment":"120.00"}
 PUT {{gateway}}/api/v1/spending
 Authorization: Bearer {{token}}

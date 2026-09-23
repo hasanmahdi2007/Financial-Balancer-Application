@@ -58,9 +58,10 @@ public class PlanningConfiguration {
             Places places,
             TaxReserves taxReserves,
             PlanAssembler assembler,
+            BankSpending bank,
             Clock clock) {
         return new PlanService(
-                profiles, spending, goals, snapshots, places, taxReserves, assembler, clock,
+                profiles, spending, goals, snapshots, places, taxReserves, assembler, bank, clock,
                 () -> UUID.randomUUID().toString());
     }
 
@@ -70,9 +71,10 @@ public class PlanningConfiguration {
     }
 
     /**
-     * What the user has actually paid, where a bank is connected. It reaches the decision engine only
-     * through this adapter: the engine may not import the ingestion module at all, and a merchant as
-     * a bank describes one has no business in the arithmetic.
+     * What the user has actually paid, where a bank is connected - both for pricing a decision and
+     * for what a finished month cost the plan. It reaches either only through this adapter: the
+     * planning module may not import the ingestion module at all, and a merchant as a bank describes
+     * one has no business in the arithmetic.
      */
     @Bean
     BankSpending bankSpending(ObservedMerchantPrices prices, IngestionService ingestion) {

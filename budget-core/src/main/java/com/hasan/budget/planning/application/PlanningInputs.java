@@ -20,7 +20,10 @@ import java.util.Optional;
  *
  * @param funds the money the user agreed the app may plan with. Its income is a rate and feeds the
  *     surplus; its balance is a stock and reaches goals only through earmarking.
- * @param statedSpending what the user says they spend. A category left out is assumed to run at its
+ * @param statedSpending what the user says they spend. It outranks every other source, a bank
+ *     included: they may know last month was not a normal month, and nothing else can.
+ * @param measuredSpending what a connected bank says a finished month actually cost. Read only for
+ *     categories the user did not state; a category neither of them covers is assumed to run at its
  *     local figure, and the plan says so on that line.
  * @param taxReserve present only for income that arrives untaxed. Empty, not zero, for everyone else:
  *     a zero tax line invites somebody to "fix" it later.
@@ -33,6 +36,7 @@ public record PlanningInputs(
         ConsideredFunds funds,
         Map<SpendCategory, ResolvedBaseline> baselines,
         Map<SpendCategory, Money> statedSpending,
+        MeasuredSpending measuredSpending,
         List<UserLineItem> lineItems,
         Money alreadySaving,
         Optional<Money> taxReserve,
@@ -45,6 +49,7 @@ public record PlanningInputs(
 
     public PlanningInputs {
         Objects.requireNonNull(funds, "funds");
+        Objects.requireNonNull(measuredSpending, "measuredSpending");
         Objects.requireNonNull(alreadySaving, "alreadySaving");
         Objects.requireNonNull(taxReserve, "taxReserve");
         Objects.requireNonNull(finishFirst, "finishFirst");

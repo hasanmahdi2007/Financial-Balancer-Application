@@ -186,6 +186,13 @@ class DecisionServiceTest {
                 String userId, SpendCategory category, java.time.YearMonth month) {
             return java.util.Optional.of(Money.of(40));
         }
+
+        @Override
+        public MeasuredSpending measuredSpending(String userId, java.time.YearMonth month) {
+            // Nothing here: what a finished month cost belongs to the plan, and these tests are about
+            // the decision on top of it. PlanAssemblerTest is where the measured month is exercised.
+            return MeasuredSpending.none(month);
+        }
     }
 
     @Nested

@@ -25,8 +25,10 @@ import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.Rigidity;
 import com.hasan.budget.shared.SpendCategory;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -39,6 +41,9 @@ import java.util.stream.Collectors;
  * one we researched from a country-wide guess.
  */
 public final class PlanViews {
+
+    /** The month a measured figure came from, as a person says it: "August 2026", never "2026-08". */
+    private static final DateTimeFormatter MONTH_AND_YEAR = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
 
     private PlanViews() {}
 
@@ -111,6 +116,9 @@ public final class PlanViews {
                 line.baseline() == null ? null : text(line.baseline()),
                 text(line.counted()),
                 wholeCategory && plan.assumedSpending().contains(line.category()),
+                wholeCategory && plan.measuredSpending().contains(line.category())
+                        ? "what you spent in " + plan.inputs().measuredSpending().month().format(MONTH_AND_YEAR)
+                        : null,
                 howWilling(line.rigidity()),
                 source == null ? null : basis(source));
     }

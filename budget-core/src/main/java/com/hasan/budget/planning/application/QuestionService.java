@@ -70,6 +70,7 @@ public final class QuestionService {
         if (plans.money(userId).isEmpty()) {
             questions.add(income());
             questions.add(balance());
+            questions.add(alreadySaving());
         }
         profile.ifPresent(known -> {
             if (known.leastForEnjoyingLife() == null) {
@@ -128,6 +129,20 @@ public final class QuestionService {
                 "How much money do you already have that this plan may use?",
                 "Only what you enter here is used. It goes toward your goals first, so they need less "
                         + "each month. Lower it at any time and the next plan hands the money back.",
+                List.of(),
+                null,
+                null,
+                List.of());
+    }
+
+    private static Question alreadySaving() {
+        return new Question(
+                "already-saving",
+                "PUT /api/v1/money alreadySaving",
+                "How much do you already put into savings each month?",
+                "We show it beside your plan and never take it off what you have left, because putting "
+                        + "money away is not spending it. It is here so your plan reflects what you are "
+                        + "already doing rather than starting from nothing.",
                 List.of(),
                 null,
                 null,

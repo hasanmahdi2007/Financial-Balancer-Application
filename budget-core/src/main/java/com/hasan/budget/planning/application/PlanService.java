@@ -9,6 +9,7 @@ import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.SpendCategory;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,6 +36,7 @@ public final class PlanService {
     private final Places places;
     private final TaxReserves tax;
     private final PlanAssembler assembler;
+    private final BankSpending bank;
     private final Clock clock;
     private final Supplier<String> ids;
 
@@ -46,6 +48,7 @@ public final class PlanService {
             Places places,
             TaxReserves tax,
             PlanAssembler assembler,
+            BankSpending bank,
             Clock clock,
             Supplier<String> ids) {
         this.profiles = Objects.requireNonNull(profiles, "profiles");
@@ -55,6 +58,7 @@ public final class PlanService {
         this.places = Objects.requireNonNull(places, "places");
         this.tax = Objects.requireNonNull(tax, "tax");
         this.assembler = Objects.requireNonNull(assembler, "assembler");
+        this.bank = Objects.requireNonNull(bank, "bank");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.ids = Objects.requireNonNull(ids, "ids");
     }
@@ -274,23 +278,32 @@ public final class PlanService {
         Map<SpendCategory, com.hasan.budget.costofliving.domain.ResolvedBaseline> baselines =
                 places.baselinesFor(profile);
         checkNamedItemsFit(userId, baselines);
+        LocalDate asOf = LocalDate.now(clock);
         return assembler.assemble(new PlanningInputs(
                 money.asFunds().resolve(),
                 baselines,
                 spending.spending(userId),
+                bank.measuredSpending(userId, lastCompleteMonth(asOf)),
                 spending.lineItems(userId),
-                // What the user already moves into savings each month, which is shown and never
-                // subtracted. It is zero until bank data exists: it comes from classifying transfers,
-                // which belongs to the ingestion module, and inventing a figure here would put a
-                // number on the screen that nothing measured.
-                Money.ZERO,
+                money.alreadySaving(),
                 tax.monthlyReserve(profile, money.monthlyIncome()),
                 profile.lifestyle(),
                 profile.leastForEnjoyingLife(),
                 cityNameOf(profile),
                 goals.goals(userId),
                 goals.finishFirst(userId),
-                LocalDate.now(clock)));
+                asOf));
+    }
+
+    /**
+     * The month a plan reads off a bank statement: the last one that is over.
+     *
+     * <p>Never the month in progress. Reading it on the 3rd would price a whole life off three days
+     * of it and hand the user a surplus that does not exist - and this is the one direction a budget
+     * must never be wrong in.
+     */
+    private static YearMonth lastCompleteMonth(LocalDate asOf) {
+        return YearMonth.from(asOf).minusMonths(1);
     }
 
     /**

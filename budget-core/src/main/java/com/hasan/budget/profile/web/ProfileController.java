@@ -68,9 +68,15 @@ class ProfileController {
             boolean incomeArrivesTaxed,
             String leastForEnjoyingLife) {}
 
-    record MoneyRequest(BigDecimal monthlyIncome, BigDecimal balance) {}
+    record MoneyRequest(BigDecimal monthlyIncome, BigDecimal balance, BigDecimal alreadySaving) {}
 
-    record MoneyView(String monthlyIncome, String balance, String setAside, String explanation) {}
+    record MoneyView(
+            String monthlyIncome,
+            String balance,
+            String setAside,
+            String explanation,
+            String alreadySaving,
+            String alreadySavingExplanation) {}
 
     @GetMapping("/profile")
     ProfileView profile(@CurrentUser String userId) {
@@ -111,8 +117,12 @@ class ProfileController {
             throw new IllegalArgumentException(
                     "Tell us both what arrives each month and how much you already have. Enter 0 if there is none.");
         }
+        // Left out rather than zero is the usual case for someone who has not been asked yet, and
+        // both mean the same plan, so it is optional here instead of another required field.
         return view(plans.saveMoney(userId, new StatedMoney(
-                new Money(request.monthlyIncome()), new Money(request.balance()))));
+                new Money(request.monthlyIncome()),
+                new Money(request.balance()),
+                request.alreadySaving() == null ? Money.ZERO : new Money(request.alreadySaving()))));
     }
 
     @GetMapping("/questions")
@@ -143,7 +153,10 @@ class ProfileController {
                 money.balance().toString(),
                 Money.ZERO.toString(),
                 "We plan with exactly what you told us you have. Nothing is set aside, because nothing "
-                        + "beyond this figure was ever visible to us.");
+                        + "beyond this figure was ever visible to us.",
+                money.alreadySaving().toString(),
+                "What you already move into savings every month. We show it beside your plan and never "
+                        + "take it off what you have left, because putting money away is not spending it.");
     }
 
     private static Money money(BigDecimal amount) {
