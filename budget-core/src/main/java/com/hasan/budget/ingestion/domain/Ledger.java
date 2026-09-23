@@ -92,12 +92,18 @@ public final class Ledger {
         Map<SpendCategory, Money> byCategory = new EnumMap<>(SpendCategory.class);
         Money income = Money.ZERO;
         Money fees = Money.ZERO;
+        Money saved = Money.ZERO;
         Money pending = Money.ZERO;
         List<LedgerEntry> inMonth = entriesIn(month);
 
         for (LedgerEntry entry : inMonth) {
             NormalisedTransaction transaction = entry.transaction();
             Money amount = transaction.amount();
+            if (transaction.classification().towardsSavings()) {
+                // Signed, so paying in and taking back out in the same month nets off. Both halves
+                // of a transfer the user can see from both sides have already been collapsed to one.
+                saved = saved.plus(amount);
+            }
             switch (transaction.classification().kind()) {
                 case SPEND -> {
                     SpendCategory category = transaction.classification().category();
@@ -120,6 +126,8 @@ public final class Ledger {
                 byCategory,
                 atLeastNothing(income),
                 atLeastNothing(fees),
+                // Not floored: a month where savings were drawn down is a real thing to be told.
+                saved,
                 atLeastNothing(pending),
                 inMonth.size());
     }

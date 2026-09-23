@@ -200,10 +200,12 @@ class BankDataSpecTest {
 
             assertThat(toSavings.classification().kind()).isEqualTo(TransactionKind.TRANSFER_INTERNAL);
             assertThat(toSavings.classification().category()).isNull();
-            assertThat(Ledger.of(List.of(toSavings), List.of())
-                            .summaryFor(YearMonth.from(toSavings.transaction().date()))
-                            .totalSpending())
-                    .isEqualTo(Money.ZERO);
+
+            SpendingSummary summary = Ledger.of(List.of(toSavings), List.of())
+                    .summaryFor(YearMonth.from(toSavings.transaction().date()));
+            assertThat(summary.totalSpending()).isEqualTo(Money.ZERO);
+            // Not spending, and not nothing either: it is money the user put by, and shown as such.
+            assertThat(summary.alreadySaving()).isEqualTo(Money.of("250.00"));
         }
 
         /**
@@ -226,6 +228,8 @@ class BankDataSpecTest {
                     .summaryFor(YearMonth.from(paidFromChecking.transaction().date()));
             assertThat(summary.totalSpending()).isEqualTo(Money.ZERO);
             assertThat(summary.income()).isEqualTo(Money.ZERO);
+            // Nor is clearing a card balance money put by, though it is equally "not spending".
+            assertThat(summary.alreadySaving()).isEqualTo(Money.ZERO);
         }
 
         /**
@@ -260,8 +264,10 @@ class BankDataSpecTest {
 
             List<LedgerEntry> survivors = Ledger.of(List.of(toSavings), List.of()).entries();
 
+            // Its category alone still says everything: an internal transfer, and one that adds to
+            // savings rather than settling a debt - with no second half to corroborate it.
             assertThat(survivors).singleElement().satisfies(kept -> assertThat(kept.classification())
-                    .isEqualTo(Classification.notSpending(TransactionKind.TRANSFER_INTERNAL)));
+                    .isEqualTo(Classification.savings()));
         }
     }
 
@@ -352,7 +358,7 @@ class BankDataSpecTest {
             store.apply(
                     theConnection().id(),
                     store.cursor(theConnection().id()).orElseThrow(),
-                    List.of(new SyncResult(List.of(), List.of(settled), List.of(), "cursor-after-settling", false)));
+                    List.of(SyncResult.of(List.of(), List.of(settled), List.of(), "cursor-after-settling", false)));
 
             assertThat(store.entriesForUser(USER)).hasSize(countBefore);
             NormalisedTransaction now =

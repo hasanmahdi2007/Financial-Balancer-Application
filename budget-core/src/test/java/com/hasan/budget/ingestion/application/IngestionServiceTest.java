@@ -45,8 +45,8 @@ class IngestionServiceTest {
     @DisplayName("every page of a sync is read before anything is written")
     void allPagesAreAppliedAsOneUnit() {
         ScriptedBank bank = new ScriptedBank(
-                new SyncResult(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", true),
-                new SyncResult(List.of(purchase("t-2", "20.00")), List.of(), List.of(), "c2", false));
+                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", true),
+                SyncResult.of(List.of(purchase("t-2", "20.00")), List.of(), List.of(), "c2", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
         long connectionId = ingestion.connect(USER, "public-token").id();
 
@@ -59,17 +59,17 @@ class IngestionServiceTest {
     @DisplayName("a sync that loses the race reports that it wrote nothing")
     void anOvertakenSyncIsHarmless() {
         ScriptedBank bank = new ScriptedBank(
-                new SyncResult(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
+                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
         long connectionId = ingestion.connect(USER, "public-token").id();
 
         // A second sync finishes while this one is still reading its pages - the only moment the
         // race is real, since each attempt re-reads the cursor before it starts.
-        bank.queue(new SyncResult(List.of(purchase("t-2", "20.00")), List.of(), List.of(), "c2", false));
+        bank.queue(SyncResult.of(List.of(purchase("t-2", "20.00")), List.of(), List.of(), "c2", false));
         bank.whileReadingPages(() -> store.apply(
                 connectionId,
                 "c1",
-                List.of(new SyncResult(List.of(purchase("t-9", "99.00")), List.of(), List.of(), "c9", false))));
+                List.of(SyncResult.of(List.of(purchase("t-9", "99.00")), List.of(), List.of(), "c9", false))));
 
         IngestionService.SyncOutcome outcome = ingestion.syncNow(connectionId);
 
@@ -86,9 +86,9 @@ class IngestionServiceTest {
     @DisplayName("data changing mid-import starts again from where the sync began")
     void anInterruptedSyncRestartsFromTheBeginning() {
         ScriptedBank bank = new ScriptedBank(
-                new SyncResult(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", true));
+                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", true));
         bank.thenFail(new SyncInterrupted("the data changed"));
-        bank.queue(new SyncResult(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
+        bank.queue(SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
 
         long connectionId = ingestion.connect(USER, "public-token").id();
@@ -117,12 +117,12 @@ class IngestionServiceTest {
     @DisplayName("streams are only re-read when something actually changed")
     void aQuietSyncDoesNotAskForStreamsAgain() {
         ScriptedBank bank = new ScriptedBank(
-                new SyncResult(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
+                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
         long connectionId = ingestion.connect(USER, "public-token").id();
         int afterTheImport = bank.recurringCalls;
 
-        bank.queue(new SyncResult(List.of(), List.of(), List.of(), "c1", false));
+        bank.queue(SyncResult.of(List.of(), List.of(), List.of(), "c1", false));
         ingestion.syncNow(connectionId);
 
         assertThat(afterTheImport).isEqualTo(1);
@@ -147,7 +147,7 @@ class IngestionServiceTest {
     @DisplayName("a notification asking only for streams does not re-read transactions")
     void recurringRefreshIsItsOwnPath() {
         ScriptedBank bank = new ScriptedBank(
-                new SyncResult(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
+                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
         ingestion.connect(USER, "public-token");
         int requestsSoFar = bank.cursors.size();
@@ -165,14 +165,14 @@ class IngestionServiceTest {
         // the provider answers that request with an error. The transactions are already stored by
         // then, so failing the sync would report a disaster that did not happen.
         ScriptedBank bank = new ScriptedBank(
-                new SyncResult(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
+                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         bank.refuseStreams(new IllegalStateException("PRODUCT_NOT_READY"));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
 
         long connectionId = ingestion.connect(USER, "public-token").id();
         IngestionService.SyncOutcome outcome;
         try (LogCapture logs = LogCapture.start()) {
-            bank.queue(new SyncResult(List.of(purchase("t-2", "20.00")), List.of(), List.of(), "c2", false));
+            bank.queue(SyncResult.of(List.of(purchase("t-2", "20.00")), List.of(), List.of(), "c2", false));
             outcome = ingestion.syncNow(connectionId);
 
             assertThat(logs.everything()).contains("repeating payments could not be read");
@@ -187,7 +187,7 @@ class IngestionServiceTest {
     @DisplayName("a bank that never stops offering pages is cut off rather than filling memory")
     void endlessPaginationIsBounded() {
         ScriptedBank bank = new ScriptedBank();
-        bank.alwaysAnswer(new SyncResult(List.of(purchase("t-1", "1.00")), List.of(), List.of(), "c", true));
+        bank.alwaysAnswer(SyncResult.of(List.of(purchase("t-1", "1.00")), List.of(), List.of(), "c", true));
         IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
         long connectionId = ingestion.connect(USER, "public-token").id();
 
@@ -302,7 +302,7 @@ class IngestionServiceTest {
                 return standingAnswer;
             }
             if (next >= answers.size()) {
-                return new SyncResult(List.of(), List.of(), List.of(), cursorOrNull, false);
+                return SyncResult.of(List.of(), List.of(), List.of(), cursorOrNull, false);
             }
             Object answer = answers.get(next++);
             if (answer instanceof RuntimeException failure) {

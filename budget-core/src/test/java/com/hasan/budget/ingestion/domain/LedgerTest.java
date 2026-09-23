@@ -103,6 +103,60 @@ class LedgerTest {
         }
 
         @Test
+        @DisplayName("money moved to savings is reported as saved, and a card payment is not")
+        void savingIsToldApartFromClearingADebt() {
+            SpendingSummary summary = ledger(
+                            savingsTransfer("a", "250.00"),
+                            internal("b", "checking", "1500.00"),
+                            spend("c", SpendCategory.GROCERIES, "80.00"))
+                    .summaryFor(SEPTEMBER);
+
+            // Both are transfers and neither is spending. Only one of them is still the user's money.
+            assertThat(summary.alreadySaving()).isEqualTo(Money.of("250.00"));
+            assertThat(summary.totalSpending()).isEqualTo(Money.of("80.00"));
+        }
+
+        @Test
+        @DisplayName("money taken back out of savings nets off against what went in")
+        void savingIsNetOfWithdrawals() {
+            SpendingSummary summary = ledger(savingsTransfer("a", "250.00"), savingsTransfer("b", "-100.00"))
+                    .summaryFor(SEPTEMBER);
+
+            assertThat(summary.alreadySaving()).isEqualTo(Money.of("150.00"));
+        }
+
+        @Test
+        @DisplayName("a month that drew savings down says so rather than reading as zero")
+        void drawingSavingsDownIsNotHidden() {
+            SpendingSummary summary = ledger(savingsTransfer("a", "100.00"), savingsTransfer("b", "-300.00"))
+                    .summaryFor(SEPTEMBER);
+
+            assertThat(summary.alreadySaving()).isEqualTo(Money.of("-200.00"));
+        }
+
+        @Test
+        @DisplayName("a savings transfer seen from both sides is counted once, not cancelled out")
+        void bothHalvesOfASavingsTransferCountAsOne() {
+            // Checking pays 250 out; the savings account shows 250 arriving. Counted naively these
+            // sum to zero and the user is told they saved nothing. Collapsing keeps the outflow.
+            LedgerEntry out = savingsTransfer("out", "250.00");
+            LedgerEntry in = entry(new NormalisedTransaction(
+                    "in",
+                    "savings-account",
+                    MID_SEPTEMBER,
+                    Money.of("-250.00"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    Classification.savings(),
+                    false));
+
+            assertThat(Ledger.of(List.of(out, in), List.of()).summaryFor(SEPTEMBER).alreadySaving())
+                    .isEqualTo(Money.of("250.00"));
+        }
+
+        @Test
         @DisplayName("borrowed money is not income")
         void aCashAdvanceDoesNotCountAsEarnings() {
             SpendingSummary summary = ledger(external("a", "-95.00")).summaryFor(SEPTEMBER);
@@ -481,6 +535,20 @@ class LedgerTest {
 
     private static LedgerEntry external(String id, String amount) {
         return notSpending(id, "checking", amount, TransactionKind.TRANSFER_EXTERNAL);
+    }
+
+    private static LedgerEntry savingsTransfer(String id, String amount) {
+        return entry(new NormalisedTransaction(
+                id,
+                "checking",
+                MID_SEPTEMBER,
+                Money.of(amount),
+                null,
+                null,
+                null,
+                null,
+                Classification.savings(),
+                false));
     }
 
     private static LedgerEntry internal(String id, String account, String amount) {

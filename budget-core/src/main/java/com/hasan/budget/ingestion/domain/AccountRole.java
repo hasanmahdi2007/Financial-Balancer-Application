@@ -39,6 +39,8 @@ public enum AccountRole {
             if (!moneyIn || byCategory.kind() == TransactionKind.SPEND) {
                 return byCategory;
             }
+            // Deliberately drops any saving flag with it: money reaching a card is paying off a
+            // balance, which is the opposite of putting money by, however the provider tagged it.
             return Classification.notSpending(TransactionKind.TRANSFER_INTERNAL);
         }
     },

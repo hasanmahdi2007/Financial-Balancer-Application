@@ -130,7 +130,7 @@ class BankLedgerIT extends BankLedgerContract {
                 true);
 
         ledger().apply(connection.id(), null, List.of(
-                new SyncResult(List.of(original), List.of(), List.of(), "cursor-1", false)));
+                SyncResult.of(List.of(original), List.of(), List.of(), "cursor-1", false)));
 
         assertThat(ledger().entriesForUser(userId))
                 .singleElement()
@@ -155,7 +155,7 @@ class BankLedgerIT extends BankLedgerContract {
                 false);
 
         ledger().apply(connection.id(), null, List.of(
-                new SyncResult(List.of(unlocated), List.of(), List.of(), "cursor-1", false)));
+                SyncResult.of(List.of(unlocated), List.of(), List.of(), "cursor-1", false)));
 
         assertThat(ledger().entriesForUser(userId))
                 .singleElement()
