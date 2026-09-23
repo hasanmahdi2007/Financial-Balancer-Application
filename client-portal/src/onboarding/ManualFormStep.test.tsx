@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { FakeAuth, renderApp } from '../test/fakes';
+import { FakeAuth, FakeServer, renderApp } from '../test/fakes';
 import { internalWordsIn } from '../test/internalWords';
 import questions from '../test/fixtures/manual-form-LB.json';
 
@@ -71,7 +71,7 @@ describe('the form for a city we do not hold figures for', () => {
     await user.type(first, 'about 400');
     await user.click(screen.getByRole('button', { name: 'Save and continue' }));
 
-    expect(screen.getAllByRole('alert')[0]).toHaveTextContent('Enter an amount in dollars, like 350 or 350.50.');
+    expect(screen.getAllByRole('alert')[0]).toHaveTextContent(/Enter an amount in dollars, like 350 or 350.50/);
     expect(screen.getByTestId('path')).toHaveTextContent('/setup/LB/my-city');
   });
 
@@ -83,6 +83,17 @@ describe('the form for a city we do not hold figures for', () => {
 
     expect(screen.getAllByRole('alert')[0]).toHaveTextContent("Tell us your city's name");
     expect(screen.getByTestId('path')).toHaveTextContent('/setup/LB/my-city');
+  });
+
+  it('says so when there is nothing to ask, instead of offering a form that saves nothing', async () => {
+    // A country we hold no figures for answers with an empty list. Rendering the form anyway gives
+    // the user a Save button that records no answers and a next screen claiming "0 figures".
+    const server = new FakeServer().on('/api/catalogue/countries/LB/manual-form', { status: 200, body: [] });
+    renderApp('/setup/LB/my-city', signedIn(), server);
+
+    expect(await screen.findByRole('note')).toHaveTextContent('We have nothing to ask you about yet.');
+    expect(screen.queryByRole('button', { name: 'Save and continue' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back' })).toBeInTheDocument();
   });
 
   it('gives back what was typed when the user comes back to change something', async () => {
