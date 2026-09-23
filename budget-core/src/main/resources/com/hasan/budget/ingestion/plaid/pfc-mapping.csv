@@ -7,6 +7,13 @@
 # kind is one of SPEND, TRANSFER_INTERNAL, TRANSFER_EXTERNAL, INCOME, REFUND, FEE.
 # category is set if and only if kind is SPEND.
 #
+# savings  "savings" on the transfers that add to what the user has put by, and blank everywhere
+#          else. Only the provider can tell a payment into savings from a credit-card bill being
+#          paid - both are transfers between the user's own accounts - and reporting the two added
+#          together would tell somebody they had saved the amount they just paid off their card.
+#          Money coming back out of savings carries the same flag with a negative amount, so a month
+#          of paying in and taking out nets off instead of counting twice.
+#
 # source=observed  this value appears in the committed sandbox fixtures, and a test asserts it is
 #                  still mapped. Every one was read off real data rather than predicted: the gym
 #                  really does arrive as PERSONAL_CARE, and payroll really can arrive as a restaurant.
@@ -21,106 +28,106 @@
 #   - money arriving on a credit card or loan account is never income; it settles a debt
 #   - a loan account only mirrors cash that moved somewhere else, so it is never spending
 #
-pfc_detailed,kind,category,source,why
-BANK_FEES_INTEREST_CHARGE,FEE,,observed,Interest on a carried balance is a real cost but not a purchase
-ENTERTAINMENT_CASINOS_AND_GAMBLING,SPEND,ENTERTAINMENT,observed,
-ENTERTAINMENT_MUSIC_AND_AUDIO,SPEND,ENTERTAINMENT,observed,Spotify here; becomes a subscription when it recurs
-ENTERTAINMENT_OTHER_ENTERTAINMENT,SPEND,ENTERTAINMENT,observed,
-ENTERTAINMENT_SPORTING_EVENTS_AMUSEMENT_PARKS_AND_MUSEUMS,SPEND,ENTERTAINMENT,observed,
-ENTERTAINMENT_TV_AND_MOVIES,SPEND,ENTERTAINMENT,observed,Netflix here; a cinema ticket lands here too so it is not a subscription by itself
-ENTERTAINMENT_VIDEO_GAMES,SPEND,ENTERTAINMENT,observed,
-FOOD_AND_DRINK_BEER_WINE_AND_LIQUOR,SPEND,ENTERTAINMENT,observed,Drinks out and off-licence alike are discretionary rather than the weekly shop
-FOOD_AND_DRINK_COFFEE,SPEND,DINING_OUT,observed,
-FOOD_AND_DRINK_FAST_FOOD,SPEND,DINING_OUT,observed,
-FOOD_AND_DRINK_GROCERIES,SPEND,GROCERIES,observed,The one food value that is capped against the city rather than treated as discretionary
-FOOD_AND_DRINK_OTHER_FOOD_AND_DRINK,SPEND,DINING_OUT,observed,
-FOOD_AND_DRINK_RESTAURANT,SPEND,DINING_OUT,observed,Also carries this user's payroll; a recurring inflow is reclassified as income
-FOOD_AND_DRINK_VENDING_MACHINES,SPEND,DINING_OUT,documented,
-GENERAL_MERCHANDISE_BOOKSTORES_AND_NEWSSTANDS,SPEND,OTHER,observed,
-GENERAL_MERCHANDISE_CLOTHING_AND_ACCESSORIES,SPEND,CLOTHING,documented,
-GENERAL_MERCHANDISE_CONVENIENCE_STORES,SPEND,DINING_OUT,observed,Convenience stores are snacks and drinks rather than the household shop
-GENERAL_MERCHANDISE_DEPARTMENT_STORES,SPEND,OTHER,documented,
-GENERAL_MERCHANDISE_DISCOUNT_STORES,SPEND,OTHER,documented,
-GENERAL_MERCHANDISE_ELECTRONICS,SPEND,OTHER,documented,
-GENERAL_MERCHANDISE_OFFICE_SUPPLIES,SPEND,OTHER,documented,
-GENERAL_MERCHANDISE_ONLINE_MARKETPLACES,SPEND,OTHER,observed,Amazon; the basket could be anything so claiming to know is worse than saying we do not
-GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE,SPEND,OTHER,documented,
-GENERAL_MERCHANDISE_PET_SUPPLIES,SPEND,OTHER,documented,
-GENERAL_MERCHANDISE_SPORTING_GOODS,SPEND,OTHER,documented,
-GENERAL_MERCHANDISE_SUPERSTORES,SPEND,OTHER,observed,Walmart and Target mix groceries with everything else
-GENERAL_SERVICES_ACCOUNTING_AND_FINANCIAL_PLANNING,SPEND,OTHER,documented,
-GENERAL_SERVICES_AUTOMOTIVE,SPEND,TRANSPORT_FUEL,documented,
-GENERAL_SERVICES_CHILDCARE,SPEND,OTHER,documented,
-GENERAL_SERVICES_CONSULTING_AND_LEGAL,SPEND,OTHER,documented,
-GENERAL_SERVICES_EDUCATION,SPEND,OTHER,observed,
-GENERAL_SERVICES_INSURANCE,SPEND,HEALTHCARE,documented,
-GENERAL_SERVICES_OTHER_GENERAL_SERVICES,SPEND,OTHER,observed,Software and domains arrive here; becomes a subscription when it recurs
-GENERAL_SERVICES_POSTAGE_AND_SHIPPING,SPEND,OTHER,documented,
-GENERAL_SERVICES_STORAGE,SPEND,OTHER,documented,
-GOVERNMENT_AND_NON_PROFIT_DONATIONS,SPEND,OTHER,observed,
-GOVERNMENT_AND_NON_PROFIT_GOVERNMENT_DEPARTMENTS_AND_AGENCIES,SPEND,OTHER,documented,
-GOVERNMENT_AND_NON_PROFIT_TAX_PAYMENT,SPEND,TAX_RESERVE,observed,Tax the user pays themselves rather than through payroll
-HOME_IMPROVEMENT_FURNITURE,SPEND,OTHER,documented,
-HOME_IMPROVEMENT_HARDWARE,SPEND,OTHER,documented,
-HOME_IMPROVEMENT_OTHER_HOME_IMPROVEMENT,SPEND,OTHER,documented,
-HOME_IMPROVEMENT_REPAIR_AND_MAINTENANCE,SPEND,OTHER,documented,
-HOME_IMPROVEMENT_SECURITY,SPEND,OTHER,documented,
-INCOME_DIVIDENDS,INCOME,,documented,
-INCOME_INTEREST_EARNED,INCOME,,observed,
-INCOME_OTHER_INCOME,INCOME,,documented,
-INCOME_RETIREMENT_PENSION,INCOME,,documented,
-INCOME_SALARY,INCOME,,observed,On the credit card this is a card payment rather than pay; the account decides
-INCOME_TAX_REFUND,INCOME,,documented,
-INCOME_UNEMPLOYMENT,INCOME,,documented,
-INCOME_WAGES,INCOME,,documented,The v1 name; kept so a v1 item is not misread
-LOAN_DISBURSEMENTS_CASH_ADVANCES,TRANSFER_EXTERNAL,,observed,Borrowed money is not income; counting it would inflate the surplus
-LOAN_DISBURSEMENTS_OTHER_DISBURSEMENT,TRANSFER_EXTERNAL,,observed,The loan side of a payment; borrowed money is never income
-LOAN_DISBURSEMENTS_STUDENT_LOAN_DISBURSEMENT,TRANSFER_EXTERNAL,,documented,
-LOAN_PAYMENTS_BNPL,SPEND,DEBT_PAYMENT,observed,
-LOAN_PAYMENTS_CAR_PAYMENT,SPEND,DEBT_PAYMENT,documented,
-LOAN_PAYMENTS_CASH_ADVANCES,SPEND,DEBT_PAYMENT,observed,
-LOAN_PAYMENTS_CREDIT_CARD_PAYMENT,TRANSFER_INTERNAL,,observed,The double-count bug: the purchases were already counted when they were made
-LOAN_PAYMENTS_EWA,SPEND,DEBT_PAYMENT,observed,Repaying an earned-wage advance is an outflow to a lender
-LOAN_PAYMENTS_MORTGAGE_PAYMENT,SPEND,RENT,documented,Rent covers a mortgage payment; both are the roof and neither can be capped
-LOAN_PAYMENTS_OTHER_PAYMENT,SPEND,DEBT_PAYMENT,documented,
-LOAN_PAYMENTS_PERSONAL_LOAN_PAYMENT,SPEND,DEBT_PAYMENT,documented,
-LOAN_PAYMENTS_STUDENT_LOAN_PAYMENT,SPEND,DEBT_PAYMENT,documented,
-MEDICAL_DENTAL_CARE,SPEND,HEALTHCARE,documented,
-MEDICAL_EYE_CARE,SPEND,HEALTHCARE,documented,
-MEDICAL_NURSING_CARE,SPEND,HEALTHCARE,documented,
-MEDICAL_OTHER_MEDICAL,SPEND,HEALTHCARE,observed,
-MEDICAL_PHARMACIES_AND_SUPPLEMENTS,SPEND,HEALTHCARE,documented,
-MEDICAL_PRIMARY_CARE,SPEND,HEALTHCARE,observed,
-MEDICAL_VETERINARY_SERVICES,SPEND,OTHER,documented,
-PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS,SPEND,SUBSCRIPTIONS,observed,A gym is a membership even on the month it is not used; the category covers it explicitly
-PERSONAL_CARE_HAIR_AND_BEAUTY,SPEND,OTHER,documented,
-PERSONAL_CARE_LAUNDRY_AND_DRY_CLEANING,SPEND,CLOTHING,observed,
-PERSONAL_CARE_OTHER_PERSONAL_CARE,SPEND,OTHER,documented,
-RENT_AND_UTILITIES_GAS_AND_ELECTRICITY,SPEND,UTILITIES,documented,
-RENT_AND_UTILITIES_INTERNET_AND_CABLE,SPEND,UTILITIES,documented,
-RENT_AND_UTILITIES_OTHER_UTILITIES,SPEND,UTILITIES,documented,
-RENT_AND_UTILITIES_RENT,SPEND,RENT,observed,
-RENT_AND_UTILITIES_SEWAGE_AND_WASTE_MANAGEMENT,SPEND,UTILITIES,documented,
-RENT_AND_UTILITIES_TELEPHONE,SPEND,UTILITIES,documented,
-RENT_AND_UTILITIES_WATER,SPEND,UTILITIES,documented,
-TRANSFER_IN_ACCOUNT_TRANSFER,TRANSFER_INTERNAL,,observed,
-TRANSFER_IN_DEPOSIT,INCOME,,observed,
-TRANSFER_IN_INVESTMENT_AND_RETIREMENT_FUNDS,TRANSFER_INTERNAL,,documented,
-TRANSFER_IN_SAVINGS,TRANSFER_INTERNAL,,documented,
-TRANSFER_OUT_ACCOUNT_TRANSFER,TRANSFER_INTERNAL,,observed,
-TRANSFER_OUT_INVESTMENT_AND_RETIREMENT_FUNDS,TRANSFER_INTERNAL,,documented,
-TRANSFER_OUT_OTHER_TRANSFER_OUT,TRANSFER_INTERNAL,,documented,
-TRANSFER_OUT_SAVINGS,TRANSFER_INTERNAL,,observed,Moving money to savings is not spending and is never subtracted
-TRANSFER_OUT_TRANSFER_OUT_FROM_APPS,SPEND,OTHER,observed,Venmo and Cash App usually pay a person for something real; counted rather than dropped
-TRANSFER_OUT_WITHDRAWAL,SPEND,OTHER,documented,Cash withdrawn is spent on something we cannot see
-TRANSPORTATION_BIKES_AND_SCOOTERS,SPEND,TRANSPORT_FUEL,documented,
-TRANSPORTATION_GAS,SPEND,TRANSPORT_FUEL,observed,
-TRANSPORTATION_OTHER_TRANSPORTATION,SPEND,TRANSPORT_FUEL,documented,
-TRANSPORTATION_PARKING,SPEND,TRANSPORT_FUEL,observed,
-TRANSPORTATION_PUBLIC_TRANSIT,SPEND,TRANSPORT_FUEL,documented,
-TRANSPORTATION_TAXIS_AND_RIDE_SHARES,SPEND,TRANSPORT_FUEL,observed,
-TRANSPORTATION_TOLLS,SPEND,TRANSPORT_FUEL,documented,
-TRAVEL_FLIGHTS,SPEND,OTHER,observed,Travel is discretionary but not a night out; Other is honest about what it is
-TRAVEL_LODGING,SPEND,OTHER,documented,
-TRAVEL_OTHER_TRAVEL,SPEND,OTHER,documented,
-TRAVEL_RENTAL_CARS,SPEND,OTHER,documented,
+pfc_detailed,kind,category,savings,source,why
+BANK_FEES_INTEREST_CHARGE,FEE,,,observed,Interest on a carried balance is a real cost but not a purchase
+ENTERTAINMENT_CASINOS_AND_GAMBLING,SPEND,ENTERTAINMENT,,observed,
+ENTERTAINMENT_MUSIC_AND_AUDIO,SPEND,ENTERTAINMENT,,observed,Spotify here; becomes a subscription when it recurs
+ENTERTAINMENT_OTHER_ENTERTAINMENT,SPEND,ENTERTAINMENT,,observed,
+ENTERTAINMENT_SPORTING_EVENTS_AMUSEMENT_PARKS_AND_MUSEUMS,SPEND,ENTERTAINMENT,,observed,
+ENTERTAINMENT_TV_AND_MOVIES,SPEND,ENTERTAINMENT,,observed,Netflix here; a cinema ticket lands here too so it is not a subscription by itself
+ENTERTAINMENT_VIDEO_GAMES,SPEND,ENTERTAINMENT,,observed,
+FOOD_AND_DRINK_BEER_WINE_AND_LIQUOR,SPEND,ENTERTAINMENT,,observed,Drinks out and off-licence alike are discretionary rather than the weekly shop
+FOOD_AND_DRINK_COFFEE,SPEND,DINING_OUT,,observed,
+FOOD_AND_DRINK_FAST_FOOD,SPEND,DINING_OUT,,observed,
+FOOD_AND_DRINK_GROCERIES,SPEND,GROCERIES,,observed,The one food value that is capped against the city rather than treated as discretionary
+FOOD_AND_DRINK_OTHER_FOOD_AND_DRINK,SPEND,DINING_OUT,,observed,
+FOOD_AND_DRINK_RESTAURANT,SPEND,DINING_OUT,,observed,Also carries this user's payroll; a recurring inflow is reclassified as income
+FOOD_AND_DRINK_VENDING_MACHINES,SPEND,DINING_OUT,,documented,
+GENERAL_MERCHANDISE_BOOKSTORES_AND_NEWSSTANDS,SPEND,OTHER,,observed,
+GENERAL_MERCHANDISE_CLOTHING_AND_ACCESSORIES,SPEND,CLOTHING,,documented,
+GENERAL_MERCHANDISE_CONVENIENCE_STORES,SPEND,DINING_OUT,,observed,Convenience stores are snacks and drinks rather than the household shop
+GENERAL_MERCHANDISE_DEPARTMENT_STORES,SPEND,OTHER,,documented,
+GENERAL_MERCHANDISE_DISCOUNT_STORES,SPEND,OTHER,,documented,
+GENERAL_MERCHANDISE_ELECTRONICS,SPEND,OTHER,,documented,
+GENERAL_MERCHANDISE_OFFICE_SUPPLIES,SPEND,OTHER,,documented,
+GENERAL_MERCHANDISE_ONLINE_MARKETPLACES,SPEND,OTHER,,observed,Amazon; the basket could be anything so claiming to know is worse than saying we do not
+GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE,SPEND,OTHER,,documented,
+GENERAL_MERCHANDISE_PET_SUPPLIES,SPEND,OTHER,,documented,
+GENERAL_MERCHANDISE_SPORTING_GOODS,SPEND,OTHER,,documented,
+GENERAL_MERCHANDISE_SUPERSTORES,SPEND,OTHER,,observed,Walmart and Target mix groceries with everything else
+GENERAL_SERVICES_ACCOUNTING_AND_FINANCIAL_PLANNING,SPEND,OTHER,,documented,
+GENERAL_SERVICES_AUTOMOTIVE,SPEND,TRANSPORT_FUEL,,documented,
+GENERAL_SERVICES_CHILDCARE,SPEND,OTHER,,documented,
+GENERAL_SERVICES_CONSULTING_AND_LEGAL,SPEND,OTHER,,documented,
+GENERAL_SERVICES_EDUCATION,SPEND,OTHER,,observed,
+GENERAL_SERVICES_INSURANCE,SPEND,HEALTHCARE,,documented,
+GENERAL_SERVICES_OTHER_GENERAL_SERVICES,SPEND,OTHER,,observed,Software and domains arrive here; becomes a subscription when it recurs
+GENERAL_SERVICES_POSTAGE_AND_SHIPPING,SPEND,OTHER,,documented,
+GENERAL_SERVICES_STORAGE,SPEND,OTHER,,documented,
+GOVERNMENT_AND_NON_PROFIT_DONATIONS,SPEND,OTHER,,observed,
+GOVERNMENT_AND_NON_PROFIT_GOVERNMENT_DEPARTMENTS_AND_AGENCIES,SPEND,OTHER,,documented,
+GOVERNMENT_AND_NON_PROFIT_TAX_PAYMENT,SPEND,TAX_RESERVE,,observed,Tax the user pays themselves rather than through payroll
+HOME_IMPROVEMENT_FURNITURE,SPEND,OTHER,,documented,
+HOME_IMPROVEMENT_HARDWARE,SPEND,OTHER,,documented,
+HOME_IMPROVEMENT_OTHER_HOME_IMPROVEMENT,SPEND,OTHER,,documented,
+HOME_IMPROVEMENT_REPAIR_AND_MAINTENANCE,SPEND,OTHER,,documented,
+HOME_IMPROVEMENT_SECURITY,SPEND,OTHER,,documented,
+INCOME_DIVIDENDS,INCOME,,,documented,
+INCOME_INTEREST_EARNED,INCOME,,,observed,
+INCOME_OTHER_INCOME,INCOME,,,documented,
+INCOME_RETIREMENT_PENSION,INCOME,,,documented,
+INCOME_SALARY,INCOME,,,observed,On the credit card this is a card payment rather than pay; the account decides
+INCOME_TAX_REFUND,INCOME,,,documented,
+INCOME_UNEMPLOYMENT,INCOME,,,documented,
+INCOME_WAGES,INCOME,,,documented,The v1 name; kept so a v1 item is not misread
+LOAN_DISBURSEMENTS_CASH_ADVANCES,TRANSFER_EXTERNAL,,,observed,Borrowed money is not income; counting it would inflate the surplus
+LOAN_DISBURSEMENTS_OTHER_DISBURSEMENT,TRANSFER_EXTERNAL,,,observed,The loan side of a payment; borrowed money is never income
+LOAN_DISBURSEMENTS_STUDENT_LOAN_DISBURSEMENT,TRANSFER_EXTERNAL,,,documented,
+LOAN_PAYMENTS_BNPL,SPEND,DEBT_PAYMENT,,observed,
+LOAN_PAYMENTS_CAR_PAYMENT,SPEND,DEBT_PAYMENT,,documented,
+LOAN_PAYMENTS_CASH_ADVANCES,SPEND,DEBT_PAYMENT,,observed,
+LOAN_PAYMENTS_CREDIT_CARD_PAYMENT,TRANSFER_INTERNAL,,,observed,The double-count bug: the purchases were already counted when they were made
+LOAN_PAYMENTS_EWA,SPEND,DEBT_PAYMENT,,observed,Repaying an earned-wage advance is an outflow to a lender
+LOAN_PAYMENTS_MORTGAGE_PAYMENT,SPEND,RENT,,documented,Rent covers a mortgage payment; both are the roof and neither can be capped
+LOAN_PAYMENTS_OTHER_PAYMENT,SPEND,DEBT_PAYMENT,,documented,
+LOAN_PAYMENTS_PERSONAL_LOAN_PAYMENT,SPEND,DEBT_PAYMENT,,documented,
+LOAN_PAYMENTS_STUDENT_LOAN_PAYMENT,SPEND,DEBT_PAYMENT,,documented,
+MEDICAL_DENTAL_CARE,SPEND,HEALTHCARE,,documented,
+MEDICAL_EYE_CARE,SPEND,HEALTHCARE,,documented,
+MEDICAL_NURSING_CARE,SPEND,HEALTHCARE,,documented,
+MEDICAL_OTHER_MEDICAL,SPEND,HEALTHCARE,,observed,
+MEDICAL_PHARMACIES_AND_SUPPLEMENTS,SPEND,HEALTHCARE,,documented,
+MEDICAL_PRIMARY_CARE,SPEND,HEALTHCARE,,observed,
+MEDICAL_VETERINARY_SERVICES,SPEND,OTHER,,documented,
+PERSONAL_CARE_GYMS_AND_FITNESS_CENTERS,SPEND,SUBSCRIPTIONS,,observed,A gym is a membership even on the month it is not used; the category covers it explicitly
+PERSONAL_CARE_HAIR_AND_BEAUTY,SPEND,OTHER,,documented,
+PERSONAL_CARE_LAUNDRY_AND_DRY_CLEANING,SPEND,CLOTHING,,observed,
+PERSONAL_CARE_OTHER_PERSONAL_CARE,SPEND,OTHER,,documented,
+RENT_AND_UTILITIES_GAS_AND_ELECTRICITY,SPEND,UTILITIES,,documented,
+RENT_AND_UTILITIES_INTERNET_AND_CABLE,SPEND,UTILITIES,,documented,
+RENT_AND_UTILITIES_OTHER_UTILITIES,SPEND,UTILITIES,,documented,
+RENT_AND_UTILITIES_RENT,SPEND,RENT,,observed,
+RENT_AND_UTILITIES_SEWAGE_AND_WASTE_MANAGEMENT,SPEND,UTILITIES,,documented,
+RENT_AND_UTILITIES_TELEPHONE,SPEND,UTILITIES,,documented,
+RENT_AND_UTILITIES_WATER,SPEND,UTILITIES,,documented,
+TRANSFER_IN_ACCOUNT_TRANSFER,TRANSFER_INTERNAL,,,observed,
+TRANSFER_IN_DEPOSIT,INCOME,,,observed,
+TRANSFER_IN_INVESTMENT_AND_RETIREMENT_FUNDS,TRANSFER_INTERNAL,,savings,documented,
+TRANSFER_IN_SAVINGS,TRANSFER_INTERNAL,,savings,documented,
+TRANSFER_OUT_ACCOUNT_TRANSFER,TRANSFER_INTERNAL,,,observed,
+TRANSFER_OUT_INVESTMENT_AND_RETIREMENT_FUNDS,TRANSFER_INTERNAL,,savings,documented,
+TRANSFER_OUT_OTHER_TRANSFER_OUT,TRANSFER_INTERNAL,,,documented,
+TRANSFER_OUT_SAVINGS,TRANSFER_INTERNAL,,savings,observed,Moving money to savings is not spending and is never subtracted
+TRANSFER_OUT_TRANSFER_OUT_FROM_APPS,SPEND,OTHER,,observed,Venmo and Cash App usually pay a person for something real; counted rather than dropped
+TRANSFER_OUT_WITHDRAWAL,SPEND,OTHER,,documented,Cash withdrawn is spent on something we cannot see
+TRANSPORTATION_BIKES_AND_SCOOTERS,SPEND,TRANSPORT_FUEL,,documented,
+TRANSPORTATION_GAS,SPEND,TRANSPORT_FUEL,,observed,
+TRANSPORTATION_OTHER_TRANSPORTATION,SPEND,TRANSPORT_FUEL,,documented,
+TRANSPORTATION_PARKING,SPEND,TRANSPORT_FUEL,,observed,
+TRANSPORTATION_PUBLIC_TRANSIT,SPEND,TRANSPORT_FUEL,,documented,
+TRANSPORTATION_TAXIS_AND_RIDE_SHARES,SPEND,TRANSPORT_FUEL,,observed,
+TRANSPORTATION_TOLLS,SPEND,TRANSPORT_FUEL,,documented,
+TRAVEL_FLIGHTS,SPEND,OTHER,,observed,Travel is discretionary but not a night out; Other is honest about what it is
+TRAVEL_LODGING,SPEND,OTHER,,documented,
+TRAVEL_OTHER_TRAVEL,SPEND,OTHER,,documented,
+TRAVEL_RENTAL_CARS,SPEND,OTHER,,documented,

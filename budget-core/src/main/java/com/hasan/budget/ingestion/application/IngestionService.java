@@ -1,5 +1,6 @@
 package com.hasan.budget.ingestion.application;
 
+import com.hasan.budget.ingestion.domain.AccountSnapshot;
 import com.hasan.budget.ingestion.domain.BankConnection;
 import com.hasan.budget.ingestion.domain.BankWebhook;
 import com.hasan.budget.ingestion.domain.Ledger;
@@ -206,6 +207,17 @@ public class IngestionService {
 
     public SpendingSummary summaryFor(String userId, YearMonth month) {
         return ledgerFor(userId).summaryFor(month);
+    }
+
+    /**
+     * What this user's connected accounts held at their last sync.
+     *
+     * <p>The considered-balance question - how much of what somebody has the plan may work with -
+     * has nothing to answer without this. Note that a balance is a stock and the monthly income is a
+     * rate: they are different quantities and adding them is the mistake this separation prevents.
+     */
+    public List<AccountSnapshot> accountsFor(String userId) {
+        return ledger.accountsForUser(userId);
     }
 
     public List<RecurringCommitment> commitmentsFor(String userId) {

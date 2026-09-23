@@ -1,5 +1,6 @@
 package com.hasan.budget.ingestion.support;
 
+import com.hasan.budget.ingestion.domain.AccountSnapshot;
 import com.hasan.budget.ingestion.domain.BankConnection;
 import com.hasan.budget.ingestion.domain.EncryptedToken;
 import com.hasan.budget.ingestion.domain.LedgerEntry;
@@ -31,6 +32,7 @@ public class InMemoryBankStore implements BankConnections, BankLedger {
     private final Map<Long, String> cursors = new LinkedHashMap<>();
     private final Map<Long, Map<String, NormalisedTransaction>> transactions = new LinkedHashMap<>();
     private final Map<Long, List<RecurringStream>> streams = new LinkedHashMap<>();
+    private final Map<Long, Map<String, AccountSnapshot>> accounts = new LinkedHashMap<>();
 
     @Override
     public synchronized BankConnection connect(
@@ -91,6 +93,10 @@ public class InMemoryBankStore implements BankConnections, BankLedger {
             page.modified().forEach(transaction -> held.put(transaction.externalId(), transaction));
             page.removedExternalIds().forEach(held::remove);
         }
+        // The last page carries the freshest reading of the balances, as in the database.
+        Map<String, AccountSnapshot> heldAccounts =
+                accounts.computeIfAbsent(connectionId, id -> new LinkedHashMap<>());
+        pages.get(pages.size() - 1).accounts().forEach(account -> heldAccounts.put(account.accountId(), account));
         return true;
     }
 
@@ -111,6 +117,15 @@ public class InMemoryBankStore implements BankConnections, BankLedger {
                         (LedgerEntry entry) -> entry.transaction().date())
                 .thenComparing(entry -> entry.transaction().externalId()));
         return List.copyOf(entries);
+    }
+
+    @Override
+    public synchronized List<AccountSnapshot> accountsForUser(String userId) {
+        List<AccountSnapshot> found = new ArrayList<>();
+        for (BankConnection connection : forUser(userId)) {
+            found.addAll(accounts.getOrDefault(connection.id(), Map.of()).values());
+        }
+        return List.copyOf(found);
     }
 
     @Override

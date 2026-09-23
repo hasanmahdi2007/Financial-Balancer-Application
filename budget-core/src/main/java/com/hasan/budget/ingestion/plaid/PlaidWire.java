@@ -101,7 +101,11 @@ final class PlaidWire {
             String transactionsUpdateStatus) {}
 
     /** {@code type} is depository, credit, loan or investment; the subtype refines it. */
-    record Account(String accountId, String name, String type, String subtype) {}
+    record Account(String accountId, String name, String officialName, String mask, String type,
+            String subtype, Balances balances) {}
+
+    /** current is the ledger balance; available nets off what has not cleared, and is often absent. */
+    record Balances(BigDecimal current, BigDecimal available, String isoCurrencyCode) {}
 
     record RemovedTransaction(String transactionId, String accountId) {}
 

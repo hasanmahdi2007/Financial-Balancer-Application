@@ -117,6 +117,31 @@ class PlaidBankDataProviderTest {
     }
 
     @Test
+    @DisplayName("the balances that come with the transactions are kept, and labelled by kind")
+    void accountBalancesArriveWithTheSync() {
+        SyncResult result = RecordedSandbox.withRecordedHistory().provider().sync(TOKEN, null);
+
+        assertThat(result.accounts()).isNotEmpty();
+        assertThat(result.accounts())
+                .filteredOn(account -> account.role() == com.hasan.budget.ingestion.domain.AccountRole.CASH)
+                .isNotEmpty()
+                .allSatisfy(account -> {
+                    assertThat(account.holdsMoney()).isTrue();
+                    assertThat(account.label()).isNotBlank();
+                    assertThat(account.current()).isNotNull();
+                });
+        // The card and the loans are in the list too, and none of them holds spendable money:
+        // adding what is owed on them to somebody's funds would invent money that is not there.
+        assertThat(result.accounts())
+                .filteredOn(account -> !account.holdsMoney())
+                .isNotEmpty()
+                .allSatisfy(account -> assertThat(account.role())
+                        .isIn(
+                                com.hasan.budget.ingestion.domain.AccountRole.CARD,
+                                com.hasan.budget.ingestion.domain.AccountRole.LOAN));
+    }
+
+    @Test
     @DisplayName("detected streams keep the merchant's name and the latest amount")
     void recurringStreamsAreParsed() {
         var streams = RecordedSandbox.withRecordedHistory().provider().recurringStreams(TOKEN);

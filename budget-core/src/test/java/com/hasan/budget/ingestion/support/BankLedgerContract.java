@@ -3,6 +3,8 @@ package com.hasan.budget.ingestion.support;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.hasan.budget.ingestion.domain.AccountRole;
+import com.hasan.budget.ingestion.domain.AccountSnapshot;
 import com.hasan.budget.ingestion.domain.BankConnection;
 import com.hasan.budget.ingestion.domain.Classification;
 import com.hasan.budget.ingestion.domain.EncryptedToken;
@@ -92,7 +94,7 @@ public abstract class BankLedgerContract {
         BankConnection connection = connect(userId, "item-modify");
         ledger().apply(connection.id(), null, List.of(page("cursor-1", purchase("t-1", "12.34"))));
 
-        SyncResult correction = new SyncResult(
+        SyncResult correction = SyncResult.of(
                 List.of(), List.of(purchase("t-1", "18.00")), List.of(), "cursor-2", false);
         ledger().apply(connection.id(), "cursor-1", List.of(correction));
 
@@ -108,7 +110,7 @@ public abstract class BankLedgerContract {
         BankConnection connection = connect(userId, "item-remove");
         ledger().apply(connection.id(), null, List.of(page("cursor-1", purchase("t-1", "12.34"))));
 
-        SyncResult retraction = new SyncResult(List.of(), List.of(), List.of("t-1"), "cursor-2", false);
+        SyncResult retraction = SyncResult.of(List.of(), List.of(), List.of("t-1"), "cursor-2", false);
         ledger().apply(connection.id(), "cursor-1", List.of(retraction));
 
         assertThat(ledger().entriesForUser(userId)).isEmpty();
@@ -124,8 +126,8 @@ public abstract class BankLedgerContract {
                         connection.id(),
                         null,
                         List.of(
-                                new SyncResult(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", true),
-                                new SyncResult(List.of(purchase("t-2", "20.00")), List.of(), List.of("t-1"), "c2", false)));
+                                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", true),
+                                SyncResult.of(List.of(purchase("t-2", "20.00")), List.of(), List.of("t-1"), "c2", false)));
 
         assertThat(ledger().entriesForUser(userId))
                 .singleElement()
@@ -191,6 +193,79 @@ public abstract class BankLedgerContract {
     }
 
     @Test
+    @DisplayName("account balances arrive with the sync and are readable afterwards")
+    void balancesAreKeptFromTheSyncThatCarriedThem() {
+        String userId = someUserId();
+        BankConnection connection = connect(userId, "item-balances");
+        AccountSnapshot checking = new AccountSnapshot(
+                "acc-checking", "Checking ••4421", AccountRole.CASH, Money.of("500.00"), Money.of("393.75"));
+        AccountSnapshot card = new AccountSnapshot(
+                "acc-card", "Credit card", AccountRole.CARD, Money.of("1500.00"), null);
+
+        ledger().apply(connection.id(), null, List.of(new SyncResult(
+                List.of(purchase("t-1", "12.34")),
+                List.of(),
+                List.of(),
+                List.of(checking, card),
+                "cursor-1",
+                false)));
+
+        assertThat(ledger().accountsForUser(userId)).containsExactlyInAnyOrder(checking, card);
+        // Only one of them holds money the user can spend; the other records what they owe.
+        assertThat(ledger().accountsForUser(userId))
+                .filteredOn(AccountSnapshot::holdsMoney)
+                .singleElement()
+                .satisfies(account -> assertThat(account.available()).isEqualTo(Money.of("393.75")));
+    }
+
+    @Test
+    @DisplayName("a later sync replaces a balance rather than adding a second one")
+    void balancesAreTheLatestReadingRatherThanAHistory() {
+        String userId = someUserId();
+        BankConnection connection = connect(userId, "item-rebalance");
+        AccountSnapshot before = new AccountSnapshot(
+                "acc-1", "Checking", AccountRole.CASH, Money.of("500.00"), Money.of("500.00"));
+        AccountSnapshot after = new AccountSnapshot(
+                "acc-1", "Checking", AccountRole.CASH, Money.of("250.00"), Money.of("250.00"));
+        ledger().apply(connection.id(), null, List.of(
+                new SyncResult(List.of(), List.of(), List.of(), List.of(before), "cursor-1", false)));
+
+        ledger().apply(connection.id(), "cursor-1", List.of(
+                new SyncResult(List.of(), List.of(), List.of(), List.of(after), "cursor-2", false)));
+
+        assertThat(ledger().accountsForUser(userId)).containsExactly(after);
+    }
+
+    @Test
+    @DisplayName("a transfer remembers whether it was money put by")
+    void savingSurvivesStorage() {
+        String userId = someUserId();
+        BankConnection connection = connect(userId, "item-saving");
+        NormalisedTransaction toSavings = new NormalisedTransaction(
+                "t-save",
+                "checking",
+                LocalDate.of(2026, 9, 14),
+                Money.of("250.00"),
+                null,
+                null,
+                null,
+                null,
+                Classification.savings(),
+                false);
+        NormalisedTransaction cardBill = transfer("t-card", "checking", "1500.00");
+
+        ledger().apply(connection.id(), null, List.of(
+                SyncResult.of(List.of(toSavings, cardBill), List.of(), List.of(), "cursor-1", false)));
+
+        // Both are internal transfers; only one of them is still the user's money afterwards, and
+        // losing that distinction in storage would report a cleared card balance as savings.
+        assertThat(ledger().entriesForUser(userId))
+                .filteredOn(entry -> entry.classification().towardsSavings())
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.transaction().externalId()).isEqualTo("t-save"));
+    }
+
+    @Test
     @DisplayName("a stream with no known member transactions still reads back")
     void aStreamCanHaveNoMembers() {
         String userId = someUserId();
@@ -226,7 +301,7 @@ public abstract class BankLedgerContract {
         ledger().apply(other.id(), null, List.of(page("cursor-1", purchase("t-other", "50.00"))));
 
         ledger().apply(other.id(), "cursor-1", List.of(
-                new SyncResult(List.of(), List.of(), List.of("t-shared"), "cursor-2", false)));
+                SyncResult.of(List.of(), List.of(), List.of("t-shared"), "cursor-2", false)));
 
         assertThat(ledger().entriesForUser(userId))
                 .extracting(entry -> entry.transaction().externalId())
@@ -238,7 +313,7 @@ public abstract class BankLedgerContract {
     }
 
     protected static SyncResult page(String nextCursor, NormalisedTransaction... added) {
-        return new SyncResult(List.of(added), List.of(), List.of(), nextCursor, false);
+        return SyncResult.of(List.of(added), List.of(), List.of(), nextCursor, false);
     }
 
     protected static NormalisedTransaction purchase(String externalId, String amount) {

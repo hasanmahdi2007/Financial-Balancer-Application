@@ -74,9 +74,9 @@ public class PfcMapping {
                 headerSeen = true;
                 continue;
             }
-            // Four columns then free text, so a reason may contain commas without quoting.
-            String[] columns = line.split(",", 5);
-            if (columns.length < 4) {
+            // Five columns then free text, so a reason may contain commas without quoting.
+            String[] columns = line.split(",", 6);
+            if (columns.length < 5) {
                 throw new IllegalStateException("malformed row in " + FILE + ": " + line);
             }
             String detailed = columns[0].trim();
@@ -93,16 +93,24 @@ public class PfcMapping {
     private static Classification classificationFrom(String[] columns, String line) {
         TransactionKind kind = TransactionKind.valueOf(columns[1].trim());
         String categoryName = columns[2].trim();
+        boolean savings = "savings".equalsIgnoreCase(columns[3].trim());
         if (kind == TransactionKind.SPEND) {
             if (categoryName.isEmpty()) {
                 throw new IllegalStateException("a SPEND row needs a category: " + line);
+            }
+            if (savings) {
+                throw new IllegalStateException("spending cannot also be saving: " + line);
             }
             return Classification.spend(SpendCategory.valueOf(categoryName));
         }
         if (!categoryName.isEmpty()) {
             throw new IllegalStateException("only SPEND rows may carry a category: " + line);
         }
-        return Classification.notSpending(kind);
+        if (savings && kind != TransactionKind.TRANSFER_INTERNAL) {
+            throw new IllegalStateException(
+                    "only a transfer between the user's own accounts can be saving: " + line);
+        }
+        return savings ? Classification.savings() : Classification.notSpending(kind);
     }
 
     /** Empty for a value this table has never heard of, which the caller must not treat as nothing. */

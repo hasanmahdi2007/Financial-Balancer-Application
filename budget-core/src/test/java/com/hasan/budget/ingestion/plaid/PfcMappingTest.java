@@ -46,10 +46,27 @@ class PfcMappingTest {
     }
 
     @Test
-    @DisplayName("moving money to savings is not spending")
+    @DisplayName("moving money to savings is not spending, and is known to be saving")
     void savingsTransfersAreInternal() {
-        assertThat(mapping.classify("TRANSFER_OUT_SAVINGS"))
+        // Not spending is not specific enough: a credit-card payment is equally "not spending", and
+        // adding the two together would report a cleared card balance as money put by.
+        assertThat(mapping.classify("TRANSFER_OUT_SAVINGS")).contains(Classification.savings());
+        assertThat(mapping.classify("TRANSFER_OUT_INVESTMENT_AND_RETIREMENT_FUNDS"))
+                .contains(Classification.savings());
+        assertThat(mapping.classify("LOAN_PAYMENTS_CREDIT_CARD_PAYMENT"))
                 .contains(Classification.notSpending(TransactionKind.TRANSFER_INTERNAL));
+    }
+
+    @Test
+    @DisplayName("a table that calls spending saving, or income saving, fails on load")
+    void savingIsOnlyEverATransfer() {
+        assertThatThrownBy(() -> parse(header() + "FOOD_AND_DRINK_COFFEE,SPEND,DINING_OUT,savings,observed,\n"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("spending cannot also be saving");
+
+        assertThatThrownBy(() -> parse(header() + "INCOME_SALARY,INCOME,,savings,observed,\n"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("only a transfer");
     }
 
     @Test
