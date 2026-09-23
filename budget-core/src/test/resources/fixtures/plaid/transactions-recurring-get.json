@@ -1,0 +1,194 @@
+{
+  "inflow_streams": [
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "average_amount": {
+        "amount": -810
+      },
+      "category": [
+        "Food and Drink",
+        "Restaurants"
+      ],
+      "category_id": "13005000",
+      "description": "Sweetgreen inc payroll ppd id",
+      "first_date": "2026-06-28",
+      "frequency": "WEEKLY",
+      "is_active": true,
+      "is_user_modified": false,
+      "last_amount": {
+        "amount": -810
+      },
+      "last_date": "2026-09-20",
+      "last_user_modified_datetime": "0001-01-01T00:00:00Z",
+      "merchant_name": "Sweetgreen",
+      "personal_finance_category": {
+        "confidence_level": "UNKNOWN",
+        "detailed": "FOOD_AND_DRINK_RESTAURANT",
+        "primary": "FOOD_AND_DRINK"
+      },
+      "predicted_next_date": "2026-09-27",
+      "status": "MATURE",
+      "stream_id": "Vx3KnmQMx7uXryLJoxyKsqQWRg5e8RCWPov7x",
+      "transaction_ids": [
+        "z7e3g18j7EhZ6M81mLMRiKJLXGejaECekPkMy",
+        "BQj7aW8VQgSagLWkrwLligPm18BED6CkmemXW",
+        "3qRm6xa8qDtxVNwl6jNytk5qb13VzGiW4o4QJ",
+        "xPjzpmoNPZCeDXo9ByX3iZwNz4M6JksQrlrkj",
+        "4KRlXd4EKgcPv5rBy95MIXeAx5mvB9ImGDG9q",
+        "NGEWpyd4G3Spdwev86wNIX3vzj7pEmIVReRoL",
+        "PqlGgA4PqdtgRboBLVbNuXZ8nklpRGIKq3q8w",
+        "jAWox6dDAKhqW9GjRP9Vuj97LryAZqsQnpnx1",
+        "LWk81w3dWzI17by3p9bPCe1be6DGDof95zwNV",
+        "RrKbEAP7r4fJXQBWPaQbHPNQPwXdXrHGE18Dp",
+        "PqlGgA4PqdtgRboBLVbNuXZbXDq9q3SNRmgGJ",
+        "7BKrwNjGBWuqJvla6dvGuXWzXZoJoQS1qVeRw",
+        "WdxrbAZ1decLpkBlKvkrUP3WP8p7pqH4VaggD"
+      ]
+    },
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "average_amount": {
+        "amount": -0.12
+      },
+      "category": [
+        "Interest",
+        "Interest Earned"
+      ],
+      "category_id": "15001000",
+      "description": "Interest payment",
+      "first_date": "2026-07-22",
+      "frequency": "MONTHLY",
+      "is_active": true,
+      "is_user_modified": false,
+      "last_amount": {
+        "amount": -0.12
+      },
+      "last_date": "2026-09-22",
+      "last_user_modified_datetime": "0001-01-01T00:00:00Z",
+      "merchant_name": "",
+      "personal_finance_category": {
+        "confidence_level": "UNKNOWN",
+        "detailed": "INCOME_INTEREST_EARNED",
+        "primary": "INCOME"
+      },
+      "predicted_next_date": "2026-10-22",
+      "status": "MATURE",
+      "stream_id": "wNPrL1p4Nei7qGpPDmGWia4vL8dz3LUro3aeJ",
+      "transaction_ids": [
+        "dpLQq9KypAirBkGm7ekDiBLvmQ9oD4hXVgVlp",
+        "7BKrwNjGBWuqJvla6dvGuXWnLl9Bm5IwDvD6d",
+        "mqKE4wNlqBtzWENmKXEQIlNalLdkdPIAa366X"
+      ]
+    }
+  ],
+  "outflow_streams": [
+    {
+      "account_id": "E1QZPWAq1gUP6kbdwVkzIlrepLENqbI3L647D",
+      "average_amount": {
+        "amount": 20
+      },
+      "category": [
+        "Transfer",
+        "Debit"
+      ],
+      "category_id": "21006000",
+      "description": "OPENAI *CHATGPT SUBSCR",
+      "first_date": "2026-07-22",
+      "frequency": "MONTHLY",
+      "is_active": true,
+      "is_user_modified": false,
+      "last_amount": {
+        "amount": 20
+      },
+      "last_date": "2026-09-22",
+      "last_user_modified_datetime": "0001-01-01T00:00:00Z",
+      "merchant_name": "OpenAI",
+      "personal_finance_category": {
+        "confidence_level": "UNKNOWN",
+        "detailed": "TRANSFER_OUT_ACCOUNT_TRANSFER",
+        "primary": "TRANSFER_OUT"
+      },
+      "predicted_next_date": "2026-10-22",
+      "status": "MATURE",
+      "stream_id": "6zqKV4PAz1f5gBeVZrBjuKWk3m1Pl3tgXmadv",
+      "transaction_ids": [
+        "g8g1z6BR8Li9oEBlDbEpc3PdEWGyPMtyA3A9z",
+        "E1QZPWAq1gUP6kbdwVkzIlr9VkaZr4H6WDWz1",
+        "E1QZPWAq1gUP6kbdwVkzIlrZloK1KzIENdb1w"
+      ]
+    },
+    {
+      "account_id": "E1QZPWAq1gUP6kbdwVkzIlrepLENqbI3L647D",
+      "average_amount": {
+        "amount": 19.57
+      },
+      "category": [
+        "Service",
+        "Subscription"
+      ],
+      "category_id": "18061000",
+      "description": "Netflix",
+      "first_date": "2026-07-22",
+      "frequency": "MONTHLY",
+      "is_active": true,
+      "is_user_modified": false,
+      "last_amount": {
+        "amount": 19.57
+      },
+      "last_date": "2026-09-22",
+      "last_user_modified_datetime": "0001-01-01T00:00:00Z",
+      "merchant_name": "Netflix",
+      "personal_finance_category": {
+        "confidence_level": "UNKNOWN",
+        "detailed": "ENTERTAINMENT_TV_AND_MOVIES",
+        "primary": "ENTERTAINMENT"
+      },
+      "predicted_next_date": "2026-10-22",
+      "status": "MATURE",
+      "stream_id": "RrKbEAP7r4fJXQBWPaQbHPNbMAKDmMFRbwxnm",
+      "transaction_ids": [
+        "orzAPojKrkf3NGjdA1GVFP5pJ3jL5qTv6L6AN",
+        "83rz5P7n38sXDwvjynwms8AGlMbjAghNDdD5q",
+        "83rz5P7n38sXDwvjynwms8Aj8zR9RoHrBEqGl"
+      ]
+    },
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "average_amount": {
+        "amount": 12.65
+      },
+      "category": [
+        "Service",
+        "Subscription"
+      ],
+      "category_id": "18061000",
+      "description": "Spotify",
+      "first_date": "2026-07-22",
+      "frequency": "MONTHLY",
+      "is_active": true,
+      "is_user_modified": false,
+      "last_amount": {
+        "amount": 12.65
+      },
+      "last_date": "2026-09-22",
+      "last_user_modified_datetime": "0001-01-01T00:00:00Z",
+      "merchant_name": "Spotify",
+      "personal_finance_category": {
+        "confidence_level": "UNKNOWN",
+        "detailed": "ENTERTAINMENT_MUSIC_AND_AUDIO",
+        "primary": "ENTERTAINMENT"
+      },
+      "predicted_next_date": "2026-10-22",
+      "status": "MATURE",
+      "stream_id": "J8poZWz38KiZJDdvgBDViQDkaznPLaIdg1G7v",
+      "transaction_ids": [
+        "aMZjwGAnMLULGKQBR4KyUkzprMoD1xiXydyov",
+        "eopZKDr9o8iWEGrx7aG1tlmp8gd57NIxA6AJa",
+        "yj7BoRgPjZcvK9GVzq9xiJdkJMyGyLHDBvxx8"
+      ]
+    }
+  ],
+  "personal_finance_category_version": "v2",
+  "request_id": "aba1450984fc23e",
+  "updated_datetime": "2026-09-22T17:33:03Z"
+}

@@ -1,0 +1,9 @@
+{
+  "webhook_type": "TRANSACTIONS",
+  "webhook_code": "RECURRING_TRANSACTIONS_UPDATE",
+  "item_id": "kGlgdoaVGrSKa695lp6ru3evzz6NKLTxAy1JR",
+  "environment": "sandbox",
+  "account_ids": [
+    "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D"
+  ]
+}

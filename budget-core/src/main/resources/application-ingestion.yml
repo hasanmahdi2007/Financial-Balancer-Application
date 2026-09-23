@@ -1,0 +1,24 @@
+# Bank ingestion. Imported by application.yml; nothing here belongs in that file.
+#
+# Every value defaults to blank rather than being required, because the application has to start
+# without bank credentials: other modules' integration tests boot this context in CI, where no Plaid
+# keys exist and none should. A missing credential therefore fails when somebody tries to connect a
+# bank, with a message naming the variable to set, instead of preventing the service from starting.
+ingestion:
+  plaid:
+    # sandbox or production. The environment picks the base URL, so a deployment cannot end up
+    # pointing sandbox credentials at production by editing an address.
+    environment: ${PLAID_ENV:sandbox}
+    client-id: ${PLAID_CLIENT_ID:}
+    secret: ${PLAID_SECRET:}
+    client-name: Financial Balancer
+    # Optional. Without a publicly reachable address there is nothing for Plaid to notify, and syncs
+    # still happen when the user opens the app.
+    webhook-url: ${PLAID_WEBHOOK_URL:}
+  # 32 random bytes, base64 encoded. Encrypts stored access tokens, each of which can read a person's
+  # entire financial history.
+  token-encryption-key: ${TOKEN_ENCRYPTION_KEY:}
+  sync:
+    # Deliberately small: bank imports are slow, entirely I/O, and rate-limited per item by the
+    # provider, so a burst of notifications must not be able to starve the rest of the service.
+    threads: ${INGESTION_SYNC_THREADS:2}
