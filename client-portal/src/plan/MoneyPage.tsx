@@ -33,18 +33,30 @@ function MoneyForm({ existing }: { existing: Money | null }) {
   const navigate = useNavigate();
   const [income, setIncome] = useState(existing?.monthlyIncome ?? '');
   const [balance, setBalance] = useState(existing?.balance ?? '');
+  const [saving, setSaving] = useState(existing?.alreadySaving ?? '');
   const [showProblems, setShowProblems] = useState(false);
-  const bad = { income: !isAmount(income), balance: !isAmount(balance) };
+  const bad = {
+    income: !isAmount(income),
+    balance: !isAmount(balance),
+    saving: saving.trim() !== '' && !isAmount(saving),
+  };
 
   const save = useAction(async () => {
-    await plan.saveMoney(api, { monthlyIncome: income.trim(), balance: balance.trim() });
+    // Empty means "let a connected bank say", and is sent that way - left out. Anything typed is
+    // sent, including 0, which is the user saying they save nothing. Leaving it out when they had
+    // not emptied the box would clear a figure they never asked to lose.
+    await plan.saveMoney(api, {
+      monthlyIncome: income.trim(),
+      balance: balance.trim(),
+      ...(saving.trim() === '' ? {} : { alreadySaving: saving.trim() }),
+    });
     await plan.recompute(api);
     navigate('/plan');
   });
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (bad.income || bad.balance) {
+    if (bad.income || bad.balance || bad.saving) {
       setShowProblems(true);
       return;
     }
@@ -67,6 +79,13 @@ function MoneyForm({ existing }: { existing: Money | null }) {
         value={balance}
         onChange={setBalance}
         problem={showProblems && bad.balance ? AMOUNT_PROBLEM : null}
+      />
+      <MoneyField
+        label="How much do you already move into savings each month?"
+        help={existing?.alreadySavingExplanation ?? 'Leave it empty if you would rather your bank told us.'}
+        value={saving}
+        onChange={setSaving}
+        problem={showProblems && bad.saving ? AMOUNT_PROBLEM : null}
       />
       {save.error ? (
         <p className="field__error" role="alert">

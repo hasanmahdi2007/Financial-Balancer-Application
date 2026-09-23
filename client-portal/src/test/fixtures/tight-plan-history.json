@@ -1,7 +1,7 @@
 [
   {
-    "id": "f9ba744c-f071-4bb6-9983-a492eee7668b",
-    "takenAt": "2026-09-23T15:34:22.094643600Z",
+    "id": "206ad187-85f7-4da0-8552-39be790de9de",
+    "takenAt": "2026-09-23T20:54:12.269473600Z",
     "reason": "You added a goal: Emergency fund",
     "changes": {
       "goalsAdded": [
@@ -14,7 +14,7 @@
       },
       "goals": [
         {
-          "id": "df11f4a7-d7a6-47b4-88b6-5871e3896cc9",
+          "id": "e1ab7df4-ad36-4c96-bdc9-fae1eb0b1501",
           "name": "Car",
           "before": {
             "status": "Behind",
@@ -31,8 +31,8 @@
     }
   },
   {
-    "id": "641e7ab8-d1ce-4aaf-95b6-a3c120dbc786",
-    "takenAt": "2026-09-23T15:34:21.785398700Z",
+    "id": "4e7f8c94-f70a-4d9b-96f0-128e697cbdd9",
+    "takenAt": "2026-09-23T20:54:11.403404500Z",
     "reason": "You added a goal: Car",
     "changes": null
   }

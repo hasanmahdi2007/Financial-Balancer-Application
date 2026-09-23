@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { FakeAuth, FakeServer, renderApp } from '../test/fakes';
+import type { Plan } from '../api/plan';
 import { internalWordsIn } from '../test/internalWords';
 import finishFirst from '../test/fixtures/finish-first.json';
 import planFixture from '../test/fixtures/plan.json';
@@ -55,12 +56,36 @@ describe('the plan', () => {
     expect(row('Rent')).not.toHaveTextContent('our estimate');
   });
 
-  it('raises a staleness warning when the server says figures are ageing', async () => {
-    const ageing = structuredClone(planFixture);
-    ageing.surplus.lines[0]!.basis!.ageing = 'Prices have probably moved since these were gathered.' as never;
+  it('names the month a figure was read off the bank, instead of calling it our estimate', async () => {
+    // Worded by the server ("what you spent in February 2026") - a figure the user can check against
+    // a statement is the only kind they have reason to believe, so the month is shown, not a flag.
+    const measured: Plan = structuredClone(planFixture);
+    const healthcare = measured.surplus.lines.find((l) => l.id === 'healthcare')!;
+    healthcare.measuredFrom = 'what you spent in August 2026';
+    renderApp('/plan', signedIn(), new FakeServer().on('/api/v1/plan', { status: 200, body: measured }));
+    await screen.findByRole('heading', { name: 'What you spend' });
+
+    expect(row('Healthcare')).toHaveTextContent('(what you spent in August 2026)');
+    expect(row('Healthcare')).not.toHaveTextContent('our estimate');
+  });
+
+  it('raises a staleness warning, once, when the server says figures are ageing', async () => {
+    // Exactly the shape `PlanView.Basis` sends, with `Wording`'s own words for a stale figure. Every
+    // recorded fixture is too new to be ageing, so this is the only place the shape is exercised -
+    // and an earlier version of this test set a plain string here, which hid that the client typed
+    // the field as one and would have thrown the moment a real figure aged.
+    const stale = {
+      label: 'Probably out of date',
+      meaning: 'Prices have moved a lot since this was gathered. Your own figure would make the plan more accurate.',
+    };
+    const ageing: Plan = structuredClone(planFixture);
+    ageing.surplus.lines[0]!.basis!.ageing = stale;
+    ageing.surplus.lines[1]!.basis!.ageing = stale;
     renderApp('/plan', signedIn(), new FakeServer().on('/api/v1/plan', { status: 200, body: ageing }));
 
-    expect(await screen.findByRole('note', { name: 'Prices have probably moved since these were gathered.' })).toBeInTheDocument();
+    const warnings = await screen.findAllByRole('note', { name: stale.label });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toHaveTextContent(stale.meaning);
   });
 
   it('never shows suggested cuts without what was already assumed and the total change', async () => {

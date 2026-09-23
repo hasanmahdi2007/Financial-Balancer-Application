@@ -182,13 +182,18 @@ function SpendingSection({ plan }: { plan: Plan }) {
   const hints = new Map(plan.hints.map((h) => [h.id, h.hint]));
   // Each source is explained once, below the table, rather than on all eleven rows it applies to.
   const sources = [...new Map(lines.flatMap((l) => (l.basis ? [[basisKey(l.basis), l.basis] as const] : []))).values()];
-  const ageing = [...new Set(lines.map((l) => l.basis?.ageing).filter((a): a is string => !!a))];
+  // One warning per distinct tier, however many lines share it.
+  const ageing = [
+    ...new Map(
+      lines.flatMap((l) => (l.basis?.ageing ? [[l.basis.ageing.label, l.basis.ageing] as const] : [])),
+    ).values(),
+  ];
 
   return (
     <section className="panel" aria-labelledby="spending-heading">
       <h2 id="spending-heading">What you spend</h2>
-      {ageing.map((sentence) => (
-        <StalenessBanner key={sentence} headline={sentence} />
+      {ageing.map((tier) => (
+        <StalenessBanner key={tier.label} headline={tier.label} detail={tier.meaning} />
       ))}
       <table className="lines">
         <thead>
@@ -212,7 +217,11 @@ function SpendingSection({ plan }: { plan: Plan }) {
                 </th>
                 <td>
                   {formatMoney(line.spent)}
-                  {line.assumed ? <span className="aside"> (our estimate - you have not told us yours)</span> : null}
+                  {line.measuredFrom ? (
+                    <span className="aside"> ({line.measuredFrom})</span>
+                  ) : line.assumed ? (
+                    <span className="aside"> (our estimate - you have not told us yours)</span>
+                  ) : null}
                 </td>
                 <td>{line.localFigure === null ? '-' : formatMoney(line.localFigure)}</td>
                 <td>{line.basis ? line.basis.label : '-'}</td>

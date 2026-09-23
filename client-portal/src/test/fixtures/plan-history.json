@@ -1,7 +1,7 @@
 [
   {
-    "id": "ec40d50f-a398-400b-9705-04c31a506abe",
-    "takenAt": "2026-09-23T15:33:50.683761800Z",
+    "id": "eb4fe26d-36da-44be-9b7c-afdc5a206aaf",
+    "takenAt": "2026-09-23T20:54:06.062311900Z",
     "reason": "You added a goal: Emergency fund",
     "changes": {
       "goalsAdded": [
@@ -16,8 +16,8 @@
     }
   },
   {
-    "id": "e244a884-7e88-4798-b2ea-f73df992bf46",
-    "takenAt": "2026-09-23T15:33:50.381071Z",
+    "id": "c49ee762-53cf-4ee1-b278-be93796cf23b",
+    "takenAt": "2026-09-23T20:54:05.514839200Z",
     "reason": "You added a goal: Car",
     "changes": {
       "goalsAdded": [
@@ -32,8 +32,8 @@
     }
   },
   {
-    "id": "a2e879b7-1f8c-4f0a-932d-41969b8dd23d",
-    "takenAt": "2026-09-23T15:33:50.048604Z",
+    "id": "f44d803e-8399-4f60-85b1-27992dbe5b70",
+    "takenAt": "2026-09-23T20:54:04.706415800Z",
     "reason": "You asked for a fresh plan",
     "changes": null
   }

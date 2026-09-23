@@ -1,6 +1,6 @@
 [
   {
-    "id": "f6ade929-7c48-4ee9-aa03-5fa5bf2fa37e",
+    "id": "7e28801f-3d00-41fc-b2db-a74374b5939c",
     "name": "Car",
     "priority": {
       "key": "high",
@@ -11,7 +11,7 @@
     "finishFirst": false
   },
   {
-    "id": "951d25e3-0915-4e23-ac1b-3bcad44f5fba",
+    "id": "5b8962b0-9932-4cb4-ae4a-f6cd25fa15b3",
     "name": "Emergency fund",
     "priority": {
       "key": "critical",

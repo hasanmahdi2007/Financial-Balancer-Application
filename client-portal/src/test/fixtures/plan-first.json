@@ -1,6 +1,6 @@
 {
-  "id": "a2e879b7-1f8c-4f0a-932d-41969b8dd23d",
-  "takenAt": "2026-09-23T15:33:50.048604Z",
+  "id": "f44d803e-8399-4f60-85b1-27992dbe5b70",
+  "takenAt": "2026-09-23T20:54:04.706415800Z",
   "asOf": "2026-09-23",
   "reason": "You asked for a fresh plan",
   "money": {
@@ -45,6 +45,7 @@
         "localFigure": "600.00",
         "counted": "500.00",
         "assumed": false,
+        "measuredFrom": null,
         "howWilling": {
           "key": "locked",
           "label": "Cannot be changed"
@@ -67,6 +68,7 @@
         "localFigure": "90.00",
         "counted": "90.00",
         "assumed": true,
+        "measuredFrom": null,
         "howWilling": {
           "key": "essential",
           "label": "Very important"
@@ -89,6 +91,7 @@
         "localFigure": "25.00",
         "counted": "40.00",
         "assumed": false,
+        "measuredFrom": null,
         "howWilling": {
           "key": "essential",
           "label": "Very important"
@@ -111,6 +114,7 @@
         "localFigure": "180.00",
         "counted": "180.00",
         "assumed": true,
+        "measuredFrom": null,
         "howWilling": {
           "key": "essential",
           "label": "Very important"
@@ -133,6 +137,7 @@
         "localFigure": "300.00",
         "counted": "300.00",
         "assumed": false,
+        "measuredFrom": null,
         "howWilling": {
           "key": "essential",
           "label": "Very important"
@@ -155,6 +160,7 @@
         "localFigure": "120.00",
         "counted": "120.00",
         "assumed": true,
+        "measuredFrom": null,
         "howWilling": {
           "key": "essential",
           "label": "Very important"
@@ -177,6 +183,7 @@
         "localFigure": "150.00",
         "counted": "0.00",
         "assumed": false,
+        "measuredFrom": null,
         "howWilling": {
           "key": "flexible",
           "label": "Flexible"
@@ -199,6 +206,7 @@
         "localFigure": "80.00",
         "counted": "0.00",
         "assumed": false,
+        "measuredFrom": null,
         "howWilling": {
           "key": "disposable",
           "label": "Not very important"
@@ -221,6 +229,7 @@
         "localFigure": "60.00",
         "counted": "0.00",
         "assumed": true,
+        "measuredFrom": null,
         "howWilling": {
           "key": "flexible",
           "label": "Flexible"
@@ -243,6 +252,7 @@
         "localFigure": "70.00",
         "counted": "0.00",
         "assumed": true,
+        "measuredFrom": null,
         "howWilling": {
           "key": "flexible",
           "label": "Flexible"
@@ -265,6 +275,7 @@
         "localFigure": null,
         "counted": "0.00",
         "assumed": false,
+        "measuredFrom": null,
         "howWilling": {
           "key": "locked",
           "label": "Cannot be changed"

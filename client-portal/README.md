@@ -105,6 +105,15 @@ test that fails if it is broken - checked by breaking each one on purpose.
 the live server leave only the second. So every write here reads what is saved, merges, and sends the
 whole body - see `setup/QuestionsStep.tsx` and `setup/saveLocation.ts`.
 
+The money route has a sharper edge: `alreadySaving` *left out* clears a saved figure, while empty in
+the form means "let a connected bank say". So a figure on file travels again with every write unless
+the user emptied the box.
+
+Which setup questions may be skipped is also the server's call. It cannot be read off a question
+("already saving" has no suggestion and is optional; income has none and is not), so the client checks
+only the form of an answer, leaves empty ones out, and shows the server's sentence if the plan needs
+something it was not given.
+
 ### Setup follows the server
 
 `GET /api/v1/questions` says what is still open and `answerWith` says where each answer goes
