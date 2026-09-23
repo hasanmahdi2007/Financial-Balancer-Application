@@ -281,8 +281,11 @@ GET {{gateway}}/api/v1/plan/history/paste-a-snapshot-id
 Authorization: Bearer {{token}}
 
 ### 20. "Can I afford this today?" Pick a meal band from /choices, or price something yourself with
-# "price" and "label". "spentThisMonth" is what has already gone on that category this month; it is
-# asked for because no bank is connected yet to work it out.
+# "price" and "label". "spentThisMonth" is what has already gone on that category this month: send it
+# and it is used, leave it out and a connected bank answers it from the user's own transactions. With
+# neither, the request is refused rather than assuming nothing has been spent - which would make every
+# answer look more affordable than it is. Where their own payments cover a band, "basis" on the price
+# reads "What you actually pay" instead of "Our estimate".
 # -> {"verdict":{"label":"This works if you ease off afterwards","meaning":"..."},
 #     "category":{"key":"dining-out","label":"Eating out"},
 #     "purchase":{"label":"A normal meal out","covers":"...","price":"10.00",

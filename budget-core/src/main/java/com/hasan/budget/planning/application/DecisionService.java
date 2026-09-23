@@ -19,6 +19,7 @@ import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.SpendCategory;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,19 +35,13 @@ import java.util.Objects;
  */
 public final class DecisionService {
 
-    /**
-     * What the user's own card payments say they pay, per merchant. Empty until bank data exists:
-     * the aggregate the ingestion module is asked to expose has not been built, so every price band
-     * is an estimate and says so. That is the cold-start case the decision engine already handles
-     * honestly - nothing here pretends otherwise.
-     */
-    private static final List<ObservedTicket> NO_CARD_PAYMENTS_YET = List.of();
-
     private final PlanService plans;
+    private final BankSpending bank;
     private final Clock clock;
 
-    public DecisionService(PlanService plans, Clock clock) {
+    public DecisionService(PlanService plans, BankSpending bank, Clock clock) {
         this.plans = Objects.requireNonNull(plans, "plans");
+        this.bank = Objects.requireNonNull(bank, "bank");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -55,19 +50,15 @@ public final class DecisionService {
     /**
      * @param band a meal band, for eating out; null when the user priced something themselves
      * @param label and {@code price} name and price a one-off purchase; both null when a band is given
-     * @param spentThisMonth what has already gone on this category this month. Asked for because no
-     *     bank is connected to work it out, and never defaulted: assuming zero would make every answer
-     *     look more affordable than it is.
+     * @param spentThisMonth what has already gone on this category this month, when the user tells us.
+     *     Null leaves it to their bank, and with no bank connected the question is asked rather than
+     *     assumed - taking it as zero would make every answer look more affordable than it is.
      */
     public record AffordQuestion(
             SpendCategory category, SpendBand band, String label, Money price, Money spentThisMonth) {
 
         public AffordQuestion {
             Objects.requireNonNull(category, "category");
-            if (spentThisMonth == null) {
-                throw new IllegalArgumentException(
-                        "Tell us how much has already gone on this this month, so the answer is about your real month.");
-            }
             if ((band == null) == (price == null)) {
                 throw new IllegalArgumentException(
                         "Pick a kind of meal, or give the price of what you are thinking of buying - one or the other.");
@@ -85,9 +76,14 @@ public final class DecisionService {
         AssembledPlan plan = plans.assemble(userId);
         SpendCategory category = question.category();
         Allowance allowance = allowanceFor(plan, category);
+        LocalDate asOf = LocalDate.now(clock);
+        YearMonth thisMonth = YearMonth.from(asOf);
 
+        // Where the user's own payments cover a band, what they actually pay replaces our estimate -
+        // the estimate only ever existed because there was nothing better.
+        List<ObservedTicket> observed = bank.observedTickets(userId, category, thisMonth);
         PriceLadder ladder = category == SpendCategory.DINING_OUT
-                ? PriceLadder.fromDiningBaseline(diningBaseline(plan, allowance), NO_CARD_PAYMENTS_YET)
+                ? PriceLadder.fromDiningBaseline(diningBaseline(plan, allowance), observed)
                 : PriceLadder.none();
         TicketEstimate purchase;
         if (question.band() != null) {
@@ -101,8 +97,33 @@ public final class DecisionService {
         }
 
         SpendAssessment assessment = SpendDecision.decide(new SpendDecisionRequest(
-                category, allowance.amount(), question.spentThisMonth(), purchase, ladder, LocalDate.now(clock)));
+                category,
+                allowance.amount(),
+                spentThisMonth(userId, question, category, thisMonth),
+                purchase,
+                ladder,
+                asOf));
         return new Affordability(assessment, allowance.basis());
+    }
+
+    /**
+     * What has already gone on this category this month.
+     *
+     * <p>The user's own figure wins where they gave one - they may know about something that has not
+     * settled - and a connected bank answers it otherwise. With neither, the question is asked rather
+     * than assumed: taking it as zero would make every answer look more affordable than it is, which
+     * is the one direction this feature must never be wrong in.
+     */
+    private Money spentThisMonth(
+            String userId, AffordQuestion question, SpendCategory category, YearMonth month) {
+
+        if (question.spentThisMonth() != null) {
+            return question.spentThisMonth();
+        }
+        return bank.spentThisMonth(userId, category, month)
+                .orElseThrow(() -> new NeedsMoreInformationException("Tell us how much you have already spent on "
+                        + category.label().toLowerCase(java.util.Locale.ENGLISH) + " this month. Once a bank is "
+                        + "connected we work it out for you."));
     }
 
     private record Allowance(Money amount, String basis) {}

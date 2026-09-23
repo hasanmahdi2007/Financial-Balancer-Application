@@ -2,6 +2,8 @@ package com.hasan.budget.planning.application;
 
 import com.hasan.budget.costofliving.application.BaselineResolver;
 import com.hasan.budget.costofliving.application.CityCatalogService;
+import com.hasan.budget.ingestion.application.IngestionService;
+import com.hasan.budget.ingestion.port.ObservedMerchantPrices;
 import com.hasan.budget.planning.domain.AllocationStrategy;
 import com.hasan.budget.planning.domain.GreedyPriorityAllocator;
 import com.hasan.budget.profile.application.DiscretionaryFloorService;
@@ -67,8 +69,18 @@ public class PlanningConfiguration {
         return new QuestionService(plans, places);
     }
 
+    /**
+     * What the user has actually paid, where a bank is connected. It reaches the decision engine only
+     * through this adapter: the engine may not import the ingestion module at all, and a merchant as
+     * a bank describes one has no business in the arithmetic.
+     */
     @Bean
-    DecisionService decisionService(PlanService plans, Clock clock) {
-        return new DecisionService(plans, clock);
+    BankSpending bankSpending(ObservedMerchantPrices prices, IngestionService ingestion) {
+        return new IngestionBankSpending(prices, ingestion);
+    }
+
+    @Bean
+    DecisionService decisionService(PlanService plans, BankSpending bank, Clock clock) {
+        return new DecisionService(plans, bank, clock);
     }
 }

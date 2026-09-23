@@ -33,10 +33,11 @@ class DecisionServiceTest {
     /** Mid-month, so there are days left to spread a purchase over. */
     private static final LocalDate TODAY = LocalDate.of(2026, 3, 14);
 
+    private static final java.time.Clock FIXED = java.time.Clock.fixed(
+            TODAY.atStartOfDay(java.time.ZoneOffset.UTC).toInstant(), java.time.ZoneOffset.UTC);
+
     private final PlanningFixture fixture = new PlanningFixture(TODAY);
-    private final DecisionService decisions = new DecisionService(
-            fixture.plans(), java.time.Clock.fixed(
-                    TODAY.atStartOfDay(java.time.ZoneOffset.UTC).toInstant(), java.time.ZoneOffset.UTC));
+    private final DecisionService decisions = new DecisionService(fixture.plans(), BankSpending.NONE, FIXED);
 
     @BeforeEach
     void onboard() {
@@ -107,11 +108,83 @@ class DecisionServiceTest {
 
         /** Assuming nothing had been spent yet would make every answer look more affordable than it is. */
         @Test
-        void whatHasAlreadyGoneOnItThisMonthIsAskedForRatherThanAssumed() {
-            assertThatThrownBy(() -> new DecisionService.AffordQuestion(
-                            SpendCategory.DINING_OUT, SpendBand.LOW, null, null, null))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("already gone on this");
+        void withNoBankAndNoFigureTheQuestionIsAskedRatherThanAssumed() {
+            assertThatThrownBy(() -> decisions.afford("saver", new DecisionService.AffordQuestion(
+                            SpendCategory.DINING_OUT, SpendBand.LOW, null, null, null)))
+                    .isInstanceOf(NeedsMoreInformationException.class)
+                    .hasMessageContaining("already spent on eating out this month");
+        }
+
+        /**
+         * Once a bank is connected the same question needs no answer from the user, and the estimate
+         * gives way to what they actually pay. Both halves come from the ingestion module through one
+         * narrow seam, so the decision engine never learns what a bank is.
+         */
+        @Test
+        void aConnectedBankAnswersBothHalvesOfTheQuestionItself() {
+            DecisionService withBank = new DecisionService(fixture.plans(), new StubBank(), FIXED);
+
+            // Their two regular places average $12 and $9 against a $6 typical meal here, so both sit
+            // nearest the band above a normal meal - and that band is then priced at what they pay.
+            DecisionService.Affordability answer = withBank.afford("saver", new DecisionService.AffordQuestion(
+                    SpendCategory.DINING_OUT, SpendBand.HIGH, null, null, null));
+
+            assertThat(answer.assessment().spentMonthToDate())
+                    .as("worked out from their own transactions rather than asked for")
+                    .isEqualTo(Money.of(40));
+            assertThat(answer.assessment().purchase().basis())
+                    .as("a band the user's own payments cover is what they pay, not what we guessed")
+                    .isEqualTo(PriceBasis.OBSERVED);
+            assertThat(answer.assessment().purchase().price())
+                    .as("the two places averaged, weighted by how often they went")
+                    .isEqualTo(Money.of("10.50"));
+
+            // And a band nothing of theirs covers stays an estimate rather than borrowing the other's.
+            DecisionService.Affordability cheaper = withBank.afford("saver", new DecisionService.AffordQuestion(
+                    SpendCategory.DINING_OUT, SpendBand.FAST_FOOD, null, null, null));
+            assertThat(cheaper.assessment().purchase().basis()).isEqualTo(PriceBasis.ESTIMATED);
+        }
+
+        /** Their own figure still wins: they may know about something that has not settled yet. */
+        @Test
+        void theUsersOwnFigureBeatsTheBanks() {
+            DecisionService withBank = new DecisionService(fixture.plans(), new StubBank(), FIXED);
+
+            DecisionService.Affordability answer = withBank.afford("saver", new DecisionService.AffordQuestion(
+                    SpendCategory.DINING_OUT, SpendBand.MEDIUM, null, null, Money.of(95)));
+
+            assertThat(answer.assessment().spentMonthToDate()).isEqualTo(Money.of(95));
+        }
+
+        /** What a bank can say about one merchant's price means nothing for rent, and is not asked. */
+        @Test
+        void onlySpendingMadeOfIndividualPurchasesIsPricedFromPayments() {
+            assertThat(BankSpending.PRICED_BY_THE_TICKET).containsExactly(SpendCategory.DINING_OUT);
+        }
+    }
+
+    /**
+     * A bank that has seen this user eat out: $40 so far this month, and two regular places averaging
+     * about a normal meal out, which is the band their own payments then price.
+     */
+    private static final class StubBank implements BankSpending {
+
+        @Override
+        public java.util.List<com.hasan.budget.planning.domain.decision.ObservedTicket> observedTickets(
+                String userId, SpendCategory category, java.time.YearMonth month) {
+            return PRICED_BY_THE_TICKET.contains(category)
+                    ? java.util.List.of(
+                            new com.hasan.budget.planning.domain.decision.ObservedTicket(
+                                    "mch_1", "The usual place", Money.of(12), 3),
+                            new com.hasan.budget.planning.domain.decision.ObservedTicket(
+                                    "mch_2", "The other place", Money.of(9), 3))
+                    : java.util.List.of();
+        }
+
+        @Override
+        public java.util.Optional<Money> spentThisMonth(
+                String userId, SpendCategory category, java.time.YearMonth month) {
+            return java.util.Optional.of(Money.of(40));
         }
     }
 
