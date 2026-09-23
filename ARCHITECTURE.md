@@ -28,10 +28,10 @@ Target user: a single person (not a household) with an income, a city, and goals
 | F1 | Account, profile, city, income, lifestyle tier | Designed |
 | F2 | Bank connection and transaction import, strictly read-only | **Built, 151 tests passing** |
 | F3 | Cost-of-living benchmark against the user's own city | Designed |
-| F4 | Monthly plan: fixed / flexible / discretionary / surplus | Designed |
+| F4 | Monthly plan: fixed / flexible / discretionary / surplus | **Built, served over HTTP** |
 | F5 | Goals, recompute, and tradeoffs | **Built, 27 tests passing** |
 | F6 | Investment surface, deliberately minimal | Designed |
-| F7 | Plan history via append-only snapshots | Designed |
+| F7 | Plan history via append-only snapshots | **Built, enforced by the table** |
 | F8 | "Can I afford this meal right now?" with a catch-up plan | **Built, 33 tests passing** |
 | F9 | Budget rebalancing with user-assigned rigidity tiers | **Built, 27 tests passing** |
 

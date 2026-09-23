@@ -44,15 +44,23 @@ Authorization: Bearer {{token}}
 GET {{gateway}}/api/catalogue/countries/LB/manual-form
 Authorization: Bearer {{token}}
 
-### 4. Every choice the client offers, with the words to offer it in.
+### 4. Every choice the client offers, with the words to offer it in. Each entry is
+# {key, label, covers}: send the key back, render the label, show "covers" as the explanation.
 # -> {"categories":[{"key":"groceries","label":"Groceries","covers":"food and household shopping ..."}],
-#     "howWilling":[{"key":"locked","label":"Cannot be changed","meaning":"We will never suggest ..."}],
-#     "priorities":[{"key":"high","label":"Very important","meaning":"..."}],
-#     "lifestyles":[{"key":"regular","label":"Out regularly"}],
-#     "itemKinds":[{"key":"part-of","label":"Part of what I already spend on %s","meaning":"..."}],
+#     "howWilling":[{"key":"locked","label":"Cannot be changed","covers":"We will never suggest ..."}],
+#     "priorities":[{"key":"high","label":"Very important","covers":"Funded before anything you ..."}],
+#     "lifestyles":[{"key":"regular","label":"Out regularly","covers":"Typical for someone who ..."}],
 #     "mealBands":[{"key":"medium","label":"A normal meal out","covers":"a regular restaurant ..."}]}
-# itemKinds labels contain "%s": fill it with the chosen category's label.
 GET {{gateway}}/api/v1/choices
+Authorization: Bearer {{token}}
+
+### 4b. The two kinds of named commitment, worded for the category the user has just picked, so the
+# label names their own category rather than leaving a hole for the client to fill in.
+# -> [{"key":"already-counted","label":"Part of what I already spend on Subscriptions",
+#      "covers":"we will not add it again - naming it just lets us tell you which thing to cut"},
+#     {"key":"on-top","label":"Extra, on top of my Subscriptions",
+#      "covers":"we will add it to what you spend, because nothing else has counted it yet"}]
+GET {{gateway}}/api/v1/choices/item-kinds?category=subscriptions
 Authorization: Bearer {{token}}
 
 ### 5. Where the user lives and how they live. Send "city" for a listed city, or "cityNotListed" with
@@ -76,6 +84,10 @@ Content-Type: application/json
   "leastForEnjoyingLife": null
 }
 
+### 5b. Reading it back - the same shape, and 404 until they have told us where they live.
+GET {{gateway}}/api/v1/profile
+Authorization: Bearer {{token}}
+
 ### 6. The questions still to ask, each explaining itself and pre-filled wherever we can.
 # Money questions carry {question, why, covers, suggested, basis}; "key" says where the answer goes.
 # -> [{"key":"least-for-enjoying-life","answerWith":"PUT /api/v1/profile leastForEnjoyingLife",
@@ -90,7 +102,7 @@ Authorization: Bearer {{token}}
 ### 7. The user's own figure for a category - a manual-form answer, or a correction to ours.
 # Applies to their plan immediately and to nobody else's, and beats every other source.
 # -> {"category":{"key":"groceries","label":"Groceries"},"amount":"300.00","setOn":"2026-09-22",
-#     "basis":{"label":"Your own figure","explanation":"..."}}
+#     "basis":{"label":"Your own figure","meaning":"You told us this, so we use it and nothing overrides it."}}
 PUT {{gateway}}/api/v1/overrides/groceries
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -112,6 +124,10 @@ Content-Type: application/json
 
 { "monthlyIncome": "2000.00", "balance": "20000.00" }
 
+### 8b. What the plan is currently working with. 404 until step 8.
+GET {{gateway}}/api/v1/money
+Authorization: Bearer {{token}}
+
 ### 9. What the user actually spends each month, by category key. Leave a category out and the plan
 # assumes the local figure for it - and says so on that line ("assumed": true).
 # -> {"rent":"500.00","groceries":"380.00","dining-out":"200.00","entertainment":"120.00"}
@@ -127,12 +143,17 @@ Content-Type: application/json
   "entertainment": "120.00"
 }
 
-### 10. A named commitment, so advice can name it. "kind" is "part-of" (already inside that category's
+### 9b. What they have told us so far, by category key. A category missing here is one the plan
+# assumes at the local figure.
+GET {{gateway}}/api/v1/spending
+Authorization: Bearer {{token}}
+
+### 10. A named commitment, so advice can name it. "kind" is "already-counted" (already inside that category's
 # figure - naming it changes no total) or "on-top" (extra, nothing else has counted it).
 # "howWilling" is the user's own answer; "locked" means the plan never suggests cutting it.
 # -> {"id":"gym","label":"Gym membership","category":{"key":"subscriptions","label":"Subscriptions"},
 #     "amount":"30.00","howWilling":{"key":"locked","label":"Cannot be changed"},
-#     "kind":{"key":"part-of","label":"Part of what I already spend on Subscriptions"}}
+#     "kind":{"key":"already-counted","label":"Part of what I already spend on Subscriptions","meaning":"we will not add it again ..."}}
 PUT {{gateway}}/api/v1/line-items/gym
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -142,11 +163,15 @@ Content-Type: application/json
   "category": "subscriptions",
   "amount": "30.00",
   "howWilling": "locked",
-  "kind": "part-of"
+  "kind": "already-counted"
 }
 
 ###
 GET {{gateway}}/api/v1/line-items
+Authorization: Bearer {{token}}
+
+### 10b. Removing a named commitment. 204, and 404 if it is not one of theirs.
+DELETE {{gateway}}/api/v1/line-items/gym
 Authorization: Bearer {{token}}
 
 ### 11. The first plan. Every recompute appends a snapshot; nothing ever edits an old one.
@@ -159,7 +184,9 @@ Authorization: Bearer {{token}}
 # Adding a goal recomputes the whole plan and returns it.
 # -> 201 {"goal":{"id":"...","name":"Car","target":"12000.00","deadline":"2027-06-30",
 #                 "priority":{"key":"high","label":"Very important"},"finishFirst":false},
-#         "plan":{ ...the new plan... }}
+#         "plan":{ ...the new plan... },"waitingFor":null}
+# "waitingFor" is a sentence instead, and "plan" is null, when the goal is saved but a plan cannot be
+# made yet - before any income is known, for instance.
 POST {{gateway}}/api/v1/goals
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -254,8 +281,11 @@ GET {{gateway}}/api/v1/plan/history/paste-a-snapshot-id
 Authorization: Bearer {{token}}
 
 ### 20. "Can I afford this today?" Pick a meal band from /choices, or price something yourself with
-# "price" and "label". "spentThisMonth" is what has already gone on that category this month; it is
-# asked for because no bank is connected yet to work it out.
+# "price" and "label". "spentThisMonth" is what has already gone on that category this month: send it
+# and it is used, leave it out and a connected bank answers it from the user's own transactions. With
+# neither, the request is refused rather than assuming nothing has been spent - which would make every
+# answer look more affordable than it is. Where their own payments cover a band, "basis" on the price
+# reads "What you actually pay" instead of "Our estimate".
 # -> {"verdict":{"label":"This works if you ease off afterwards","meaning":"..."},
 #     "category":{"key":"dining-out","label":"Eating out"},
 #     "purchase":{"label":"A normal meal out","covers":"...","price":"10.00",

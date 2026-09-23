@@ -1,0 +1,54 @@
+# The gateway's own configuration. Everything secret arrives from the environment; .env is gitignored
+# and nothing here may be committed with a value in it.
+
+server:
+  # 8080 inside the container. docker-compose.yml publishes it on 8090, because the jobs-tracker stack
+  # on this machine already holds 8080 on the host.
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            # Everything the client asks for goes to budget-core, which has no published port of its
+            # own. By the time a request is forwarded, the filters have replaced any X-User-Id it
+            # arrived with by the one the token says.
+            - id: budget-core
+              uri: ${BUDGET_CORE_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/**
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      # 6380 when run from an IDE against the local stack; 6379 inside the Compose network.
+      port: ${REDIS_PORT:6380}
+
+supabase:
+  jwks-uri: ${SUPABASE_JWKS_URI:}
+  # Supabase issues tokens as <project url>/auth/v1. Checking it is what stops a token minted by
+  # somebody else's free Supabase project from signing in as a user of this one.
+  issuer: ${SUPABASE_URL:}/auth/v1
+  audience: authenticated
+
+gateway:
+  rate-limit:
+    # One person using their own dashboard: enough for a screen that loads several things at once,
+    # and low enough that a runaway client is stopped rather than left to hammer the domain service.
+    capacity: 20
+    refill-per-second: 5
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.hasan.gateway: INFO

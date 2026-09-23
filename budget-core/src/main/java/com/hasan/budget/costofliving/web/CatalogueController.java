@@ -3,6 +3,7 @@ package com.hasan.budget.costofliving.web;
 import com.hasan.budget.costofliving.application.CityCatalogService;
 import com.hasan.budget.costofliving.domain.CityListing;
 import com.hasan.budget.costofliving.domain.CountryProfile;
+import com.hasan.budget.planning.application.Keys;
 import com.hasan.budget.profile.domain.SpendingQuestion;
 import com.hasan.budget.shared.CountryCode;
 import java.time.LocalDate;
@@ -50,11 +51,15 @@ class CatalogueController {
             LocalDate gathered) {}
 
     /**
+     * @param category the key to send the answer back under, to {@code PUT /api/v1/overrides/{key}}.
+     *     A lowercase machine key, never rendered - {@code covers} and the question are what a person
+     *     reads. Without it the client would have to match an answer to a category by its wording,
+     *     which is exactly how a renamed label silently misfiles someone's rent.
      * @param covers one rendered line per category, e.g. "Rent - your rent or mortgage payment"
      * @param suggested the pre-filled value, so the user corrects rather than composes
      */
     record QuestionView(
-            String question, String why, List<String> covers, String suggested, String basis) {}
+            String category, String question, String why, List<String> covers, String suggested, String basis) {}
 
     @GetMapping("/countries")
     List<CountryView> countries() {
@@ -91,6 +96,8 @@ class CatalogueController {
 
     private static QuestionView toView(SpendingQuestion question) {
         return new QuestionView(
+                // A manual-form question covers exactly one category; the key names which.
+                Keys.of(question.covers().getFirst()),
                 question.question(),
                 question.why(),
                 question.explainedCoverage(),

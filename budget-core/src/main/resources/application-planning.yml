@@ -1,0 +1,10 @@
+# The planning module's settings, imported by application.yml.
+
+spring:
+  mvc:
+    # Spring's own failures - a malformed body, a missing query parameter, the wrong method - answer
+    # with an RFC 9457 problem document, the same shape the controllers' own failures use. Off by
+    # default, and leaving it off would mean a client had two error formats to read, one of which
+    # nobody wrote: the Boot default body is not written for a person and says nothing actionable.
+    problemdetails:
+      enabled: true
