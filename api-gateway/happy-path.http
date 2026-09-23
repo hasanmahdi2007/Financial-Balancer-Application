@@ -84,6 +84,10 @@ Content-Type: application/json
   "leastForEnjoyingLife": null
 }
 
+### 5b. Reading it back - the same shape, and 404 until they have told us where they live.
+GET {{gateway}}/api/v1/profile
+Authorization: Bearer {{token}}
+
 ### 6. The questions still to ask, each explaining itself and pre-filled wherever we can.
 # Money questions carry {question, why, covers, suggested, basis}; "key" says where the answer goes.
 # -> [{"key":"least-for-enjoying-life","answerWith":"PUT /api/v1/profile leastForEnjoyingLife",
@@ -120,6 +124,10 @@ Content-Type: application/json
 
 { "monthlyIncome": "2000.00", "balance": "20000.00" }
 
+### 8b. What the plan is currently working with. 404 until step 8.
+GET {{gateway}}/api/v1/money
+Authorization: Bearer {{token}}
+
 ### 9. What the user actually spends each month, by category key. Leave a category out and the plan
 # assumes the local figure for it - and says so on that line ("assumed": true).
 # -> {"rent":"500.00","groceries":"380.00","dining-out":"200.00","entertainment":"120.00"}
@@ -134,6 +142,11 @@ Content-Type: application/json
   "dining-out": "200.00",
   "entertainment": "120.00"
 }
+
+### 9b. What they have told us so far, by category key. A category missing here is one the plan
+# assumes at the local figure.
+GET {{gateway}}/api/v1/spending
+Authorization: Bearer {{token}}
 
 ### 10. A named commitment, so advice can name it. "kind" is "already-counted" (already inside that category's
 # figure - naming it changes no total) or "on-top" (extra, nothing else has counted it).
@@ -155,6 +168,10 @@ Content-Type: application/json
 
 ###
 GET {{gateway}}/api/v1/line-items
+Authorization: Bearer {{token}}
+
+### 10b. Removing a named commitment. 204, and 404 if it is not one of theirs.
+DELETE {{gateway}}/api/v1/line-items/gym
 Authorization: Bearer {{token}}
 
 ### 11. The first plan. Every recompute appends a snapshot; nothing ever edits an old one.
