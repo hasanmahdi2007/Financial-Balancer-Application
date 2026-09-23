@@ -191,6 +191,32 @@ public abstract class BankLedgerContract {
     }
 
     @Test
+    @DisplayName("a stream with no known member transactions still reads back")
+    void aStreamCanHaveNoMembers() {
+        String userId = someUserId();
+        BankConnection connection = connect(userId, "item-memberless");
+        RecurringStream unmatched = new RecurringStream(
+                "s-lonely",
+                "account-1",
+                RecurringStream.Direction.MONEY_OUT,
+                "Something regular",
+                Frequency.MONTHLY,
+                Money.of("9.99"),
+                LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 10, 1),
+                true,
+                List.of());
+
+        ledger().replaceStreams(connection.id(), List.of(unmatched));
+
+        // The database path aggregates members into an array, and an empty one is a different SQL
+        // expression from a populated one - so it needs its own case rather than being assumed.
+        assertThat(ledger().streamsForUser(userId))
+                .singleElement()
+                .satisfies(stream -> assertThat(stream.memberIds()).isEmpty());
+    }
+
+    @Test
     @DisplayName("a webhook cannot delete another connection's transactions")
     void removalIsScopedToItsOwnConnection() {
         String userId = someUserId();

@@ -70,6 +70,19 @@ class AccessTokenCipherTest {
     }
 
     @Test
+    @DisplayName("a stored value that was edited by hand fails as a stored-value problem")
+    void aCorruptedRowSaysWhatIsWrongWithIt() {
+        // Not arithmetic accidents: a decoder complaining about padding, or an array index error on a
+        // truncated value, tells whoever is reading the log nothing about the database.
+        assertThatThrownBy(() -> cipher.decrypt(new EncryptedToken("v1:not-base64-!!"), USER))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("altered");
+        assertThatThrownBy(() -> cipher.decrypt(new EncryptedToken("v1:c2hvcnQ="), USER))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("too short");
+    }
+
+    @Test
     @DisplayName("a value written by an older scheme is refused rather than guessed at")
     void anUnknownFormatIsNotDecrypted() {
         assertThatThrownBy(() -> cipher.decrypt(new EncryptedToken("just-a-token"), USER))

@@ -110,6 +110,25 @@ class TransferPairsTest {
     }
 
     @Test
+    @DisplayName("two banks reusing one transaction id do not cancel each other out")
+    void identityIncludesTheConnection() {
+        // A provider's identifiers are unique within that provider. This port exists so a second one
+        // can be added, and nothing stops two of them issuing the same string. If identity ignored the
+        // connection, absorbing one bank's half would delete the other bank's row - a real outflow.
+        LedgerEntry firstBank = new LedgerEntry(1, transaction("shared-id", "checking", "250.00", MONDAY, internal()));
+        LedgerEntry itsOtherHalf = new LedgerEntry(1, transaction("in", "savings", "-250.00", MONDAY, internal()));
+        LedgerEntry secondBank =
+                new LedgerEntry(2, transaction("shared-id", "other-checking", "80.00", MONDAY, internal()));
+
+        List<String> left = survivors(List.of(firstBank, itsOtherHalf, secondBank));
+
+        assertThat(left).hasSize(2);
+        assertThat(TransferPairs.collapse(List.of(firstBank, itsOtherHalf, secondBank)))
+                .extracting(LedgerEntry::connectionId)
+                .containsExactlyInAnyOrder(1L, 2L);
+    }
+
+    @Test
     @DisplayName("an unmatched half is left exactly as it was")
     void oneSidedTransfersSurvive() {
         LedgerEntry out = transfer("out", "checking", "250.00", MONDAY);

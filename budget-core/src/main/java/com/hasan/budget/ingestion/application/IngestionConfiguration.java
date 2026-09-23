@@ -6,6 +6,7 @@ import com.hasan.budget.ingestion.port.BankLedger;
 import com.hasan.budget.ingestion.port.BankLinkProvider;
 import com.hasan.budget.ingestion.port.RecurringStreamProvider;
 import java.util.concurrent.Executor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,7 +51,7 @@ public class IngestionConfiguration {
             BankConnections connections,
             BankLedger ledger,
             AccessTokenCipher cipher,
-            Executor bankSyncExecutor) {
+            @Qualifier("bankSyncExecutor") Executor bankSyncExecutor) {
         return new IngestionService(links, banks, streams, connections, ledger, cipher, bankSyncExecutor);
     }
 

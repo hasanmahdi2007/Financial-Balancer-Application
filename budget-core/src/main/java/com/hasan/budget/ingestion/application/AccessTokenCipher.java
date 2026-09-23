@@ -76,12 +76,32 @@ public class AccessTokenCipher {
         if (parts.length != 2 || !VERSION.equals(parts[0])) {
             throw new IllegalStateException("stored token is not in a format this version can read");
         }
-        byte[] stored = Base64.getDecoder().decode(parts[1]);
+        byte[] stored = decodeStored(parts[1]);
         byte[] nonce = new byte[NONCE_BYTES];
         System.arraycopy(stored, 0, nonce, 0, NONCE_BYTES);
         byte[] sealed = new byte[stored.length - NONCE_BYTES];
         System.arraycopy(stored, NONCE_BYTES, sealed, 0, sealed.length);
         return new String(run(Cipher.DECRYPT_MODE, nonce, userId, sealed), StandardCharsets.UTF_8);
+    }
+
+    /**
+     * A stored value that is not what we wrote is a failure of its own, not an arithmetic accident.
+     *
+     * <p>Without this, a corrupted or hand-edited row surfaces as an {@code IllegalArgumentException}
+     * from a base64 decoder, or an array index error if it is merely too short - neither of which
+     * tells anyone what is actually wrong with the database.
+     */
+    private static byte[] decodeStored(String encoded) {
+        byte[] stored;
+        try {
+            stored = Base64.getDecoder().decode(encoded);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("stored token is not readable; it was altered after it was written", e);
+        }
+        if (stored.length <= NONCE_BYTES) {
+            throw new IllegalStateException("stored token is too short to be a token this code wrote");
+        }
+        return stored;
     }
 
     private byte[] run(int mode, byte[] nonce, String userId, byte[] input) {

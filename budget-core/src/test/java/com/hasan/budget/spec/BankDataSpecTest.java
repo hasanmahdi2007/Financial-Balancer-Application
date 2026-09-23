@@ -285,9 +285,15 @@ class BankDataSpecTest {
             IngestionService after = serviceUsing(watched, TestExecutors.immediate());
             after.syncNow(connectionId);
 
+            // It asked to carry on from where it stopped, rather than for the whole history again.
             assertThat(watched.cursorsAskedFor()).containsExactly(cursorAfterTheFirstImport);
             assertThat(watched.cursorsAskedFor()).doesNotContainNull();
-            assertThat(store.entriesForUser(USER).size()).isGreaterThanOrEqualTo(importedSoFar);
+            // The resumed page brought more, and nothing arrived twice - which is the property that
+            // counting rows alone could never show, since re-importing is idempotent.
+            assertThat(store.entriesForUser(USER)).hasSizeGreaterThan(importedSoFar);
+            assertThat(store.entriesForUser(USER))
+                    .extracting(entry -> entry.transaction().externalId())
+                    .doesNotHaveDuplicates();
         }
 
         /** Replaying the same webhook must not duplicate a single transaction. */

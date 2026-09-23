@@ -57,18 +57,30 @@ public final class TransferPairs {
         Set<String> absorbed = new HashSet<>();
         for (LedgerEntry outflow : outflows) {
             inflows.stream()
-                    .filter(inflow -> !absorbed.contains(inflow.transaction().externalId()))
+                    .filter(inflow -> !absorbed.contains(identityOf(inflow)))
                     .filter(inflow -> isOtherHalfOf(outflow, inflow))
                     .min(Comparator.comparingLong((LedgerEntry inflow) -> daysBetween(outflow, inflow))
                             .thenComparing(inflow -> inflow.transaction().externalId()))
-                    .ifPresent(match -> absorbed.add(match.transaction().externalId()));
+                    .ifPresent(match -> absorbed.add(identityOf(match)));
         }
         if (absorbed.isEmpty()) {
             return List.copyOf(entries);
         }
         return entries.stream()
-                .filter(entry -> !absorbed.contains(entry.transaction().externalId()))
+                .filter(entry -> !absorbed.contains(identityOf(entry)))
                 .toList();
+    }
+
+    /**
+     * A transaction is identified by its connection as well as its own id.
+     *
+     * <p>A provider's identifiers are unique within that provider and nowhere else. This port exists
+     * so a second one can be added for a market Plaid does not serve, and two providers can perfectly
+     * well hand out the same string. Keying on the id alone would then let a row from one bank cancel
+     * a row from another - which, since the surviving half is an outflow, would delete real spending.
+     */
+    private static String identityOf(LedgerEntry entry) {
+        return entry.connectionId() + ":" + entry.transaction().externalId();
     }
 
     private static boolean isOtherHalfOf(LedgerEntry outflow, LedgerEntry inflow) {

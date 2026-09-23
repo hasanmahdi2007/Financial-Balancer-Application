@@ -1,6 +1,7 @@
 package com.hasan.budget.ingestion.plaid;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.hasan.budget.ingestion.domain.Classification;
 import com.hasan.budget.shared.SpendCategory;
@@ -108,5 +109,53 @@ class PfcMappingTest {
     @DisplayName("the table is big enough to be worth having")
     void theTableCoversTheTaxonomyBroadly() {
         assertThat(mapping.knownCategories()).hasSizeGreaterThan(60);
+    }
+
+    @Test
+    @DisplayName("comments, blank lines and reasons containing commas are all read correctly")
+    void theFileFormatToleratesBeingReadable() {
+        PfcMapping parsed = parse("""
+                # a comment
+                pfc_detailed,kind,category,source,why
+
+                FOOD_AND_DRINK_GROCERIES,SPEND,GROCERIES,observed,the weekly shop, which has commas in it
+                TRANSFER_OUT_SAVINGS,TRANSFER_INTERNAL,,observed,
+                """);
+
+        assertThat(parsed.classify("FOOD_AND_DRINK_GROCERIES"))
+                .contains(Classification.spend(SpendCategory.GROCERIES));
+        assertThat(parsed.classify("TRANSFER_OUT_SAVINGS"))
+                .contains(Classification.notSpending(TransactionKind.TRANSFER_INTERNAL));
+    }
+
+    @Test
+    @DisplayName("a malformed table fails on load, before anybody connects a bank")
+    void badRowsAreCaughtImmediately() {
+        assertThatThrownBy(() -> parse(header() + "FOOD_AND_DRINK_GROCERIES,SPEND,,observed,\n"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("SPEND row needs a category");
+
+        assertThatThrownBy(() -> parse(header() + "TRANSFER_OUT_SAVINGS,TRANSFER_INTERNAL,GROCERIES,observed,\n"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("only SPEND rows may carry a category");
+
+        assertThatThrownBy(() -> parse(header()
+                        + "FOOD_AND_DRINK_COFFEE,SPEND,DINING_OUT,observed,\n"
+                        + "FOOD_AND_DRINK_COFFEE,SPEND,GROCERIES,observed,\n"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("appears twice");
+
+        assertThatThrownBy(() -> parse(header() + "FOOD_AND_DRINK_COFFEE,NOT_A_KIND,,observed,\n"))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> parse(header())).isInstanceOf(IllegalStateException.class);
+    }
+
+    private static String header() {
+        return "pfc_detailed,kind,category,source,why\n";
+    }
+
+    private static PfcMapping parse(String table) {
+        return PfcMapping.parse(new java.io.StringReader(table));
     }
 }

@@ -3,7 +3,6 @@ package com.hasan.budget.ingestion.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.hasan.budget.ingestion.domain.BankConnection;
 import com.hasan.budget.ingestion.domain.BankWebhook;
 import com.hasan.budget.ingestion.domain.Classification;
 import com.hasan.budget.ingestion.domain.NormalisedTransaction;
@@ -160,6 +159,45 @@ class IngestionServiceTest {
     }
 
     @Test
+    @DisplayName("an import still counts when the bank cannot list repeating payments yet")
+    void streamsFailingDoesNotUndoASuccessfulImport() {
+        // The ordinary case just after linking: transactions are ready, stream detection is not, and
+        // the provider answers that request with an error. The transactions are already stored by
+        // then, so failing the sync would report a disaster that did not happen.
+        ScriptedBank bank = new ScriptedBank(
+                new SyncResult(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
+        bank.refuseStreams(new IllegalStateException("PRODUCT_NOT_READY"));
+        IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
+
+        long connectionId = ingestion.connect(USER, "public-token").id();
+        IngestionService.SyncOutcome outcome;
+        try (LogCapture logs = LogCapture.start()) {
+            bank.queue(new SyncResult(List.of(purchase("t-2", "20.00")), List.of(), List.of(), "c2", false));
+            outcome = ingestion.syncNow(connectionId);
+
+            assertThat(logs.everything()).contains("repeating payments could not be read");
+        }
+
+        assertThat(outcome.applied()).isTrue();
+        assertThat(store.entriesForUser(USER)).hasSize(2);
+        assertThat(store.cursor(connectionId)).contains("c2");
+    }
+
+    @Test
+    @DisplayName("a bank that never stops offering pages is cut off rather than filling memory")
+    void endlessPaginationIsBounded() {
+        ScriptedBank bank = new ScriptedBank();
+        bank.alwaysAnswer(new SyncResult(List.of(purchase("t-1", "1.00")), List.of(), List.of(), "c", true));
+        IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
+        long connectionId = ingestion.connect(USER, "public-token").id();
+
+        assertThatThrownBy(() -> ingestion.syncNow(connectionId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("pages of transactions");
+        assertThat(store.entriesForUser(USER)).isEmpty();
+    }
+
+    @Test
     @DisplayName("a background failure is logged rather than thrown into the void")
     void backgroundWorkReportsItsOwnFailures() {
         ScriptedBank bank = new ScriptedBank();
@@ -207,6 +245,8 @@ class IngestionServiceTest {
         private int recurringCalls;
         private int next;
         private Runnable duringTheNextRead;
+        private RuntimeException streamFailure;
+        private SyncResult standingAnswer;
 
         private ScriptedBank(SyncResult... pages) {
             answers.addAll(List.of(pages));
@@ -214,6 +254,16 @@ class IngestionServiceTest {
 
         void queue(SyncResult page) {
             answers.add(page);
+        }
+
+        /** Makes stream detection fail, as a provider does before it has finished detecting any. */
+        void refuseStreams(RuntimeException failure) {
+            this.streamFailure = failure;
+        }
+
+        /** Answers every request the same way, for testing what happens when a bank never stops. */
+        void alwaysAnswer(SyncResult page) {
+            this.standingAnswer = page;
         }
 
         void thenFail(RuntimeException failure) {
@@ -248,6 +298,9 @@ class IngestionServiceTest {
                 duringTheNextRead = null;
                 competing.run();
             }
+            if (standingAnswer != null) {
+                return standingAnswer;
+            }
             if (next >= answers.size()) {
                 return new SyncResult(List.of(), List.of(), List.of(), cursorOrNull, false);
             }
@@ -261,6 +314,9 @@ class IngestionServiceTest {
         @Override
         public List<RecurringStream> recurringStreams(String accessToken) {
             recurringCalls++;
+            if (streamFailure != null) {
+                throw streamFailure;
+            }
             return List.of();
         }
     }

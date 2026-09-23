@@ -198,7 +198,7 @@ public class JdbcBankLedger implements BankLedger {
                         SELECT s.connection_id, s.stream_id, s.account_id, s.direction, s.label, s.frequency,
                                s.last_amount, s.last_date, s.next_expected, s.active,
                                COALESCE(ARRAY_AGG(m.external_id) FILTER (WHERE m.external_id IS NOT NULL),
-                                        '{}') AS member_ids
+                                        ARRAY[]::text[]) AS member_ids
                           FROM recurring_stream s
                           JOIN bank_connection c ON c.id = s.connection_id
                           LEFT JOIN recurring_stream_member m

@@ -41,9 +41,24 @@ public class PfcMapping {
             if (stream == null) {
                 throw new IllegalStateException(FILE + " is missing from the classpath");
             }
-            return read(new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8)));
+            return parse(new InputStreamReader(stream, StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException("could not read " + FILE, e);
+        }
+    }
+
+    /**
+     * Visible so the validation below can be tested against a bad table.
+     *
+     * <p>Worth testing rather than trusting: the whole point of failing on load is that a malformed
+     * row is caught before anybody's bank is connected, and a validation nothing exercises is a
+     * validation that might not fire.
+     */
+    static PfcMapping parse(java.io.Reader source) {
+        try (BufferedReader reader = new BufferedReader(source)) {
+            return read(reader);
+        } catch (IOException e) {
+            throw new UncheckedIOException("could not read the category mapping", e);
         }
     }
 

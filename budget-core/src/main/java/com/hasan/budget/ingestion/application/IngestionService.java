@@ -43,6 +43,9 @@ public class IngestionService {
     /** A sync interrupted by changing data restarts from the beginning; three attempts is plenty. */
     private static final int SYNC_ATTEMPTS = 3;
 
+    /** More pages than any real history, so a provider that never says "no more" cannot exhaust memory. */
+    private static final int PAGE_LIMIT = 500;
+
     private final BankLinkProvider links;
     private final BankDataProvider banks;
     private final RecurringStreamProvider streams;
@@ -139,7 +142,7 @@ public class IngestionService {
                 }
                 SyncOutcome outcome = SyncOutcome.of(pages);
                 if (outcome.changedAnything()) {
-                    refreshRecurring(connectionId, accessToken);
+                    alsoRefreshRecurring(connectionId, accessToken);
                 }
                 return outcome;
             } catch (SyncInterrupted e) {
@@ -158,8 +161,34 @@ public class IngestionService {
             page = banks.sync(accessToken, cursor);
             pages.add(page);
             cursor = page.nextCursor();
+            if (pages.size() >= PAGE_LIMIT) {
+                // Every page is held in memory until the whole sync is written, so "keep asking until
+                // it says stop" has to have an end that does not depend on the provider being correct.
+                // At the provider's maximum page size this is more history than any person has.
+                throw new IllegalStateException(
+                        "the bank offered more than " + PAGE_LIMIT + " pages of transactions; stopping");
+            }
         } while (page.hasMore());
         return pages;
+    }
+
+    /**
+     * Streams are an enrichment, so failing to read them must not fail the sync that just succeeded.
+     *
+     * <p>This is the ordinary case rather than an edge: immediately after a bank is linked the
+     * provider often has transactions ready and stream detection not yet, and answers that request
+     * with an error. The transactions are already written by this point, and throwing would report the
+     * whole import as failed while leaving the user's data in place - the worst of both.
+     */
+    private void alsoRefreshRecurring(long connectionId, String accessToken) {
+        try {
+            refreshRecurring(connectionId, accessToken);
+        } catch (RuntimeException e) {
+            log.info(
+                    "Connection {} imported, but its repeating payments could not be read yet: {}",
+                    connectionId,
+                    e.getMessage());
+        }
     }
 
     /** Re-reads detected streams. Separate from a sync because a notification can ask for only this. */

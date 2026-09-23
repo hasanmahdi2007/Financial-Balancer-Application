@@ -240,6 +240,41 @@ class LedgerTest {
         }
 
         @Test
+        @DisplayName("a stream's category is what most of its transactions say, not the first one")
+        void oneOddMonthDoesNotDecideAStreamsCategory() {
+            // The same merchant, categorised differently once. Taking whichever identifier the
+            // provider happened to list first would make the answer depend on their ordering.
+            LedgerEntry odd = entry(new NormalisedTransaction(
+                    "rent-odd",
+                    "checking",
+                    MID_SEPTEMBER.minusMonths(2),
+                    Money.of("1450.00"),
+                    "Oakwood Apartments",
+                    "merchant-oakwood",
+                    null,
+                    null,
+                    Classification.spend(SpendCategory.OTHER),
+                    false));
+            LedgerEntry first = rent("rent-1", MID_SEPTEMBER.minusMonths(1));
+            LedgerEntry second = rent("rent-2", MID_SEPTEMBER);
+            RecurringStream stream = new RecurringStream(
+                    "rent",
+                    "checking",
+                    RecurringStream.Direction.MONEY_OUT,
+                    "Oakwood Apartments",
+                    Frequency.MONTHLY,
+                    Money.of("1450.00"),
+                    MID_SEPTEMBER,
+                    MID_SEPTEMBER.plusMonths(1),
+                    true,
+                    List.of("rent-odd", "rent-1", "rent-2"));
+
+            assertThat(Ledger.of(List.of(odd, first, second), List.of(stream)).commitments())
+                    .singleElement()
+                    .satisfies(commitment -> assertThat(commitment.category()).isEqualTo(SpendCategory.RENT));
+        }
+
+        @Test
         @DisplayName("a cancelled stream stops being a commitment")
         void anInactiveStreamIsIgnored() {
             LedgerEntry gym = entry(new NormalisedTransaction(
@@ -377,6 +412,20 @@ class LedgerTest {
 
     private static LedgerEntry entry(NormalisedTransaction transaction) {
         return new LedgerEntry(1, transaction);
+    }
+
+    private static LedgerEntry rent(String id, java.time.LocalDate when) {
+        return entry(new NormalisedTransaction(
+                id,
+                "checking",
+                when,
+                Money.of("1450.00"),
+                "Oakwood Apartments",
+                "merchant-oakwood",
+                null,
+                null,
+                Classification.spend(SpendCategory.RENT),
+                false));
     }
 
     private static LedgerEntry spend(String id, SpendCategory category, String amount) {

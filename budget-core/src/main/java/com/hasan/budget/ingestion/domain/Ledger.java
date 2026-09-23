@@ -194,14 +194,30 @@ public final class Ledger {
         return List.copyOf(averages);
     }
 
-    /** The latest classification among the stream's own transactions, which beats the stream's own label. */
+    /**
+     * What the stream's own transactions say it is, by weight of numbers.
+     *
+     * <p>The stream's own category is not consulted, because the provider's is demonstrably
+     * unreliable: the recorded sandbox labels a software subscription's stream an account transfer
+     * while every transaction in it says general services. The members are the evidence.
+     *
+     * <p>A majority rather than the first one found. Categorisation is per transaction, so one
+     * unusual month at the same merchant can disagree with the other eleven, and taking whichever
+     * happened to be listed first would make a rent stream's category depend on the order a provider
+     * returned identifiers in. Ties break on the category's own order so the answer is stable.
+     */
     private static SpendCategory categoryOf(RecurringStream stream, Map<String, Classification> byId) {
-        return stream.memberIds().stream()
-                .map(byId::get)
-                .filter(Objects::nonNull)
-                .filter(classification -> classification.kind() == TransactionKind.SPEND)
-                .map(Classification::category)
-                .findFirst()
+        Map<SpendCategory, Integer> votes = new EnumMap<>(SpendCategory.class);
+        for (String memberId : stream.memberIds()) {
+            Classification classification = byId.get(memberId);
+            if (classification != null && classification.kind() == TransactionKind.SPEND) {
+                votes.merge(classification.category(), 1, Integer::sum);
+            }
+        }
+        return votes.entrySet().stream()
+                .max(Map.Entry.<SpendCategory, Integer>comparingByValue()
+                        .thenComparing(Map.Entry.comparingByKey(Comparator.reverseOrder())))
+                .map(Map.Entry::getKey)
                 .orElse(null);
     }
 
