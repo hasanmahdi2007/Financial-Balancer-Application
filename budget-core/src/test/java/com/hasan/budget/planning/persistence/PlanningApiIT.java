@@ -127,7 +127,9 @@ class PlanningApiIT extends PlanningDatabaseFixture {
         mockMvc.perform(get("/api/v1/plan"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.detail").value("Sign in to see this."));
+                .andExpect(jsonPath("$.detail").value("Sign in to see this."))
+                // The path that failed, so a problem can be traced back to the request that caused it.
+                .andExpect(jsonPath("$.instance").value("/api/v1/plan"));
 
         // The catalogue is reference data and stays reachable, which is what the gateway's own health
         // and the signup flow depend on.
@@ -308,8 +310,12 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                 .andExpect(jsonPath("$.purchase.price").exists())
                 .andExpect(jsonPath("$.cheaper.label").exists())
                 .andExpect(jsonPath("$.cheaper.verdict.label").exists())
+                // Every value on this route carries its own words; not one of them may arrive as a constant.
                 .andExpect(content().string(not(containsString("OVER_BUDGET"))))
-                .andExpect(content().string(not(containsString("FAST_FOOD"))));
+                .andExpect(content().string(not(containsString("SUSTAINABLE"))))
+                .andExpect(content().string(not(containsString("FAST_FOOD"))))
+                .andExpect(content().string(not(containsString("ESTIMATED"))))
+                .andExpect(content().string(not(containsString("USER_STATED"))));
     }
 
     @Test
@@ -324,7 +330,9 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                 .andExpect(jsonPath("$.outcome.label").exists())
                 .andExpect(jsonPath("$.changes[0].label").exists())
                 .andExpect(content().string(not(containsString("ABSORBED"))))
-                .andExpect(content().string(not(containsString("DISPOSABLE"))));
+                .andExpect(content().string(not(containsString("DISPOSABLE"))))
+                .andExpect(content().string(not(containsString("COUNT_MORE_OF_YOUR_BALANCE"))))
+                .andExpect(content().string(not(containsString("GIVE_A_GOAL_MORE_TIME"))));
     }
 
     /** A user with a city, money, spending and one plan already made. */

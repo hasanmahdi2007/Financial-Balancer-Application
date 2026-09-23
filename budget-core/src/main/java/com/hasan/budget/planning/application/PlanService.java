@@ -271,9 +271,12 @@ public final class PlanService {
             throw new NeedsMoreInformationException(
                     "A plan is built from what comes in each month, so tell us your monthly income first.");
         }
+        Map<SpendCategory, com.hasan.budget.costofliving.domain.ResolvedBaseline> baselines =
+                places.baselinesFor(profile);
+        checkNamedItemsFit(userId, baselines);
         return assembler.assemble(new PlanningInputs(
                 money.asFunds().resolve(),
-                places.baselinesFor(profile),
+                baselines,
                 spending.spending(userId),
                 spending.lineItems(userId),
                 // What the user already moves into savings each month, which is shown and never
@@ -288,6 +291,42 @@ public final class PlanService {
                 goals.goals(userId),
                 goals.finishFirst(userId),
                 LocalDate.now(clock)));
+    }
+
+    /**
+     * An item the user named as part of a category has to fit inside what that category actually
+     * costs them. Naming $45 of gym inside $40 of subscriptions is a real thing to get into - they
+     * lowered one without the other - and the calculation rejects it, rightly, but in words written
+     * for whoever is reading a stack trace. Caught here so the user is told which two figures
+     * disagree, by the names they gave them, and which they might want to change.
+     */
+    private void checkNamedItemsFit(
+            String userId, Map<SpendCategory, com.hasan.budget.costofliving.domain.ResolvedBaseline> baselines) {
+
+        Map<SpendCategory, Money> stated = spending.spending(userId);
+        Map<SpendCategory, Money> namedSoFar = new java.util.EnumMap<>(SpendCategory.class);
+        for (UserLineItem item : spending.lineItems(userId)) {
+            if (item.scope().isSubtractedInItsOwnRight()) {
+                continue;
+            }
+            Money spentThere = stated.get(item.parent());
+            if (spentThere == null && baselines.containsKey(item.parent())) {
+                spentThere = baselines.get(item.parent()).amount();
+            }
+            String category = item.parent().label().toLowerCase(java.util.Locale.ENGLISH);
+            if (spentThere == null) {
+                throw new NeedsMoreInformationException("You said \"" + item.label() + "\" is part of what you "
+                        + "spend on " + category + ", but you have not told us what you spend on " + category
+                        + " yet.");
+            }
+            Money named = namedSoFar.merge(item.parent(), item.monthlyAmount(), Money::plus);
+            if (named.compareTo(spentThere) > 0) {
+                throw new NeedsMoreInformationException("What you have named inside " + category
+                        + " comes to " + named + " a month, which is more than the " + spentThere
+                        + " you said you spend there. Raise what you spend on " + category
+                        + ", or lower what you named inside it.");
+            }
+        }
     }
 
     private PlanView recompute(String userId, String reason) {

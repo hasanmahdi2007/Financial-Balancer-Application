@@ -105,6 +105,38 @@ class PlanServiceTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
+        /**
+         * The calculation rejects an item named inside a category it does not fit in, in words meant
+         * for whoever reads a stack trace - constant name and all. The user is told which two figures
+         * of their own disagree instead.
+         */
+        @Test
+        void anItemNamedInsideACategoryHasToFitInsideIt() {
+            fixture.onboard("saver", Money.of(1000));
+            plans.saveSpending("saver", Map.of(SpendCategory.SUBSCRIPTIONS, Money.of(40)));
+            plans.saveLineItem("saver", UserLineItem.alreadyIn(
+                    "gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45)));
+
+            assertThatThrownBy(() -> plans.plan("saver"))
+                    .isInstanceOf(NeedsMoreInformationException.class)
+                    .hasMessageContaining("comes to 45.00 a month")
+                    .hasMessageContaining("more than the 40.00")
+                    .hasMessageNotContainingAny("SUBSCRIPTIONS", "ALREADY_COUNTED");
+        }
+
+        /** And naming part of something they have never told us they spend on says exactly that. */
+        @Test
+        void anItemNamedInsideACategoryWithNoFigureAsksForTheFigure() {
+            fixture.onboard("saver", Money.of(1000));
+            plans.saveSpending("saver", Map.of(SpendCategory.RENT, Money.of(600)));
+            plans.saveLineItem("saver", UserLineItem.alreadyIn(
+                    "gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(45)));
+
+            assertThatThrownBy(() -> plans.plan("saver"))
+                    .isInstanceOf(NeedsMoreInformationException.class)
+                    .hasMessageContaining("not told us what you spend on subscriptions");
+        }
+
         @Test
         void deletingSomethingThatIsNotYoursSaysOnlyThatItIsNotThere() {
             fixture.onboard("owner", Money.of(1000));
