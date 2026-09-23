@@ -1,0 +1,291 @@
+{
+  "accounts": [
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "apy": null,
+      "balances": {
+        "available": 187.76377200000002,
+        "current": 500,
+        "iso_currency_code": "USD",
+        "limit": null,
+        "unofficial_currency_code": null
+      },
+      "holder_category": "personal",
+      "mask": "5121",
+      "name": "Checking",
+      "official_name": "Plaid checking",
+      "subtype": "checking",
+      "type": "depository"
+    }
+  ],
+  "added": [
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "account_owner": null,
+      "amount": 2835.8,
+      "authorized_date": "2026-09-13",
+      "authorized_datetime": null,
+      "category": [
+        "Payment",
+        "Credit Card"
+      ],
+      "category_id": "16001000",
+      "check_number": null,
+      "counterparties": [
+        {
+          "confidence_level": "VERY_HIGH",
+          "entity_id": "o2Ry34bq605MvmEed3yjqjkYWwqRQYpnkjd0O",
+          "logo_url": null,
+          "name": "Chase Bank",
+          "phone_number": null,
+          "type": "financial_institution",
+          "website": "chase.com"
+        }
+      ],
+      "date": "2026-09-13",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": null,
+      "merchant_category_code": null,
+      "merchant_entity_id": null,
+      "merchant_name": null,
+      "name": "CHASE CREDIT CRD AUTOPAY PPD ID",
+      "payment_channel": "other",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": null,
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "HIGH",
+        "detailed": "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT",
+        "primary": "LOAN_PAYMENTS",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_LOAN_PAYMENTS.png",
+      "running_balance": null,
+      "transaction_code": null,
+      "transaction_id": "ZN439ALoNGibBkz5xPk3U9awrb81GVSPRovnz",
+      "transaction_type": "special",
+      "unofficial_currency_code": null,
+      "website": null
+    },
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "account_owner": null,
+      "amount": 250,
+      "authorized_date": "2026-09-14",
+      "authorized_datetime": null,
+      "category": [
+        "Transfer",
+        "Debit"
+      ],
+      "category_id": "21006000",
+      "check_number": null,
+      "counterparties": [],
+      "date": "2026-09-14",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": null,
+      "merchant_category_code": null,
+      "merchant_entity_id": null,
+      "merchant_name": null,
+      "name": "ONLINE TRANSFER TO SAVINGS XXXXXX4421",
+      "payment_channel": "other",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": null,
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "HIGH",
+        "detailed": "TRANSFER_OUT_SAVINGS",
+        "primary": "TRANSFER_OUT",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_TRANSFER_OUT.png",
+      "running_balance": null,
+      "transaction_code": null,
+      "transaction_id": "1GRnvBxoGDSDx7rKjk7Bt6xRdBeEZ5sNKnabD",
+      "transaction_type": "special",
+      "unofficial_currency_code": null,
+      "website": null
+    },
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "account_owner": null,
+      "amount": 1450,
+      "authorized_date": "2026-09-17",
+      "authorized_datetime": null,
+      "category": [
+        "Payment",
+        "Rent"
+      ],
+      "category_id": "16002000",
+      "check_number": null,
+      "counterparties": [
+        {
+          "confidence_level": "HIGH",
+          "entity_id": null,
+          "logo_url": null,
+          "name": "Oakwood Apartments",
+          "phone_number": null,
+          "type": "merchant",
+          "website": null
+        }
+      ],
+      "date": "2026-09-17",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": null,
+      "merchant_category_code": null,
+      "merchant_entity_id": null,
+      "merchant_name": "Oakwood Apartments",
+      "name": "RENT PAYMENT OAKWOOD APARTMENTS",
+      "payment_channel": "in store",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": null,
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "HIGH",
+        "detailed": "RENT_AND_UTILITIES_RENT",
+        "primary": "RENT_AND_UTILITIES",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_RENT_AND_UTILITIES.png",
+      "running_balance": null,
+      "transaction_code": null,
+      "transaction_id": "83rz5P7n38sXDwvjynwms8ApqWGNVjTg1PRvP",
+      "transaction_type": "special",
+      "unofficial_currency_code": null,
+      "website": null
+    },
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "account_owner": null,
+      "amount": -34.99,
+      "authorized_date": "2026-09-19",
+      "authorized_datetime": null,
+      "category": [
+        "Shops",
+        "Digital Purchase"
+      ],
+      "category_id": "19019000",
+      "check_number": null,
+      "counterparties": [
+        {
+          "confidence_level": "VERY_HIGH",
+          "entity_id": "2gOwmq9qK56K60oDm3eLrREV2B2mVadkRn8MW",
+          "logo_url": "https://plaid-merchant-logos.plaid.com/amazon_44.png",
+          "name": "Amazon",
+          "phone_number": null,
+          "type": "merchant",
+          "website": "amazon.com"
+        }
+      ],
+      "date": "2026-09-19",
+      "datetime": null,
+      "iso_currency_code": "USD",
+      "location": {
+        "address": null,
+        "city": null,
+        "country": null,
+        "lat": null,
+        "lon": null,
+        "postal_code": null,
+        "region": null,
+        "store_number": null
+      },
+      "logo_url": "https://plaid-merchant-logos.plaid.com/amazon_44.png",
+      "merchant_category_code": null,
+      "merchant_entity_id": "2gOwmq9qK56K60oDm3eLrREV2B2mVadkRn8MW",
+      "merchant_name": "Amazon",
+      "name": "AMAZON.COM REFUND",
+      "payment_channel": "online",
+      "payment_meta": {
+        "by_order_of": null,
+        "payee": null,
+        "payer": null,
+        "payment_method": null,
+        "payment_processor": null,
+        "ppd_id": null,
+        "reason": null,
+        "reference_number": null
+      },
+      "pending": false,
+      "pending_transaction_id": null,
+      "personal_finance_category": {
+        "confidence_level": "VERY_HIGH",
+        "detailed": "GENERAL_MERCHANDISE_ONLINE_MARKETPLACES",
+        "primary": "GENERAL_MERCHANDISE",
+        "version": "v2"
+      },
+      "personal_finance_category_icon_url": "https://plaid-category-icons.plaid.com/PFC_GENERAL_MERCHANDISE.png",
+      "running_balance": null,
+      "transaction_code": null,
+      "transaction_id": "b1M75olb19UPqGlm7bGxIoKJN8gM61CExRJG8",
+      "transaction_type": "digital",
+      "unofficial_currency_code": null,
+      "website": "amazon.com"
+    }
+  ],
+  "has_more": false,
+  "modified": [],
+  "next_cursor": "CAESJWIxTTc1b2xiMTlVUHFHbG03Ykd4SW9LSk44Z002MUNFeFJKRzgaDAjV98rVBhDYyOuBASIMCNX3ytUGENjI64EBKgwI1ffK1QYQ2MjrgQE=",
+  "removed": [],
+  "request_id": "4b213775c8a2b27",
+  "transactions_update_status": "HISTORICAL_UPDATE_COMPLETE"
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "code": "LB",
+    "name": "Lebanon",
+    "note": "Prices have been quoted in US dollars since the 2019 collapse, so these are USD figures rather than a converted local-currency amount. Utilities and government fees are still partly in lira; those rows are USD-equivalent."
+  },
+  {
+    "code": "US",
+    "name": "United States",
+    "note": "Figures are for a single person renting alone. The official BLS/BEA derivation is deferred, so these are curated estimates like every other row here."
+  }
+]

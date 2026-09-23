@@ -1,0 +1,11 @@
+{
+  "webhook_type": "ITEM",
+  "webhook_code": "ERROR",
+  "item_id": "kGlgdoaVGrSKa695lp6ru3evzz6NKLTxAy1JR",
+  "error": {
+    "error_type": "ITEM_ERROR",
+    "error_code": "ITEM_LOGIN_REQUIRED",
+    "error_message": "the login details of this item have changed"
+  },
+  "environment": "sandbox"
+}

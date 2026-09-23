@@ -1,0 +1,33 @@
+{
+  "accounts": [
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "apy": null,
+      "balances": {
+        "available": 187.76377200000002,
+        "current": 500,
+        "iso_currency_code": "USD",
+        "limit": null,
+        "unofficial_currency_code": null
+      },
+      "holder_category": "personal",
+      "mask": "5121",
+      "name": "Checking",
+      "official_name": "Plaid checking",
+      "subtype": "checking",
+      "type": "depository"
+    }
+  ],
+  "added": [],
+  "modified": [],
+  "removed": [
+    {
+      "account_id": "83rz5P7n38sXDwvjynwms8AWmEpBvxUeyNW6D",
+      "transaction_id": "GpM176qrpEi7AKXyRVKoiGPKG4NoNpundjkmy"
+    }
+  ],
+  "next_cursor": "constructed-cursor-after-removal",
+  "has_more": false,
+  "request_id": "constructed",
+  "transactions_update_status": "HISTORICAL_UPDATE_COMPLETE"
+}
