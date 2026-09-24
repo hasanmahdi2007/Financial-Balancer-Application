@@ -1,6 +1,7 @@
 package com.hasan.gateway.security;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -72,7 +73,20 @@ public class SupabaseAuthenticationFilter implements WebFilter, Ordered {
         }
 
         return tokens.decode(authorization.substring("Bearer ".length()).trim())
-                .flatMap(token -> {
+                .map(Optional::of)
+                // Expired, tampered with, signed by another project's key, or not a token at all:
+                // all the same answer. Saying which would help someone work out what to change.
+                //
+                // This catch must stay here, on the token check alone. Placed after the hand-off below,
+                // it also caught budget-core being down and answered "Your sign-in has expired" - so
+                // the client signed out a user whose sign-in was fine, and a server fault looked like
+                // theirs.
+                .onErrorResume(rejected -> Mono.just(Optional.empty()))
+                .flatMap(decoded -> {
+                    if (decoded.isEmpty()) {
+                        return refuse(exchange, "Your sign-in has expired. Sign in again.");
+                    }
+                    Jwt token = decoded.get();
                     String userId = token.getSubject();
                     if (userId == null || userId.isBlank()) {
                         return refuse(exchange, "That sign-in is not usable here. Sign in again.");
@@ -85,10 +99,7 @@ public class SupabaseAuthenticationFilter implements WebFilter, Ordered {
                                     .headers(headers -> headers.set(USER_HEADER, userId))
                                     .build())
                             .build());
-                })
-                // Expired, tampered with, signed by another project's key, or not a token at all:
-                // all the same answer. Saying which would help someone work out what to change.
-                .onErrorResume(rejected -> refuse(exchange, "Your sign-in has expired. Sign in again."));
+                });
     }
 
     private static boolean isHealthCheck(ServerHttpRequest request) {

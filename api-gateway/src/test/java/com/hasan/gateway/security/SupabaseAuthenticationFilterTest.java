@@ -1,6 +1,7 @@
 package com.hasan.gateway.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -84,6 +85,24 @@ class SupabaseAuthenticationFilterTest {
         assertThat(forwarded.get()).isNotNull();
         assertThat(forwarded.get().getRequest().getHeaders().getFirst(SupabaseAuthenticationFilter.USER_HEADER))
                 .isEqualTo(SOMEONE);
+        assertThat(exchange.getResponse().getStatusCode()).isNotEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    /**
+     * A failure after the token was accepted is not a sign-in problem. When budget-core was down, the
+     * gateway answered "Your sign-in has expired" with a 401, the client ended the session, and a
+     * signed-in user was sent back to the sign-in page with nothing wrong with their sign-in - which
+     * is how this was found. The error must travel on so it is reported as the server fault it is.
+     */
+    @Test
+    @DisplayName("budget-core failing is not reported as an expired sign-in")
+    void aFailureDownstreamIsNotTurnedIntoA401() throws Exception {
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/v1/plan").header(HttpHeaders.AUTHORIZATION, bearer(token(SOMEONE))));
+        WebFilterChain budgetCoreDown = forwardedExchange -> Mono.error(new java.net.ConnectException("Connection refused"));
+
+        assertThatThrownBy(() -> filter.filter(exchange, budgetCoreDown).block())
+                .hasRootCauseInstanceOf(java.net.ConnectException.class);
         assertThat(exchange.getResponse().getStatusCode()).isNotEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
