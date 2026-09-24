@@ -16,25 +16,32 @@ import { formatMoney } from '../ui/amount';
 export function PlanView({ plan, goalActions }: { plan: Plan; goalActions?: (goal: PlanGoal) => ReactNode }) {
   return (
     <div className="plan">
-      <p className="plan__made">
-        Made <time dateTime={plan.takenAt}>{formatCalendarDate(plan.takenAt.slice(0, 10))}</time> · {plan.reason}
-      </p>
-      <SurplusCard surplus={plan.surplus} />
-      <GoalsSection goals={plan.goals} actions={goalActions} />
-      <CutsSection cuts={plan.cuts} />
-      <LeftOver plan={plan} />
-      <SpendingSection plan={plan} />
+      <SurplusCard plan={plan} />
       <MoneySection plan={plan} editable={goalActions !== undefined} />
+      <div className="plan__grid">
+        <GoalsSection goals={plan.goals} actions={goalActions} />
+        <div className="plan__side">
+          <CutsSection cuts={plan.cuts} />
+          <LeftOver plan={plan} />
+        </div>
+      </div>
+      <SpendingSection plan={plan} />
     </div>
   );
 }
 
-function SurplusCard({ surplus }: { surplus: Surplus }) {
+function SurplusCard({ plan }: { plan: Plan }) {
+  const surplus: Surplus = plan.surplus;
   return (
-    <section className="panel" aria-labelledby="surplus-heading">
-      <h2 id="surplus-heading">Each month for your goals</h2>
-      <p className="figure">{formatMoney(surplus.amount)}</p>
-      <p>{surplus.explanation}</p>
+    <section className="hero" aria-labelledby="surplus-heading">
+      <div className="hero__main">
+        <p className="plan__made">
+          Made <time dateTime={plan.takenAt}>{formatCalendarDate(plan.takenAt.slice(0, 10))}</time> · {plan.reason}
+        </p>
+        <h2 id="surplus-heading">Each month for your goals</h2>
+        <p className="figure">{formatMoney(surplus.amount)}</p>
+        <p className="hero__explanation">{surplus.explanation}</p>
+      </div>
       {/* Never the amount alone: it is only reachable if these changes happen, and a reader who
           missed that would treat it as money in hand. */}
       {surplus.reductions.length > 0 ? (
@@ -72,28 +79,50 @@ function GoalsSection({ goals, actions }: { goals: PlanGoal[]; actions?: (goal: 
               <time dateTime={goal.deadline}>{formatCalendarDate(goal.deadline)}</time>
               {goal.finishFirst ? ' · Takes your savings first' : null}
             </p>
-            <p className="goal__status">
+            {/* Coloured by the figures, not by the wording: a goal short of money each month is
+                amber whatever the server calls that, so a new status needs no change here. */}
+            <p className={goal.shortBy === '0.00' ? 'goal__status goal__status--ok' : 'goal__status goal__status--short'}>
               <strong>{goal.status.label}.</strong> {goal.status.meaning}
             </p>
-            <dl className="figures">
-              <dt>From what you already have</dt>
-              <dd>{formatMoney(goal.fromBalance)}</dd>
-              <dt>Needs each month</dt>
-              <dd>{formatMoney(goal.monthlyNeeded)}</dd>
-              <dt>Gets each month</dt>
-              <dd>{formatMoney(goal.monthlyFunded)}</dd>
-              {goal.shortBy !== '0.00' ? (
-                <>
-                  <dt>Short each month by</dt>
-                  <dd>{formatMoney(goal.shortBy)}</dd>
-                </>
-              ) : null}
-            </dl>
+            <Progress label="Covered by what you already have" part={goal.fromBalance} whole={goal.target} />
+            {goal.monthlyNeeded !== '0.00' ? (
+              <Progress label="Monthly amount it gets" part={goal.monthlyFunded} whole={goal.monthlyNeeded} />
+            ) : null}
+            {/* The bars above already carry what it has and what it gets; only the gap is left to say. */}
+            {goal.shortBy !== '0.00' ? (
+              <dl className="figures">
+                <dt>Short each month by</dt>
+                <dd>{formatMoney(goal.shortBy)}</dd>
+              </dl>
+            ) : null}
             {actions ? <div className="actions">{actions(goal)}</div> : null}
           </li>
         ))}
       </ol>
     </section>
+  );
+}
+
+/**
+ * A bar showing how much of one figure another covers. The ratio is for drawing only - it sets a
+ * width - and never becomes a figure anyone reads, so a float is harmless here in a way it would not
+ * be for the amounts themselves, which are shown exactly as the server sent them.
+ */
+function Progress({ label, part, whole }: { label: string; part: string; whole: string }) {
+  const ratio = Number(whole) > 0 ? Math.min(1, Math.max(0, Number(part) / Number(whole))) : 0;
+  const percent = Math.round(ratio * 100);
+  return (
+    <div className="progress">
+      <div className="progress__label">
+        <span>{label}</span>
+        <span>
+          {formatMoney(part)} of {formatMoney(whole)}
+        </span>
+      </div>
+      <div className="progress__track" role="img" aria-label={`${label}: ${percent}%`}>
+        <div className={ratio >= 1 ? 'progress__bar progress__bar--full' : 'progress__bar'} style={{ width: `${percent}%` }} />
+      </div>
+    </div>
   );
 }
 
@@ -248,17 +277,34 @@ function SpendingSection({ plan }: { plan: Plan }) {
 function MoneySection({ plan, editable }: { plan: Plan; editable: boolean }) {
   const { money, surplus } = plan;
   return (
-    <section className="panel" aria-labelledby="money-heading">
-      <h2 id="money-heading">Your money</h2>
-      <dl className="figures">
-        <dt>Arrives each month</dt>
-        <dd>{formatMoney(money.monthlyIncome)}</dd>
-        <dt>Savings this plan may use</dt>
-        <dd>{formatMoney(money.balanceInScope)}</dd>
-        <dt>Put toward goals</dt>
-        <dd>{formatMoney(money.putTowardGoals)}</dd>
-        <dt>Not yet given to a goal</dt>
-        <dd>{formatMoney(money.leftUnassigned)}</dd>
+    <section className="money" aria-labelledby="money-heading">
+      <div className="money__head">
+        <h2 id="money-heading">Your money</h2>
+        {editable ? (
+          <Link to="/money" className="button button--secondary">
+            Change these
+          </Link>
+        ) : null}
+      </div>
+      <dl className="tiles">
+        <div className="tile tile--blue">
+          <dt>Arrives each month</dt>
+          <dd>{formatMoney(money.monthlyIncome)}</dd>
+        </div>
+        <div className="tile tile--green">
+          <dt>Savings this plan may use</dt>
+          <dd>{formatMoney(money.balanceInScope)}</dd>
+        </div>
+        <div className="tile tile--orange">
+          <dt>Put toward goals</dt>
+          <dd>{formatMoney(money.putTowardGoals)}</dd>
+        </div>
+        <div className="tile tile--plain">
+          <dt>Not yet given to a goal</dt>
+          <dd>{formatMoney(money.leftUnassigned)}</dd>
+        </div>
+      </dl>
+      <dl className="figures money__more">
         {surplus.leastForEnjoyingLife !== null ? (
           <>
             <dt>The least you want for enjoying life</dt>
@@ -273,13 +319,9 @@ function MoneySection({ plan, editable }: { plan: Plan; editable: boolean }) {
         <dt>Already moving into savings</dt>
         <dd>{formatMoney(surplus.alreadySaving)}</dd>
       </dl>
-      <p className="aside">{surplus.alreadySavingExplanation}</p>
-      <p>{money.runway.label}</p>
-      {editable ? (
-        <Link to="/money" className="button button--secondary">
-          Change these
-        </Link>
-      ) : null}
+      <p className="aside">
+        {surplus.alreadySavingExplanation} {money.runway.label}.
+      </p>
     </section>
   );
 }

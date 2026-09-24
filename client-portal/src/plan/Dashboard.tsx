@@ -76,21 +76,18 @@ export function Dashboard() {
 
   return (
     <section className="dashboard">
-      <h1>Your plan</h1>
-      <nav className="actions" aria-label="What you can do next">
-        <Link to="/goals/new" className="button">
-          Add a goal
-        </Link>
-        <Link to="/afford" className="button button--secondary">
-          Can I afford this?
-        </Link>
-        <Link to="/rebalance" className="button button--secondary">
-          Give me more for something
-        </Link>
-        <Link to="/plan/history" className="button button--quiet">
-          Every plan so far
-        </Link>
-      </nav>
+      <div className="page-head">
+        <h1>Your plan</h1>
+        {/* The two things people come here to do; everything else is in the menu beside the page. */}
+        <div className="actions">
+          <Link to="/goals/new" className="button">
+            Add a goal
+          </Link>
+          <Link to="/afford" className="button button--orange">
+            Can I afford this?
+          </Link>
+        </div>
+      </div>
       {act.error ? <Failure message={act.error} /> : null}
       {changes ? (
         <aside className="banner banner--info" aria-label="What changed">
