@@ -12,6 +12,7 @@ import com.hasan.budget.planning.application.Wording;
 import com.hasan.budget.planning.domain.Priority;
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.web.CurrentUser;
+import com.hasan.budget.web.NameLength;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -117,6 +118,7 @@ class GoalController {
         if (request.name() == null || request.name().isBlank()) {
             throw new IllegalArgumentException("Give the goal a name, such as \"Car\".");
         }
+        NameLength.check(request.name(), "the goal's name");
         if (request.target() == null) {
             throw new IllegalArgumentException("Say how much this goal needs in total.");
         }

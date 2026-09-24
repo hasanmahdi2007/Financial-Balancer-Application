@@ -338,6 +338,41 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                 .andExpect(content().string(not(containsString("GIVE_A_GOAL_MORE_TIME"))));
     }
 
+    /**
+     * Every name a user types is stored in an unbounded column and carried in every plan that mentions
+     * it, so without a limit one caller could store megabytes a row. The limit is also a sentence the
+     * user sees, so it is checked for what it says and not only for the status.
+     */
+    @Test
+    @DisplayName("a name longer than a label needs is refused, and the refusal says the limit")
+    void overlongNamesAreRefused() throws Exception {
+        String longest = "a".repeat(com.hasan.budget.web.NameLength.MAX);
+        String tooLong = longest + "a";
+        onboard(ana);
+
+        mockMvc.perform(as(ana, post("/api/v1/goals")).content("""
+                        {"name":"%s","target":"500.00","deadline":"2027-06-30","priority":"high"}"""
+                        .formatted(tooLong)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Keep the goal's name to 100 characters or fewer."));
+        mockMvc.perform(as(ana, post("/api/v1/goals")).content("""
+                        {"name":"%s","target":"500.00","deadline":"2027-06-30","priority":"high"}"""
+                        .formatted(longest)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(as(ana, put("/api/v1/line-items/gym")).content("""
+                        {"label":"%s","category":"subscriptions","amount":"30.00","kind":"on-top"}"""
+                        .formatted(tooLong)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Keep the name to 100 characters or fewer."));
+
+        mockMvc.perform(as(ana, put("/api/v1/profile")).content("""
+                        {"country":"LB","cityNotListed":"%s","incomeArrivesTaxed":true}"""
+                        .formatted(tooLong)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Keep your city's name to 100 characters or fewer."));
+    }
+
     /** A user with a city, money, spending and one plan already made. */
     private void onboard(String userId) throws Exception {
         mockMvc.perform(as(userId, put("/api/v1/profile"))

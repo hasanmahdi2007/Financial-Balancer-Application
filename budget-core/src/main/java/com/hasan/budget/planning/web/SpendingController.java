@@ -9,6 +9,7 @@ import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.Rigidity;
 import com.hasan.budget.shared.SpendCategory;
 import com.hasan.budget.web.CurrentUser;
+import com.hasan.budget.web.NameLength;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -86,6 +87,7 @@ class SpendingController {
         if (request.label() == null || request.label().isBlank()) {
             throw new IllegalArgumentException("Give this a name you will recognise, such as \"Gym membership\".");
         }
+        NameLength.check(request.label(), "the name");
         if (request.amount() == null) {
             throw new IllegalArgumentException("Say how much this costs each month.");
         }

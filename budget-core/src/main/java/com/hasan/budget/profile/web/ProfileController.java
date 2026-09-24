@@ -14,6 +14,7 @@ import com.hasan.budget.shared.CountryCode;
 import com.hasan.budget.shared.MetroId;
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.web.CurrentUser;
+import com.hasan.budget.web.NameLength;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -92,6 +93,7 @@ class ProfileController {
         if (request.incomeArrivesTaxed() == null) {
             throw new IllegalArgumentException("Tell us whether your pay arrives with tax already taken off.");
         }
+        NameLength.check(request.cityNotListed(), "your city's name");
         return view(plans.saveProfile(userId, new ProfileChange(
                 new CountryCode(request.country()),
                 request.city() == null || request.city().isBlank() ? null : new MetroId(request.city().strip()),
