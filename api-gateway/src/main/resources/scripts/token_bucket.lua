@@ -6,6 +6,11 @@ local capacity = tonumber(ARGV[2])
 local now = tonumber(ARGV[3])
 local requested = tonumber(ARGV[4])
 
+-- A bucket left alone this long has refilled completely, and a missing bucket reads as a full one,
+-- so expiring it changes nothing a caller can observe. Without an expiry every caller ever seen stays
+-- in Redis forever. Twice the refill time, so a key never lapses while it still means something.
+local ttl = math.ceil(capacity / rate) * 2
+
 local current_tokens = tonumber(redis.call('get', tokens_key) or capacity)
 local last_updated = tonumber(redis.call('get', timestamp_key) or now)
 
@@ -15,8 +20,8 @@ current_tokens = math.min(capacity, current_tokens + tokens_to_add)
 
 if current_tokens >= requested then
     current_tokens = current_tokens - requested
-    redis.call('set', tokens_key, current_tokens)
-    redis.call('set', timestamp_key, now)
+    redis.call('set', tokens_key, current_tokens, 'EX', ttl)
+    redis.call('set', timestamp_key, now, 'EX', ttl)
     return 1
 else
     return 0

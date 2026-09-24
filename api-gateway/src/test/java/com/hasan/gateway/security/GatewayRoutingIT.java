@@ -32,6 +32,7 @@ import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTest
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
@@ -95,6 +96,9 @@ class GatewayRoutingIT {
 
     @Autowired
     private WebTestClient client;
+
+    @Autowired
+    private ReactiveStringRedisTemplate redis;
 
     @BeforeEach
     void forgetEarlierRequests() {
@@ -172,6 +176,62 @@ class GatewayRoutingIT {
                 .exchange()
                 .expectStatus()
                 .isOk();
+    }
+
+    /**
+     * A caller-written X-Forwarded-For once chose the rate-limit bucket, so one client could rotate the
+     * header and never be limited - and every value it invented stayed in Redis as a key.
+     */
+    @Test
+    @DisplayName("an address the caller claims does not get a rate-limit bucket of its own")
+    void aClaimedAddressIsNotABucket() {
+        client.get().uri("/api/v1/plan").header("X-Forwarded-For", "203.0.113.77").exchange();
+
+        assertThat(redis.hasKey("ip_tokens:203.0.113.77").block()).isFalse();
+        assertThat(redis.hasKey("ip_tokens:127.0.0.1").block()).isTrue();
+    }
+
+    /** A bucket nobody expires is a caller remembered forever, which is Redis memory that only grows. */
+    @Test
+    @DisplayName("rate-limit state expires once it no longer means anything")
+    void rateLimitStateExpires() throws Exception {
+        String caller = "33333333-0000-4000-8000-cccccccccccc";
+        client.get().uri("/api/v1/plan").header(HttpHeaders.AUTHORIZATION, "Bearer " + token(caller)).exchange();
+
+        for (String key : List.of(
+                "ip_tokens:127.0.0.1", "ip_timestamp:127.0.0.1", "tokens:user:" + caller, "timestamp:user:" + caller)) {
+            assertThat(redis.getExpire(key).block())
+                    .as("%s must expire", key)
+                    .isNotNull()
+                    .isPositive();
+        }
+    }
+
+    /**
+     * Refusals used to copy back whatever Origin arrived, with credentials allowed, so every website
+     * was told it could read this gateway's answers. The allowed origins are a list, and a refusal is
+     * an answer like any other.
+     */
+    @Test
+    @DisplayName("a refusal is readable by the client's own origin and by no other")
+    void aRefusalAnswersOnlyTheAllowedOrigin() {
+        client.get()
+                .uri("/api/v1/plan")
+                .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                .exchange()
+                .expectStatus()
+                .isUnauthorized()
+                .expectHeader()
+                .valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173");
+
+        client.get()
+                .uri("/api/v1/plan")
+                .header(HttpHeaders.ORIGIN, "https://somewhere-else.example")
+                .exchange()
+                .expectHeader()
+                .doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN);
+
+        assertThat(RECEIVED).isEmpty();
     }
 
     /** The decoder, holding a key generated here rather than fetched from Supabase. */

@@ -119,13 +119,8 @@ public class SupabaseAuthenticationFilter implements WebFilter, Ordered {
     private static Mono<Void> refuse(ServerWebExchange exchange, String detail) {
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_PROBLEM_JSON);
-        String origin = exchange.getRequest().getHeaders().getOrigin();
-        if (origin != null) {
-            // Without these the browser reports a CORS failure instead of the 401, and the client
-            // cannot tell "signed out" from "the server is down".
-            exchange.getResponse().getHeaders().set("Access-Control-Allow-Origin", origin);
-            exchange.getResponse().getHeaders().set("Access-Control-Allow-Credentials", "true");
-        }
+        // No CORS headers here: CorsConfig runs ahead of this filter and has already set them, for the
+        // origins it allows and no others.
         String body = """
                 {"type":"https://financialbalancer.app/problems/not-signed-in",\
                 "title":"Sign in","status":401,"detail":"%s"}"""
