@@ -17,6 +17,7 @@ import com.hasan.budget.planning.application.PlanView.MoneyInScope;
 import com.hasan.budget.planning.application.PlanView.Option;
 import com.hasan.budget.planning.application.PlanView.Runway;
 import com.hasan.budget.planning.application.PlanView.Surplus;
+import com.hasan.budget.planning.application.PlanView.Today;
 import com.hasan.budget.planning.domain.GoalAllocation;
 import com.hasan.budget.planning.domain.decision.ResolutionOption;
 import com.hasan.budget.planning.domain.surplus.CategoryLine;
@@ -53,12 +54,74 @@ public final class PlanViews {
                 takenAt,
                 plan.inputs().asOf(),
                 reason,
+                today(plan),
                 money(plan),
                 surplus(plan),
                 goals(plan),
                 cuts(plan),
                 plan.hints().stream().map(hint -> new Hint(hint.lineId(), hint.label(), hint.hint())).toList(),
                 leftOver(plan));
+    }
+
+    /**
+     * Where the user stands before the plan changes anything. Worded here, like every other sentence
+     * on the plan, so the client never composes a claim about someone's money on its own.
+     */
+    private static Today today(AssembledPlan plan) {
+        SurplusBreakdown breakdown = plan.breakdown();
+        Money income = breakdown.income();
+        Money left = breakdown.leftAsEntered();
+        Money tax = breakdown.lines().stream()
+                .filter(line -> line.lineItemId() == null && line.category() == SpendCategory.TAX_RESERVE)
+                .map(CategoryLine::actual)
+                .reduce(Money.ZERO, Money::plus);
+        // Derived from the two figures above rather than summed again, so the card always adds up.
+        Money spent = income.minus(tax).minus(left);
+
+        String explanation = left.isNegative()
+                ? "You spend $" + text(Money.ZERO.minus(left)) + " more than you earn each month. "
+                        + "The changes below show where that gap could close."
+                : "What is left each month from the figures you gave us, before any change we suggest. "
+                        + "It is money you are either saving already or simply not spending.";
+
+        String runway = null;
+        if (left.isNegative()) {
+            // The whole balance they gave us, not what the plan left unassigned: this card is from
+            // before the plan hands any of it to a goal.
+            var cover = com.hasan.budget.profile.domain.Runway.of(plan.inputs().funds(), Money.ZERO.minus(left));
+            runway = cover.months() == 0
+                    ? "You have nothing put by that would cover it."
+                    : "What you have would cover it for about " + cover.months()
+                            + (cover.months() == 1 ? " month." : " months.");
+        }
+
+        Money saving = breakdown.alreadySaving();
+        String savingNote = saving.isPositive()
+                ? "Of which you already move $" + text(saving) + " into savings."
+                : saving.isNegative()
+                        ? "You also took $" + text(Money.ZERO.minus(saving)) + " more out of savings than you put in."
+                        : null;
+
+        int estimated = plan.assumedSpending().size();
+        String where = plan.inputs().cityLabel() == null ? "where you live" : plan.inputs().cityLabel();
+        String estimatedNote = estimated == 0
+                ? null
+                : (estimated == 1 ? "One of these figures is" : estimated + " of these figures are")
+                        + " our estimate for " + where + ", because you have not told us what you spend "
+                        + (estimated == 1 ? "on it" : "on them") + ". Tell us and this becomes entirely yours.";
+
+        return new Today(
+                text(income),
+                tax.isPositive() ? text(tax) : null,
+                text(spent),
+                text(left),
+                explanation,
+                runway,
+                saving.isZero() ? null : text(saving),
+                savingNote,
+                estimated,
+                estimatedNote,
+                "Make every change above and you would have this much each month for your goals.");
     }
 
     private static MoneyInScope money(AssembledPlan plan) {
@@ -84,13 +147,14 @@ public final class PlanViews {
         return new Surplus(
                 text(breakdown.surplus()),
                 breakdown.surplus().isNegative()
+                        // Worded for where it now sits: after the changes that produce it, not above them.
                         ? "Your essential costs are more than your income, by this much each month, even "
-                                + "after the changes below."
-                        : "What is left each month for your goals, if your spending comes down to the "
-                                + "figures below. It is not money you have today.",
+                                + "after the changes above."
+                        : "What would be left each month for your goals once you make the changes above. "
+                                + "It is not money you have today.",
                 text(breakdown.assumedReduction()),
-                "The monthly figure above already assumes you make these changes. Following only the "
-                        + "suggested cuts, without these, would leave you this much short.",
+                "This figure already counts on the changes above. Making only some of them would leave "
+                        + "you short by the rest.",
                 plan.reductions().stream().map(PlanViews::reduction).toList(),
                 breakdown.lines().stream().map(line -> line(plan, line)).toList(),
                 text(breakdown.discretionaryFloor()),

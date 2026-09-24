@@ -1,27 +1,14 @@
 {
-  "id": "4f6dc2e3-4332-4550-ae0a-faeb3660dc55",
-  "takenAt": "2026-09-24T16:20:29.600791600Z",
-  "asOf": "2026-09-24",
-  "reason": "You asked for a fresh plan",
-  "today": {
-    "income": "2000.00",
-    "taxSetAside": null,
-    "spent": "1760.00",
-    "leftAsEntered": "240.00",
-    "leftAsEnteredExplanation": "What is left each month from the figures you gave us, before any change we suggest. It is money you are either saving already or simply not spending.",
-    "runway": null,
-    "alreadySaving": null,
-    "alreadySavingNote": null,
-    "estimatedLines": 5,
-    "estimatedNote": "5 of these figures are our estimate for Beirut, because you have not told us what you spend on them. Tell us and this becomes entirely yours.",
-    "planResult": "Make every change above and you would have this much each month for your goals."
-  },
+  "id": "eb4fe26d-36da-44be-9b7c-afdc5a206aaf",
+  "takenAt": "2026-09-23T20:54:06.062311900Z",
+  "asOf": "2026-09-23",
+  "reason": "You added a goal: Emergency fund",
   "money": {
     "monthlyIncome": "2000.00",
     "balanceInScope": "20000.00",
     "setAside": "0.00",
-    "putTowardGoals": "0.00",
-    "leftUnassigned": "20000.00",
+    "putTowardGoals": "18000.00",
+    "leftUnassigned": "2000.00",
     "runway": {
       "label": "Your money is not running down",
       "months": null
@@ -29,9 +16,9 @@
   },
   "surplus": {
     "amount": "520.00",
-    "explanation": "What would be left each month for your goals once you make the changes above. It is not money you have today.",
+    "explanation": "What is left each month for your goals, if your spending comes down to the figures below. It is not money you have today.",
     "assumedReduction": "280.00",
-    "assumedReductionExplanation": "This figure already counts on the changes above. Making only some of them would leave you short by the rest.",
+    "assumedReductionExplanation": "The monthly figure above already assumes you make these changes. Following only the suggested cuts, without these, would leave you this much short.",
     "reductions": [
       {
         "label": "Groceries",
@@ -158,7 +145,7 @@
         "basis": {
           "label": "Your own figure",
           "explanation": "You told us this, so we use it and nothing overrides it.",
-          "gathered": "2026-09-24",
+          "gathered": "2026-09-23",
           "ageing": null
         }
       },
@@ -301,7 +288,48 @@
     "alreadySaving": "0.00",
     "alreadySavingExplanation": "What you already move into savings each month. It is shown, never subtracted, because it is not spending."
   },
-  "goals": [],
+  "goals": [
+    {
+      "id": "7e28801f-3d00-41fc-b2db-a74374b5939c",
+      "name": "Car",
+      "priority": {
+        "key": "high",
+        "label": "Very important"
+      },
+      "target": "12000.00",
+      "fromBalance": "12000.00",
+      "stillNeeded": "0.00",
+      "deadline": "2027-06-30",
+      "monthlyNeeded": "0.00",
+      "monthlyFunded": "0.00",
+      "shortBy": "0.00",
+      "finishFirst": false,
+      "status": {
+        "label": "Already covered",
+        "meaning": "What you already have is enough for this goal, so it needs nothing more each month."
+      }
+    },
+    {
+      "id": "5b8962b0-9932-4cb4-ae4a-f6cd25fa15b3",
+      "name": "Emergency fund",
+      "priority": {
+        "key": "critical",
+        "label": "Must happen"
+      },
+      "target": "6000.00",
+      "fromBalance": "6000.00",
+      "stillNeeded": "0.00",
+      "deadline": "2027-03-31",
+      "monthlyNeeded": "0.00",
+      "monthlyFunded": "0.00",
+      "shortBy": "0.00",
+      "finishFirst": false,
+      "status": {
+        "label": "Already covered",
+        "meaning": "What you already have is enough for this goal, so it needs nothing more each month."
+      }
+    }
+  ],
   "cuts": {
     "suggested": [],
     "suggestedTotal": "0.00",

@@ -1,37 +1,24 @@
 {
-  "id": "4f6dc2e3-4332-4550-ae0a-faeb3660dc55",
-  "takenAt": "2026-09-24T16:20:29.600791600Z",
-  "asOf": "2026-09-24",
-  "reason": "You asked for a fresh plan",
-  "today": {
-    "income": "2000.00",
-    "taxSetAside": null,
-    "spent": "1760.00",
-    "leftAsEntered": "240.00",
-    "leftAsEnteredExplanation": "What is left each month from the figures you gave us, before any change we suggest. It is money you are either saving already or simply not spending.",
-    "runway": null,
-    "alreadySaving": null,
-    "alreadySavingNote": null,
-    "estimatedLines": 5,
-    "estimatedNote": "5 of these figures are our estimate for Beirut, because you have not told us what you spend on them. Tell us and this becomes entirely yours.",
-    "planResult": "Make every change above and you would have this much each month for your goals."
-  },
+  "id": "206ad187-85f7-4da0-8552-39be790de9de",
+  "takenAt": "2026-09-23T20:54:12.269473600Z",
+  "asOf": "2026-09-23",
+  "reason": "You added a goal: Emergency fund",
   "money": {
-    "monthlyIncome": "2000.00",
-    "balanceInScope": "20000.00",
+    "monthlyIncome": "1800.00",
+    "balanceInScope": "1000.00",
     "setAside": "0.00",
-    "putTowardGoals": "0.00",
-    "leftUnassigned": "20000.00",
+    "putTowardGoals": "1000.00",
+    "leftUnassigned": "0.00",
     "runway": {
       "label": "Your money is not running down",
       "months": null
     }
   },
   "surplus": {
-    "amount": "520.00",
-    "explanation": "What would be left each month for your goals once you make the changes above. It is not money you have today.",
+    "amount": "220.00",
+    "explanation": "What is left each month for your goals, if your spending comes down to the figures below. It is not money you have today.",
     "assumedReduction": "280.00",
-    "assumedReductionExplanation": "This figure already counts on the changes above. Making only some of them would leave you short by the rest.",
+    "assumedReductionExplanation": "The monthly figure above already assumes you make these changes. Following only the suggested cuts, without these, would leave you this much short.",
     "reductions": [
       {
         "label": "Groceries",
@@ -54,9 +41,9 @@
           "key": "rent",
           "label": "Rent"
         },
-        "spent": "500.00",
+        "spent": "600.00",
         "localFigure": "600.00",
-        "counted": "500.00",
+        "counted": "600.00",
         "assumed": false,
         "measuredFrom": null,
         "howWilling": {
@@ -156,9 +143,9 @@
           "label": "Very important"
         },
         "basis": {
-          "label": "Your own figure",
-          "explanation": "You told us this, so we use it and nothing overrides it.",
-          "gathered": "2026-09-24",
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
           "ageing": null
         }
       },
@@ -276,24 +263,6 @@
           "gathered": "2026-09-01",
           "ageing": null
         }
-      },
-      {
-        "id": "gym",
-        "label": "Gym membership",
-        "category": {
-          "key": "subscriptions",
-          "label": "Subscriptions"
-        },
-        "spent": "30.00",
-        "localFigure": null,
-        "counted": "0.00",
-        "assumed": false,
-        "measuredFrom": null,
-        "howWilling": {
-          "key": "locked",
-          "label": "Cannot be changed"
-        },
-        "basis": null
       }
     ],
     "leastForEnjoyingLife": "250.00",
@@ -301,30 +270,93 @@
     "alreadySaving": "0.00",
     "alreadySavingExplanation": "What you already move into savings each month. It is shown, never subtracted, because it is not spending."
   },
-  "goals": [],
+  "goals": [
+    {
+      "id": "e1ab7df4-ad36-4c96-bdc9-fae1eb0b1501",
+      "name": "Car",
+      "priority": {
+        "key": "high",
+        "label": "Very important"
+      },
+      "target": "12000.00",
+      "fromBalance": "0.00",
+      "stillNeeded": "12000.00",
+      "deadline": "2027-06-30",
+      "monthlyNeeded": "1333.34",
+      "monthlyFunded": "0.00",
+      "shortBy": "1333.34",
+      "finishFirst": false,
+      "status": {
+        "label": "Not funded yet",
+        "meaning": "Nothing is left for it each month once the goals ahead of it are paid for."
+      }
+    },
+    {
+      "id": "3b2239c3-551d-4143-babb-9c9dcaee7fe4",
+      "name": "Emergency fund",
+      "priority": {
+        "key": "critical",
+        "label": "Must happen"
+      },
+      "target": "6000.00",
+      "fromBalance": "1000.00",
+      "stillNeeded": "5000.00",
+      "deadline": "2027-03-31",
+      "monthlyNeeded": "833.34",
+      "monthlyFunded": "220.00",
+      "shortBy": "613.34",
+      "finishFirst": false,
+      "status": {
+        "label": "Behind",
+        "meaning": "It gets part of what it needs each month, so it will be late unless something changes."
+      }
+    }
+  ],
   "cuts": {
-    "suggested": [],
-    "suggestedTotal": "0.00",
+    "suggested": [
+      {
+        "label": "Subscriptions",
+        "category": {
+          "key": "subscriptions",
+          "label": "Subscriptions"
+        },
+        "by": "40.00",
+        "howWilling": {
+          "key": "essential",
+          "label": "Very important"
+        },
+        "lineIds": [
+          "subscriptions"
+        ]
+      }
+    ],
+    "suggestedTotal": "40.00",
     "alreadyAssumed": "280.00",
-    "totalChange": "280.00",
+    "totalChange": "320.00",
     "totalChangeExplanation": "Everything you would change to make this plan work: the changes the monthly figure already assumes, plus the cuts suggested on top.",
-    "stillShort": "0.00",
-    "options": []
+    "stillShort": "1906.68",
+    "options": [
+      {
+        "label": "Use more of your savings this month",
+        "meaning": "You can tell us to count more of your balance as money you are willing to spend. Nothing moves by itself - it only changes what we plan around.",
+        "answerWith": "PUT /api/v1/money"
+      },
+      {
+        "label": "Push one of your goals back",
+        "meaning": "Giving a goal a later date frees up what it was taking each month. We will show you exactly what that costs you in time before you decide.",
+        "answerWith": "PUT /api/v1/goals/{id}"
+      }
+    ]
   },
   "hints": [
     {
       "id": "rent",
       "label": "Rent",
       "hint": "a roommate, or renegotiating the lease at renewal, is the only real lever here - the monthly figure itself will not move"
-    },
-    {
-      "id": "gym",
-      "label": "Gym membership",
-      "hint": "off-peak or annual-paid memberships are usually 20-30% cheaper than the monthly rate for exactly the same thing"
     }
   ],
   "leftOver": {
-    "amount": "520.00",
-    "explanation": "Left over each month once every goal is on track. You could save or invest it."
+    "amount": "0.00",
+    "explanation": "Nothing is left over once your goals are paid for."
   }
 }

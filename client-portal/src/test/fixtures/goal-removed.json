@@ -1,9 +1,22 @@
 {
   "plan": {
-    "id": "6df93402-c0cf-4180-a9d5-2ca7e40c61e3",
-    "takenAt": "2026-09-23T20:54:14.574132300Z",
-    "asOf": "2026-09-23",
+    "id": "f73e04db-bff5-4d3a-8bbe-a28ecc67d960",
+    "takenAt": "2026-09-24T16:20:31.649294700Z",
+    "asOf": "2026-09-24",
     "reason": "You removed a goal: Car",
+    "today": {
+      "income": "1800.00",
+      "taxSetAside": null,
+      "spent": "1860.00",
+      "leftAsEntered": "-60.00",
+      "leftAsEnteredExplanation": "You spend $60.00 more than you earn each month. The changes below show where that gap could close.",
+      "runway": "What you have would cover it for about 16 months.",
+      "alreadySaving": null,
+      "alreadySavingNote": null,
+      "estimatedLines": 5,
+      "estimatedNote": "5 of these figures are our estimate for Beirut, because you have not told us what you spend on them. Tell us and this becomes entirely yours.",
+      "planResult": "Make every change above and you would have this much each month for your goals."
+    },
     "money": {
       "monthlyIncome": "1800.00",
       "balanceInScope": "1000.00",
@@ -17,9 +30,9 @@
     },
     "surplus": {
       "amount": "220.00",
-      "explanation": "What is left each month for your goals, if your spending comes down to the figures below. It is not money you have today.",
+      "explanation": "What would be left each month for your goals once you make the changes above. It is not money you have today.",
       "assumedReduction": "280.00",
-      "assumedReductionExplanation": "The monthly figure above already assumes you make these changes. Following only the suggested cuts, without these, would leave you this much short.",
+      "assumedReductionExplanation": "This figure already counts on the changes above. Making only some of them would leave you short by the rest.",
       "reductions": [
         {
           "label": "Groceries",
@@ -273,7 +286,7 @@
     },
     "goals": [
       {
-        "id": "3b2239c3-551d-4143-babb-9c9dcaee7fe4",
+        "id": "c8e82f0e-27c4-4811-b7ab-837b6105a214",
         "name": "Emergency fund",
         "priority": {
           "key": "critical",

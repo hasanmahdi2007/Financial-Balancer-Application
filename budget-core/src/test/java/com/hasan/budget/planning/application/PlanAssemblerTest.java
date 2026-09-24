@@ -343,6 +343,108 @@ class PlanAssemblerTest {
     }
 
     @Nested
+    @DisplayName("where the user stands before the plan changes anything")
+    class WhereYouStand {
+
+        /**
+         * The brief's own scenario. The plan's figure is $2,070, but it assumes groceries and going out
+         * both come down; what is really left from the figures as given is $1,500, and that comes first.
+         */
+        @Test
+        void theFirstFigureIsWhatIsLeftFromTheFiguresAsEnteredNotThePlans() {
+            PlanView view = viewOf(measuredScenario(Money.ZERO, Money.of(10_500)));
+
+            assertThat(view.surplus().amount()).isEqualTo("2070.00");
+            assertThat(view.today().income()).isEqualTo("6000.00");
+            assertThat(view.today().spent()).isEqualTo("4500.00");
+            assertThat(view.today().taxSetAside()).isNull();
+            assertThat(view.today().leftAsEntered()).isEqualTo("1500.00");
+            assertThat(view.today().leftAsEnteredExplanation()).contains("before any change we suggest");
+            assertThat(view.today().planResult()).isNotBlank();
+            assertThat(view.today().runway()).as("only someone spending more than they earn needs one").isNull();
+        }
+
+        /** Money already put by is part of what is left, and said so beneath it - not taken off it. */
+        @Test
+        void whatIsAlreadySavedIsNamedAsPartOfWhatIsLeft() {
+            PlanView view = viewOf(measuredScenario(Money.ZERO, Money.of(10_500)));
+
+            assertThat(view.today().alreadySaving()).isEqualTo("400.00");
+            assertThat(view.today().alreadySavingNote()).isEqualTo("Of which you already move $400.00 into savings.");
+        }
+
+        /** The card claims to be from what the user entered, so it says how much of it is our estimate. */
+        @Test
+        void itSaysHowManyOfItsFiguresAreOurEstimate() {
+            PlanningInputs inputs = measuredScenario(Money.ZERO, Money.of(10_500));
+            Map<SpendCategory, Money> spending = new EnumMap<>(inputs.statedSpending());
+            spending.remove(SpendCategory.GROCERIES);
+
+            PlanView exact = viewOf(inputs);
+            PlanView partly = viewOf(withSpending(inputs, spending, List.of()));
+
+            assertThat(exact.today().estimatedLines()).isZero();
+            assertThat(exact.today().estimatedNote()).isNull();
+            assertThat(partly.today().estimatedLines()).isEqualTo(1);
+            assertThat(partly.today().estimatedNote())
+                    .startsWith("One of these figures is our estimate for San Francisco");
+        }
+
+        /** Tax held back is shown as its own line, and is not also counted as spending. */
+        @Test
+        void taxSetAsideIsItsOwnLineAndNotSpending() {
+            PlanningInputs in = measuredScenario(Money.ZERO, Money.of(10_500));
+            PlanningInputs taxed = new PlanningInputs(in.funds(), in.baselines(), in.statedSpending(),
+                    in.measuredMonth(), in.lineItems(), in.alreadySaving(), Optional.of(Money.of(500)),
+                    in.lifestyle(), in.leastForEnjoyingLife(), in.cityLabel(), in.goals(), in.finishFirst(),
+                    in.asOf());
+
+            PlanView view = viewOf(taxed);
+
+            assertThat(view.today().taxSetAside()).isEqualTo("500.00");
+            assertThat(view.today().spent()).isEqualTo("4500.00");
+            assertThat(view.today().leftAsEntered()).isEqualTo("1000.00");
+        }
+
+        /** Spending more than you earn is shown first, and as that - never as a zero. */
+        @Test
+        void spendingMoreThanYouEarnIsSaidPlainly() {
+            PlanningInputs in = measuredScenario(Money.ZERO, Money.of(10_500));
+            Map<SpendCategory, Money> spending = new EnumMap<>(in.statedSpending());
+            spending.put(SpendCategory.RENT, Money.of(4200));
+
+            PlanView view = viewOf(withSpending(in, spending, List.of()));
+
+            assertThat(view.today().leftAsEntered()).isEqualTo("-300.00");
+            assertThat(view.today().leftAsEnteredExplanation())
+                    .startsWith("You spend $300.00 more than you earn each month.");
+            // The balance here is zero, so there is nothing to cover the gap - said, not implied.
+            assertThat(view.today().runway()).isEqualTo("You have nothing put by that would cover it.");
+        }
+
+        /**
+         * How long their savings cover the real shortfall - from the whole balance they gave us, since
+         * this card comes before the plan hands any of it to a goal. $1,200 against $300 a month is four.
+         * The plan's own runway, measured after its changes, would call this user "not running down".
+         */
+        @Test
+        void theRunwayBesideAShortfallIsMeasuredAgainstTheRealGap() {
+            PlanningInputs in = measuredScenario(Money.of(1_200), Money.of(10_500));
+            Map<SpendCategory, Money> spending = new EnumMap<>(in.statedSpending());
+            spending.put(SpendCategory.RENT, Money.of(4200));
+
+            PlanView view = viewOf(withSpending(in, spending, List.of()));
+
+            assertThat(view.today().runway()).isEqualTo("What you have would cover it for about 4 months.");
+            assertThat(view.money().runway().label()).isEqualTo("Your money is not running down");
+        }
+
+        private PlanView viewOf(PlanningInputs inputs) {
+            return PlanViews.from(assembler.assemble(inputs), "snapshot", Instant.EPOCH, "a test");
+        }
+    }
+
+    @Nested
     @DisplayName("earmarking the balance")
     class Earmarks {
 

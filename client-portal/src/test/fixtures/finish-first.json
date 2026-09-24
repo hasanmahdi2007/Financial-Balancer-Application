@@ -1,9 +1,22 @@
 {
   "plan": {
-    "id": "51f71e45-7461-4ca4-99c2-557fec4af658",
-    "takenAt": "2026-09-23T20:54:13.672232600Z",
-    "asOf": "2026-09-23",
+    "id": "869e3113-42de-4847-ae25-c93e9ca1cf00",
+    "takenAt": "2026-09-24T16:20:31.356851600Z",
+    "asOf": "2026-09-24",
     "reason": "You chose Car to finish first",
+    "today": {
+      "income": "1800.00",
+      "taxSetAside": null,
+      "spent": "1860.00",
+      "leftAsEntered": "-60.00",
+      "leftAsEnteredExplanation": "You spend $60.00 more than you earn each month. The changes below show where that gap could close.",
+      "runway": "What you have would cover it for about 16 months.",
+      "alreadySaving": null,
+      "alreadySavingNote": null,
+      "estimatedLines": 5,
+      "estimatedNote": "5 of these figures are our estimate for Beirut, because you have not told us what you spend on them. Tell us and this becomes entirely yours.",
+      "planResult": "Make every change above and you would have this much each month for your goals."
+    },
     "money": {
       "monthlyIncome": "1800.00",
       "balanceInScope": "1000.00",
@@ -17,9 +30,9 @@
     },
     "surplus": {
       "amount": "220.00",
-      "explanation": "What is left each month for your goals, if your spending comes down to the figures below. It is not money you have today.",
+      "explanation": "What would be left each month for your goals once you make the changes above. It is not money you have today.",
       "assumedReduction": "280.00",
-      "assumedReductionExplanation": "The monthly figure above already assumes you make these changes. Following only the suggested cuts, without these, would leave you this much short.",
+      "assumedReductionExplanation": "This figure already counts on the changes above. Making only some of them would leave you short by the rest.",
       "reductions": [
         {
           "label": "Groceries",
@@ -273,7 +286,7 @@
     },
     "goals": [
       {
-        "id": "e1ab7df4-ad36-4c96-bdc9-fae1eb0b1501",
+        "id": "4910029c-2b91-4b67-8d88-33f4d359c34c",
         "name": "Car",
         "priority": {
           "key": "high",
@@ -293,7 +306,7 @@
         }
       },
       {
-        "id": "3b2239c3-551d-4143-babb-9c9dcaee7fe4",
+        "id": "c8e82f0e-27c4-4811-b7ab-837b6105a214",
         "name": "Emergency fund",
         "priority": {
           "key": "critical",

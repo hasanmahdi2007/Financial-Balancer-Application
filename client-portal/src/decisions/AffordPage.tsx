@@ -6,6 +6,7 @@ import { useAction } from '../api/useAction';
 import { useRemote } from '../api/useRemote';
 import { AMOUNT_PROBLEM, formatMoney, isAmount } from '../ui/amount';
 import { Failure, Loading } from '../ui/Feedback';
+import { AnswerPlaceholder } from '../ui/AnswerPlaceholder';
 import { MoneyField } from '../ui/MoneyField';
 
 /**
@@ -87,7 +88,7 @@ function AffordForm({ choices }: { choices: Choices }) {
     ) : null;
 
   return (
-    <>
+    <div className="split">
       <form className="form" onSubmit={submit} noValidate>
         <label className="field">
           <span className="field__label">What is it for?</span>
@@ -145,8 +146,14 @@ function AffordForm({ choices }: { choices: Choices }) {
           </button>
         </div>
       </form>
-      {answer ? <Verdict answer={answer} /> : null}
-    </>
+      {answer ? (
+        <Verdict answer={answer} />
+      ) : (
+        <AnswerPlaceholder icon="bag" title="Your answer shows here">
+          Pick what it is and press Check. If it does not fit, we show you a cheaper option beside it.
+        </AnswerPlaceholder>
+      )}
+    </div>
   );
 }
 

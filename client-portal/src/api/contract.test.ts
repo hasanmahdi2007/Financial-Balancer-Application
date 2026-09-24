@@ -13,6 +13,7 @@ import type {
   Profile,
   Rebalance,
   SavedGoal,
+  Today,
 } from './plan';
 import affordBand from '../test/fixtures/afford-band.json';
 import affordPriced from '../test/fixtures/afford-priced.json';
@@ -25,6 +26,7 @@ import goals from '../test/fixtures/goals.json';
 import lineItem from '../test/fixtures/line-item.json';
 import money from '../test/fixtures/money.json';
 import override from '../test/fixtures/override.json';
+import planBeforeToday from '../test/fixtures/plan-before-today.json';
 import planFixture from '../test/fixtures/plan.json';
 import planHistory from '../test/fixtures/plan-history.json';
 import profile from '../test/fixtures/profile.json';
@@ -32,6 +34,7 @@ import questions from '../test/fixtures/questions-new.json';
 import rebalance from '../test/fixtures/rebalance.json';
 import tightPlan from '../test/fixtures/tight-plan.json';
 import tightHistory from '../test/fixtures/tight-plan-history.json';
+import tightBeforeToday from '../test/fixtures/tight-plan-before-today.json';
 
 /**
  * The fixtures are recorded from a live budget-core, so they are the server's actual answers. Naming
@@ -124,6 +127,29 @@ describe('the recorded fixtures match the types the client reads them at', () =>
     const demoted = entry.changes?.goals.find((g) => g.before.monthlyFunded !== g.after.monthlyFunded);
     expect(demoted).toBeDefined();
     expect(tightHistoryTyped.at(-1)?.changes).toBeNull();
+  });
+});
+
+describe('where the user stands before the plan', () => {
+  it('is on every plan the server makes now, typed field by field', () => {
+    // `today` is optional on `Plan` because old snapshots never have it, which means a type alone
+    // cannot notice the server dropping it. These assignments type the panel itself, and the checks
+    // below are what fail if a current plan arrives without one.
+    const typedToday: Today = planFixture.today;
+    const typedTightToday: Today = tightPlan.today;
+    expect(typedToday.leftAsEntered).toBe('240.00');
+    expect(typedTightToday.leftAsEntered).toBe('-60.00');
+    expect(typedTightToday.runway).toBeTruthy();
+    for (const saved of [goalCar, finishFirst, goalRemoved]) {
+      expect(saved.plan?.today).toBeTruthy();
+    }
+  });
+
+  it('is absent from a plan saved before it existed, which still reads as a plan', () => {
+    const oldPlan: Plan = planBeforeToday;
+    const oldTightPlan: Plan = tightBeforeToday;
+    expect('today' in oldPlan).toBe(false);
+    expect('today' in oldTightPlan).toBe(false);
   });
 });
 
