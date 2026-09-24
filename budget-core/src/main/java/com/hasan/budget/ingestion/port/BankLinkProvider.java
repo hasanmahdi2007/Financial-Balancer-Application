@@ -29,4 +29,12 @@ public interface BankLinkProvider {
      * a webhook cannot be traced back to a user.
      */
     String itemIdFor(String accessToken);
+
+    /**
+     * Tells the provider the connection is finished, so the credential stops working there as well.
+     *
+     * <p>Deleting our copy alone would leave a live credential at the provider that nobody can use
+     * or revoke. Revoking it is what makes disconnecting mean what the user thinks it means.
+     */
+    void revoke(String accessToken);
 }

@@ -1,5 +1,6 @@
 package com.hasan.budget.web;
 
+import com.hasan.budget.ingestion.application.BankUnavailableException;
 import com.hasan.budget.planning.application.NeedsMoreInformationException;
 import com.hasan.budget.planning.application.NotFoundException;
 import com.hasan.budget.web.CurrentUserArgumentResolver.NotSignedInException;
@@ -29,6 +30,13 @@ class ApiProblems {
     @ExceptionHandler(NotSignedInException.class)
     ProblemDetail notSignedIn(NotSignedInException problem) {
         return detail(HttpStatus.UNAUTHORIZED, "not-signed-in", "Sign in", problem.getMessage());
+    }
+
+    /** The bank or our access to it failed. 503: nothing about the request was wrong, and a retry may work. */
+    @ExceptionHandler(BankUnavailableException.class)
+    ProblemDetail bankUnavailable(BankUnavailableException problem) {
+        return detail(
+                HttpStatus.SERVICE_UNAVAILABLE, "bank-unavailable", "We could not reach your bank", problem.getMessage());
     }
 
     @ExceptionHandler(NotFoundException.class)

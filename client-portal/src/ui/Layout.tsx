@@ -10,6 +10,7 @@ const MENU: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/rebalance', label: 'Give me more for something', icon: 'sliders' },
   { to: '/plan/history', label: 'Every plan so far', icon: 'clock' },
   { to: '/money', label: 'Your money', icon: 'wallet' },
+  { to: '/bank', label: 'Connect your bank', icon: 'bank' },
   { to: '/setup/location', label: 'Where you live', icon: 'pin' },
 ];
 

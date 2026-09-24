@@ -63,6 +63,14 @@ services:
       # 6379 inside the network: the 6380 in the mappings above is a host-side choice, made because
       # another stack on this machine already holds 6379 there.
       REDIS_PORT: 6379
+      # Bank connections. Without these the app still starts, but "Connect your bank" answers that the
+      # bank cannot be reached - so a stack that forgets to pass them fails quietly, not loudly. They
+      # come from the repository-root .env, which is gitignored.
+      PLAID_CLIENT_ID: ${PLAID_CLIENT_ID:-}
+      PLAID_SECRET: ${PLAID_SECRET:-}
+      PLAID_ENV: ${PLAID_ENV:-sandbox}
+      PLAID_WEBHOOK_URL: ${PLAID_WEBHOOK_URL:-}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

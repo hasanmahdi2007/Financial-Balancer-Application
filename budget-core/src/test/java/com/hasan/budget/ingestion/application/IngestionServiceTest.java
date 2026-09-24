@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -212,6 +213,132 @@ class IngestionServiceTest {
         }
     }
 
+    @Test
+    @DisplayName("a connection shows as importing until its first sync finishes, then as up to date")
+    void aNewConnectionSaysItIsStillImporting() {
+        ScriptedBank bank = new ScriptedBank(
+                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
+        TestExecutors.Queueing executor = TestExecutors.queueing();
+        IngestionService ingestion = serviceOver(bank, executor);
+
+        ingestion.connect(USER, "public-token");
+        assertThat(ingestion.connectionsFor(USER)).singleElement().satisfies(status -> assertThat(status.hasImported())
+                .isFalse());
+
+        executor.runQueuedWork();
+        assertThat(ingestion.connectionsFor(USER)).singleElement().satisfies(status -> assertThat(status.hasImported())
+                .isTrue());
+    }
+
+    @Test
+    @DisplayName("a provider failure while connecting reaches the user as a sentence, never as the provider's error")
+    void aFailedConnectionExplainsItself() {
+        ScriptedBank bank = new ScriptedBank();
+        bank.refuseExchanging(new IllegalStateException("INVALID_API_KEYS for client 5f3c secret abc123"));
+        IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
+
+        assertThatThrownBy(() -> ingestion.connect(USER, "public-token"))
+                .isInstanceOf(BankUnavailableException.class)
+                .hasMessage("Your bank said yes, but we could not finish connecting it. Try connecting again.")
+                .hasMessageNotContaining("abc123");
+        assertThat(store.forUser(USER)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("refreshing asks every one of this user's banks, and nobody else's, without waiting")
+    void refreshingAsksOnlyThisUsersBanks() {
+        ScriptedBank bank = new ScriptedBank();
+        TestExecutors.Queueing executor = TestExecutors.queueing();
+        IngestionService ingestion = serviceOver(bank, executor);
+        ingestion.connect(USER, "first-bank");
+        ingestion.connect(USER, "second-bank");
+        ingestion.connect("someone-else", "their-bank");
+        executor.runQueuedWork();
+
+        int asked = ingestion.requestSyncFor(USER);
+
+        assertThat(asked).isEqualTo(2);
+        assertThat(executor.pending()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("the scheduled refresh asks for every connection there is")
+    void theScheduleRefreshesEveryone() {
+        ScriptedBank bank = new ScriptedBank();
+        TestExecutors.Queueing executor = TestExecutors.queueing();
+        IngestionService ingestion = serviceOver(bank, executor);
+        ingestion.connect(USER, "first-bank");
+        ingestion.connect("someone-else", "their-bank");
+        executor.runQueuedWork();
+
+        new BankRefreshSchedule(ingestion).refreshEveryConnection();
+
+        assertThat(executor.pending()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("a full refresh queue stops the scheduled run rather than failing it")
+    void aFullQueueDefersTheRest() {
+        ScriptedBank bank = new ScriptedBank();
+        TestExecutors.Queueing setup = TestExecutors.queueing();
+        IngestionService connecting = serviceOver(bank, setup);
+        connecting.connect(USER, "first-bank");
+        connecting.connect(USER, "second-bank");
+
+        IngestionService full = serviceOver(bank, work -> {
+            throw new RejectedExecutionException("queue full");
+        });
+
+        try (LogCapture logs = LogCapture.start()) {
+            full.requestSyncOfEveryConnection();
+            assertThat(logs.everything()).contains("queue is full after 0 of 2");
+        }
+    }
+
+    @Test
+    @DisplayName("disconnecting revokes the credential and leaves nothing of that bank behind")
+    void disconnectingForgetsTheBank() {
+        ScriptedBank bank = new ScriptedBank(
+                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
+        IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
+        long connectionId = ingestion.connect(USER, "public-token").id();
+        assertThat(store.entriesForUser(USER)).isNotEmpty();
+
+        assertThat(ingestion.disconnect(USER, connectionId)).isTrue();
+
+        assertThat(bank.revoked).containsExactly("access-public-token");
+        assertThat(ingestion.connectionsFor(USER)).isEmpty();
+        assertThat(store.entriesForUser(USER)).isEmpty();
+        assertThat(store.cursor(connectionId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("nobody can disconnect a bank that is not theirs")
+    void disconnectingSomeoneElsesBankDoesNothing() {
+        ScriptedBank bank = new ScriptedBank(
+                SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
+        IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
+        long theirs = ingestion.connect(USER, "public-token").id();
+
+        assertThat(ingestion.disconnect("someone-else", theirs)).isFalse();
+
+        assertThat(bank.revoked).isEmpty();
+        assertThat(ingestion.connectionsFor(USER)).hasSize(1);
+        assertThat(store.entriesForUser(USER)).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("a bank is forgotten even when the provider cannot be told")
+    void disconnectingSurvivesAnUnreachableProvider() {
+        ScriptedBank bank = new ScriptedBank();
+        IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
+        long connectionId = ingestion.connect(USER, "public-token").id();
+        bank.refuseRevoking(new IllegalStateException("provider unreachable"));
+
+        assertThat(ingestion.disconnect(USER, connectionId)).isTrue();
+        assertThat(ingestion.connectionsFor(USER)).isEmpty();
+    }
+
     private IngestionService serviceOver(ScriptedBank bank, Executor executor) {
         return new IngestionService(bank, bank, bank, store, store, cipher, executor);
     }
@@ -282,12 +409,39 @@ class IngestionServiceTest {
 
         @Override
         public String itemIdFor(String accessToken) {
-            return ITEM;
+            // One connection per public token, so a test can hold several - and the first is the one
+            // the webhook tests name.
+            return accessToken.equals("access-public-token") ? ITEM : "item-for-" + accessToken;
+        }
+
+        private final List<String> revoked = new ArrayList<>();
+        private RuntimeException revokeFailure;
+        private RuntimeException exchangeFailure;
+
+        /** Makes finishing a connection fail, as it does when the provider rejects our keys. */
+        void refuseExchanging(RuntimeException failure) {
+            this.exchangeFailure = failure;
+        }
+
+        /** Makes revoking fail, as it does when the provider is unreachable. */
+        void refuseRevoking(RuntimeException failure) {
+            this.revokeFailure = failure;
+        }
+
+        @Override
+        public void revoke(String accessToken) {
+            if (revokeFailure != null) {
+                throw revokeFailure;
+            }
+            revoked.add(accessToken);
         }
 
         @Override
         public String exchangePublicToken(String publicToken) {
-            return "access-token";
+            if (exchangeFailure != null) {
+                throw exchangeFailure;
+            }
+            return "access-" + publicToken;
         }
 
         @Override

@@ -1,6 +1,7 @@
 package com.hasan.budget.ingestion.port;
 
 import com.hasan.budget.ingestion.domain.BankConnection;
+import com.hasan.budget.ingestion.domain.ConnectionStatus;
 import com.hasan.budget.ingestion.domain.EncryptedToken;
 import java.util.List;
 import java.util.Optional;
@@ -27,4 +28,20 @@ public interface BankConnections {
     Optional<BankConnection> findByProviderItemId(String providerItemId);
 
     List<BankConnection> forUser(String userId);
+
+    /** What this user may be told about their connections, without any credential in it. */
+    List<ConnectionStatus> statusForUser(String userId);
+
+    /** Every connection there is, for the scheduled refresh that keeps each one current. */
+    List<Long> allIds();
+
+    /**
+     * Forgets a connection and everything imported through it.
+     *
+     * <p>Scoped by user as well as by id, so that a request naming somebody else's connection
+     * removes nothing rather than removing theirs.
+     *
+     * @return false when this user holds no such connection
+     */
+    boolean disconnect(long connectionId, String userId);
 }

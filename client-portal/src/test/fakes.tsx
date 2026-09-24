@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router';
 import { App } from '../App';
 import { AuthFailure, type AuthGateway, type AuthSession, type SignUpOutcome } from '../auth/AuthGateway';
+import type { BankWindow } from '../bank/BankWindow';
 import affordBand from './fixtures/afford-band.json';
 import choices from './fixtures/choices.json';
 import cities_LB from './fixtures/cities-LB.json';
@@ -169,10 +170,10 @@ function WhereAmI() {
   return <span data-testid="path">{location.pathname}</span>;
 }
 
-export function renderApp(path: string, auth = new FakeAuth(), server = new FakeServer()) {
+export function renderApp(path: string, auth = new FakeAuth(), server = new FakeServer(), bankWindow?: BankWindow) {
   const view = render(
     <MemoryRouter initialEntries={[path]}>
-      <App auth={auth} fetchImpl={server.fetch} />
+      <App auth={auth} fetchImpl={server.fetch} bankWindow={bankWindow} />
       <WhereAmI />
     </MemoryRouter>,
   );

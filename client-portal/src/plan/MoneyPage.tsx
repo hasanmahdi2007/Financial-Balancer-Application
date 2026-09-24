@@ -21,6 +21,9 @@ export function MoneyPage() {
   return (
     <section className="card">
       <h1>Your money</h1>
+      <p className="aside">
+        Rather not type these? <Link to="/bank">Connect your bank</Link> and your plan uses what it really shows.
+      </p>
       {money.state === 'loading' ? <Loading what="your figures" /> : null}
       {money.state === 'failed' ? <Failure message={money.message} retry={money.retry} /> : null}
       {money.state === 'ready' ? <MoneyForm existing={money.data} /> : null}

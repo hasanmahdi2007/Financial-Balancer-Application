@@ -2,6 +2,7 @@ package com.hasan.budget.ingestion.support;
 
 import com.hasan.budget.ingestion.domain.AccountSnapshot;
 import com.hasan.budget.ingestion.domain.BankConnection;
+import com.hasan.budget.ingestion.domain.ConnectionStatus;
 import com.hasan.budget.ingestion.domain.EncryptedToken;
 import com.hasan.budget.ingestion.domain.LedgerEntry;
 import com.hasan.budget.ingestion.domain.NormalisedTransaction;
@@ -9,6 +10,7 @@ import com.hasan.budget.ingestion.domain.RecurringStream;
 import com.hasan.budget.ingestion.domain.SyncResult;
 import com.hasan.budget.ingestion.port.BankConnections;
 import com.hasan.budget.ingestion.port.BankLedger;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +31,8 @@ public class InMemoryBankStore implements BankConnections, BankLedger {
 
     private final AtomicLong nextId = new AtomicLong(1);
     private final Map<Long, BankConnection> connections = new LinkedHashMap<>();
+    private final Map<Long, Instant> connectedAt = new LinkedHashMap<>();
+    private final Map<Long, Instant> lastSyncedAt = new LinkedHashMap<>();
     private final Map<Long, String> cursors = new LinkedHashMap<>();
     private final Map<Long, Map<String, NormalisedTransaction>> transactions = new LinkedHashMap<>();
     private final Map<Long, List<RecurringStream>> streams = new LinkedHashMap<>();
@@ -50,6 +54,7 @@ public class InMemoryBankStore implements BankConnections, BankLedger {
         }
         BankConnection created = new BankConnection(nextId.getAndIncrement(), userId, providerItemId, accessToken);
         connections.put(created.id(), created);
+        connectedAt.put(created.id(), Instant.now());
         return created;
     }
 
@@ -73,6 +78,36 @@ public class InMemoryBankStore implements BankConnections, BankLedger {
     }
 
     @Override
+    public synchronized List<ConnectionStatus> statusForUser(String userId) {
+        return forUser(userId).stream()
+                .map(connection -> new ConnectionStatus(
+                        connection.id(), connectedAt.get(connection.id()), lastSyncedAt.get(connection.id())))
+                .toList();
+    }
+
+    @Override
+    public synchronized List<Long> allIds() {
+        return List.copyOf(connections.keySet());
+    }
+
+    /** Takes everything imported through the connection with it, as the database's cascades do. */
+    @Override
+    public synchronized boolean disconnect(long connectionId, String userId) {
+        BankConnection held = connections.get(connectionId);
+        if (held == null || !held.userId().equals(userId)) {
+            return false;
+        }
+        connections.remove(connectionId);
+        connectedAt.remove(connectionId);
+        lastSyncedAt.remove(connectionId);
+        cursors.remove(connectionId);
+        transactions.remove(connectionId);
+        streams.remove(connectionId);
+        accounts.remove(connectionId);
+        return true;
+    }
+
+    @Override
     public synchronized Optional<String> cursor(long connectionId) {
         return Optional.ofNullable(cursors.get(connectionId));
     }
@@ -86,6 +121,7 @@ public class InMemoryBankStore implements BankConnections, BankLedger {
             return false;
         }
         cursors.put(connectionId, pages.get(pages.size() - 1).nextCursor());
+        lastSyncedAt.put(connectionId, Instant.now());
         Map<String, NormalisedTransaction> held =
                 transactions.computeIfAbsent(connectionId, id -> new LinkedHashMap<>());
         for (SyncResult page : pages) {

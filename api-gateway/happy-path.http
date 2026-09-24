@@ -336,3 +336,45 @@ Content-Type: application/json
 ### 22. Removing a goal also recomputes, and the history shows what freeing its money did.
 DELETE {{gateway}}/api/v1/goals/paste-a-goal-id
 Authorization: Bearer {{token}}
+
+### 23. The user's connected banks and what their accounts hold. Before anything is connected,
+# "connected" is false and both lists are empty; "explanation" is the sentence to show beside the
+# connect button.
+# -> {"connected":true,
+#     "connections":[{"id":7,"connectedAt":"2026-09-24T10:00:00Z","lastUpdated":"2026-09-24T10:01:12Z",
+#                     "status":"Up to date"}],
+#     "accounts":[{"name":"Plaid Checking ••0000","kind":"Bank account","balance":"110.00",
+#                  "meaning":"In the account","available":"100.00"},
+#                 {"name":"Plaid Credit Card ••3333","kind":"Credit card","balance":"410.00",
+#                  "meaning":"Owed on the card","available":null}],
+#     "explanation":"We can only read your transactions and balances. ..."}
+# "lastUpdated" is null and "status" says it is still importing until the first import finishes.
+# Every balance travels with its "meaning": on a card or a loan the figure is owed, not held.
+GET {{gateway}}/api/v1/bank
+Authorization: Bearer {{token}}
+
+### 24. Open the bank's own connect window. Pass "linkToken" to Plaid Link in the browser; the user's
+# bank login is typed there and never reaches this service.
+# -> {"linkToken":"link-sandbox-..."}
+# 503 with a readable "detail" when the bank cannot be reached or the service has no bank keys.
+POST {{gateway}}/api/v1/bank/link-token
+Authorization: Bearer {{token}}
+
+### 25. Finish connecting with the public token Plaid Link hands back. 202: the connection is saved and
+# the import runs in the background. Returns the same shape as step 23.
+POST {{gateway}}/api/v1/bank/connections
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "publicToken": "public-sandbox-paste-from-plaid-link" }
+
+### 26. Ask every connected bank for anything new, without waiting for it. Banks are also refreshed on
+# their own every few hours.
+# -> {"banks":1}
+POST {{gateway}}/api/v1/bank/refresh
+Authorization: Bearer {{token}}
+
+### 27. Disconnect a bank: its access is revoked at Plaid and everything imported through it is
+# deleted. 204; 404 for a connection that is not this user's.
+DELETE {{gateway}}/api/v1/bank/connections/paste-a-connection-id
+Authorization: Bearer {{token}}

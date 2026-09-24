@@ -1,8 +1,10 @@
 package com.hasan.budget.ingestion.persistence;
 
 import com.hasan.budget.ingestion.domain.BankConnection;
+import com.hasan.budget.ingestion.domain.ConnectionStatus;
 import com.hasan.budget.ingestion.domain.EncryptedToken;
 import com.hasan.budget.ingestion.port.BankConnections;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -73,6 +75,37 @@ public class JdbcBankConnections implements BankConnections {
                 .param("userId", userId)
                 .query(JdbcBankConnections::readConnection)
                 .list();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ConnectionStatus> statusForUser(String userId) {
+        return jdbc.sql("SELECT id, connected_at, last_synced_at FROM bank_connection WHERE user_id = :userId ORDER BY id")
+                .param("userId", userId)
+                .query((row, n) -> new ConnectionStatus(
+                        row.getLong("id"),
+                        row.getObject("connected_at", OffsetDateTime.class).toInstant(),
+                        Optional.ofNullable(row.getObject("last_synced_at", OffsetDateTime.class))
+                                .map(OffsetDateTime::toInstant)
+                                .orElse(null)))
+                .list();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> allIds() {
+        return jdbc.sql("SELECT id FROM bank_connection ORDER BY id").query(Long.class).list();
+    }
+
+    /** Transactions, streams and balances go with it, by the cascades on every table that names it. */
+    @Override
+    @Transactional
+    public boolean disconnect(long connectionId, String userId) {
+        return jdbc.sql("DELETE FROM bank_connection WHERE id = :id AND user_id = :userId")
+                        .param("id", connectionId)
+                        .param("userId", userId)
+                        .update()
+                > 0;
     }
 
     private static final String SELECT =
