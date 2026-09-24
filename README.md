@@ -280,3 +280,13 @@ cd budget-core
 ```
 
 Secrets (Plaid, BEA, Census keys) belong in `.env`, which is gitignored.
+
+The whole stack, once per machine and then as often as you like:
+
+```powershell
+docker volume create fb-postgres-data   # once: the database lives here, outside Compose's reach
+docker compose up -d --build
+```
+
+The database volume is external, so `docker compose down -v` cannot delete it. Wiping the data is a
+separate, deliberate step: `docker compose down`, then `docker volume rm fb-postgres-data`.

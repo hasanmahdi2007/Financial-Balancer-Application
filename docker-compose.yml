@@ -90,4 +90,15 @@ services:
         condition: service_started
 
 volumes:
+  # External, so Compose never deletes it: `docker compose down -v` removes every volume Compose
+  # created, and this one once took every user's plans and history with it. Create it once per
+  # machine, before the first `up`:
+  #
+  #   docker volume create fb-postgres-data
+  #
+  # Compose refuses to start without it rather than quietly making an empty one, which is the point:
+  # a missing database should be loud. Resetting the data is now a deliberate, separate act:
+  # `docker compose down`, then `docker volume rm fb-postgres-data`, then create it again.
   postgres-data:
+    external: true
+    name: fb-postgres-data

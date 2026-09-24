@@ -505,6 +505,30 @@ class ProfileAndFundsSpecTest {
                     .contains(first.id());
         }
 
+        /**
+         * History is only a promise if the database outlives the containers. A volume Compose owns is
+         * deleted by {@code docker compose down -v}, which is how every plan a user had was once lost
+         * in one command. An external volume is one Compose never deletes, whatever flag it is given.
+         */
+        @Test
+        @SuppressWarnings("unchecked")
+        void theDatabaseOutlivesTheStackBeingTakenDown() throws Exception {
+            Map<String, Object> compose = new Yaml().load(Files.readString(Path.of("..", "docker-compose.yml")));
+            Map<String, Object> postgres = (Map<String, Object>)
+                    ((Map<String, Object>) compose.get("services")).get("postgres");
+            String mounted = ((List<String>) postgres.get("volumes")).stream()
+                    .filter(volume -> volume.endsWith(":/var/lib/postgresql/data"))
+                    .map(volume -> volume.substring(0, volume.indexOf(':')))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("postgres keeps its data in no named volume"));
+
+            Map<String, Object> declared = (Map<String, Object>)
+                    ((Map<String, Object>) compose.get("volumes")).get(mounted);
+            assertThat(declared)
+                    .as("a volume Compose owns is deleted by `down -v`, and every plan with it")
+                    .containsEntry("external", true);
+        }
+
         /** The user can see exactly what changed at the moment a goal was added. */
         @Test
         void theChangeCausedByAddingAGoalIsVisibleAfterTheFact() {
