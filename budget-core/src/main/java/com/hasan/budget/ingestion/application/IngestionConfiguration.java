@@ -8,8 +8,10 @@ import com.hasan.budget.ingestion.port.RecurringStreamProvider;
 import java.util.concurrent.Executor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
@@ -21,6 +23,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * starve anything else in the service.
  */
 @Configuration
+@EnableScheduling
 public class IngestionConfiguration {
 
     @Bean
@@ -53,6 +56,16 @@ public class IngestionConfiguration {
             AccessTokenCipher cipher,
             @Qualifier("bankSyncExecutor") Executor bankSyncExecutor) {
         return new IngestionService(links, banks, streams, connections, ledger, cipher, bankSyncExecutor);
+    }
+
+    /**
+     * On unless switched off, because a connected bank that stops updating is the failure a user
+     * would notice last. Tests switch it off; see {@code src/test/resources/application.properties}.
+     */
+    @Bean
+    @ConditionalOnBooleanProperty(name = "ingestion.sync.scheduled", matchIfMissing = true)
+    BankRefreshSchedule bankRefreshSchedule(IngestionService ingestion) {
+        return new BankRefreshSchedule(ingestion);
     }
 
     @Bean

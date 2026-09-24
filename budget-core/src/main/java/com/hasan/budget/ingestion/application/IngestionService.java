@@ -3,6 +3,7 @@ package com.hasan.budget.ingestion.application;
 import com.hasan.budget.ingestion.domain.AccountSnapshot;
 import com.hasan.budget.ingestion.domain.BankConnection;
 import com.hasan.budget.ingestion.domain.BankWebhook;
+import com.hasan.budget.ingestion.domain.ConnectionStatus;
 import com.hasan.budget.ingestion.domain.Ledger;
 import com.hasan.budget.ingestion.domain.LedgerEntry;
 import com.hasan.budget.ingestion.domain.RecurringCommitment;
@@ -20,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +77,9 @@ public class IngestionService {
 
     /** A token for the provider's consent widget. The user's bank credentials never reach us. */
     public String startLinking(String userId) {
-        return links.createLinkToken(userId);
+        return reachingTheBank(
+                "We could not start connecting to your bank just now. Try again in a few minutes.",
+                () -> links.createLinkToken(userId));
     }
 
     /**
@@ -82,12 +87,87 @@ public class IngestionService {
      * elsewhere.
      */
     public BankConnection connect(String userId, String publicToken) {
-        String accessToken = banks.exchangePublicToken(publicToken);
-        String providerItemId = links.itemIdFor(accessToken);
-        BankConnection connection =
-                connections.connect(userId, providerItemId, cipher.encrypt(accessToken, userId));
+        BankConnection connection = reachingTheBank(
+                "Your bank said yes, but we could not finish connecting it. Try connecting again.",
+                () -> {
+                    String accessToken = banks.exchangePublicToken(publicToken);
+                    String providerItemId = links.itemIdFor(accessToken);
+                    return connections.connect(userId, providerItemId, cipher.encrypt(accessToken, userId));
+                });
         requestSync(connection.id());
         return connection;
+    }
+
+    /** This user's connected banks, as they may be shown to them. */
+    public List<ConnectionStatus> connectionsFor(String userId) {
+        return connections.statusForUser(userId);
+    }
+
+    /** Asks for a fresh import of each of this user's banks, and returns without waiting for any. */
+    public int requestSyncFor(String userId) {
+        List<BankConnection> held = connections.forUser(userId);
+        held.forEach(connection -> requestSync(connection.id()));
+        return held.size();
+    }
+
+    /**
+     * Asks for a fresh import of every connection there is. Run on a schedule.
+     *
+     * <p>If the bank executor's queue is full it stops asking rather than failing: whatever is
+     * queued is already a backlog of syncs, and the next run picks up the rest.
+     */
+    public void requestSyncOfEveryConnection() {
+        List<Long> all = connections.allIds();
+        int asked = 0;
+        for (long connectionId : all) {
+            try {
+                requestSync(connectionId);
+                asked++;
+            } catch (RejectedExecutionException full) {
+                log.warn("Bank refresh queue is full after {} of {} connections; the rest wait for the next run",
+                        asked, all.size());
+                return;
+            }
+        }
+        log.info("Asked for a refresh of {} bank connection(s)", asked);
+    }
+
+    /**
+     * Removes a connection and everything imported through it, and revokes its credential at the
+     * provider.
+     *
+     * <p>Revoking comes first and its failure is not fatal. The user has asked for their bank to be
+     * forgotten, and keeping their data because the provider did not answer would be the wrong way
+     * round: the stored credential is deleted either way, so nothing here can use it again.
+     *
+     * @return false when this user holds no such connection, including when it belongs to someone else
+     */
+    public boolean disconnect(String userId, long connectionId) {
+        Optional<BankConnection> held =
+                connections.find(connectionId).filter(connection -> connection.userId().equals(userId));
+        if (held.isEmpty()) {
+            return false;
+        }
+        try {
+            links.revoke(cipher.decrypt(held.get().accessToken(), userId));
+        } catch (RuntimeException e) {
+            log.warn("Could not revoke connection {} at the provider; deleting it here regardless: {}",
+                    connectionId, e.getMessage());
+        }
+        return connections.disconnect(connectionId, userId);
+    }
+
+    /**
+     * Runs a call that needs the provider or our credentials, turning any failure into one a person
+     * can be shown. The cause is logged here, once, with the detail that makes it fixable.
+     */
+    private <T> T reachingTheBank(String forAPerson, Supplier<T> call) {
+        try {
+            return call.get();
+        } catch (RuntimeException e) {
+            log.error("Bank call failed: {}", e.getMessage(), e);
+            throw new BankUnavailableException(forAPerson, e);
+        }
     }
 
     /** Asks for a sync and returns. Never waits for the bank. */

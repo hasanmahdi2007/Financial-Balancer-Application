@@ -89,6 +89,8 @@ final class PlaidWire {
 
     record ItemResponse(Item item) {}
 
+    record ItemRemoveResponse(String requestId) {}
+
     record Item(String itemId, String institutionId, String webhook) {}
 
     record SyncResponse(

@@ -22,3 +22,8 @@ ingestion:
     # Deliberately small: bank imports are slow, entirely I/O, and rate-limited per item by the
     # provider, so a burst of notifications must not be able to starve the rest of the service.
     threads: ${INGESTION_SYNC_THREADS:2}
+    # Every connected bank is re-imported this often, so it stays current with nobody asking. Plaid
+    # itself refreshes a few times a day, so asking more often than this mostly finds nothing new.
+    scheduled: ${INGESTION_REFRESH_SCHEDULED:true}
+    first-refresh-after: PT2M
+    refresh-every: ${INGESTION_REFRESH_EVERY:PT4H}

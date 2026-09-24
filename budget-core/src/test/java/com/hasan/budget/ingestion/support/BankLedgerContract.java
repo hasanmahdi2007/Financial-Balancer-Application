@@ -344,6 +344,57 @@ public abstract class BankLedgerContract {
                 .contains("t-shared");
     }
 
+    @Test
+    @DisplayName("a connection is reported as never synced until a sync is applied")
+    void statusFollowsTheFirstSync() {
+        String userId = someUserId();
+        BankConnection connection = connect(userId, "item-status");
+
+        assertThat(connections().statusForUser(userId)).singleElement().satisfies(status -> {
+            assertThat(status.id()).isEqualTo(connection.id());
+            assertThat(status.connectedAt()).isNotNull();
+            assertThat(status.hasImported()).isFalse();
+        });
+
+        ledger().apply(connection.id(), null, List.of(page("cursor-1", purchase("t-1", "12.34"))));
+
+        assertThat(connections().statusForUser(userId))
+                .singleElement()
+                .satisfies(status -> assertThat(status.hasImported()).isTrue());
+    }
+
+    @Test
+    @DisplayName("disconnecting removes the connection and everything imported through it")
+    void disconnectingLeavesNothingOfThatBank() {
+        String userId = someUserId();
+        BankConnection gone = connect(userId, "item-disconnect-gone");
+        BankConnection kept = connect(userId, "item-disconnect-kept");
+        ledger().apply(gone.id(), null, List.of(page("cursor-1", purchase("t-gone", "12.34"))));
+        ledger().apply(kept.id(), null, List.of(page("cursor-1", purchase("t-kept", "50.00"))));
+        ledger().replaceStreams(gone.id(), List.of(stream("stream-gone", "Gym")));
+
+        assertThat(connections().disconnect(gone.id(), userId)).isTrue();
+
+        assertThat(connections().find(gone.id())).isEmpty();
+        assertThat(connections().allIds()).doesNotContain(gone.id()).contains(kept.id());
+        assertThat(ledger().cursor(gone.id())).isEmpty();
+        assertThat(ledger().entriesForUser(userId))
+                .extracting(entry -> entry.transaction().externalId())
+                .containsExactly("t-kept");
+        assertThat(ledger().streamsForUser(userId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("a connection cannot be disconnected by anybody but its owner")
+    void disconnectingIsScopedToTheOwner() {
+        String owner = someUserId();
+        BankConnection connection = connect(owner, "item-disconnect-owned");
+
+        assertThat(connections().disconnect(connection.id(), someUserId())).isFalse();
+
+        assertThat(connections().find(connection.id())).isPresent();
+    }
+
     protected BankConnection connect(String userId, String providerItemId) {
         return connections().connect(userId, providerItemId, new EncryptedToken("v1:ciphertext"));
     }

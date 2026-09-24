@@ -76,6 +76,14 @@ public class PlaidBankDataProvider implements BankDataProvider, BankLinkProvider
     }
 
     @Override
+    public void revoke(String accessToken) {
+        client.post(
+                "/item/remove",
+                new PlaidWire.AccessTokenRequest(PlaidWire.secret(accessToken)),
+                PlaidWire.ItemRemoveResponse.class);
+    }
+
+    @Override
     public SyncResult sync(String accessToken, String cursorOrNull) {
         PlaidWire.SyncResponse response = client.post(
                 "/transactions/sync",
