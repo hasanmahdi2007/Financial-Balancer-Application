@@ -212,9 +212,12 @@ describe('where you stand, then how to improve it', () => {
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(headings.slice(0, 2)).toEqual(['Where you stand today', 'How to improve it']);
 
-    expect(within(today).getByText('Arrives each month').nextElementSibling).toHaveTextContent('$2,000.00');
-    expect(within(today).getByText('What you spend').nextElementSibling).toHaveTextContent('$1,760.00');
-    expect(within(today).getByText('Left each month').nextElementSibling).toHaveTextContent('$240.00');
+    // The big figure, the one read first, is what is really left - not the plan's.
+    expect(today.querySelector('.figure')).toHaveTextContent('$240.00');
+    const addsUp = within(today).getByRole('group', { name: 'How this adds up' });
+    expect(addsUp).toHaveTextContent('Arrives each month: $2,000.00');
+    expect(addsUp).toHaveTextContent('What you spend: $1,760.00');
+    expect(addsUp).toHaveTextContent('Left each month: $240.00');
     expect(today).toHaveTextContent(planFixture.today!.leftAsEnteredExplanation);
     // The card claims to be from what the user entered, so it says how much of it is our estimate.
     expect(today).toHaveTextContent(planFixture.today!.estimatedNote!);
@@ -254,7 +257,7 @@ describe('where you stand, then how to improve it', () => {
     renderApp('/plan', signedIn(), stretched());
     const today = await section('Where you stand today');
 
-    expect(within(today).getByText('Left each month').nextElementSibling).toHaveTextContent('-$60.00');
+    expect(today.querySelector('.figure')).toHaveTextContent('-$60.00');
     expect(today).toHaveTextContent('You spend $60.00 more than you earn each month.');
     expect(today).toHaveTextContent('What you have would cover it for about 16 months.');
     // The plan's own runway is measured after its changes and would say the opposite; it is not here.
