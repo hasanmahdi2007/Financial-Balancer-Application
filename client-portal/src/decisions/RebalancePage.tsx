@@ -8,6 +8,7 @@ import { WaysOut } from '../plan/PlanView';
 import { orNothing } from '../setup/saveLocation';
 import { AMOUNT_PROBLEM, formatMoney, isAmount } from '../ui/amount';
 import { Failure, Loading } from '../ui/Feedback';
+import { AnswerPlaceholder } from '../ui/AnswerPlaceholder';
 import { MoneyField } from '../ui/MoneyField';
 
 /**
@@ -83,7 +84,7 @@ function RebalanceForm({ lines }: { lines: PlanLine[] }) {
   }
 
   return (
-    <>
+    <div className="split">
       <form className="form" onSubmit={submit} noValidate>
         <label className="field">
           <span className="field__label">What do you want more for?</span>
@@ -133,8 +134,14 @@ function RebalanceForm({ lines }: { lines: PlanLine[] }) {
           </button>
         </div>
       </form>
-      {answer ? <RebalanceAnswer answer={answer} /> : null}
-    </>
+      {answer ? (
+        <RebalanceAnswer answer={answer} />
+      ) : (
+        <AnswerPlaceholder icon="sliders" title="Where it could come from">
+          Choose what you want more for and how much. Nothing changes until you decide.
+        </AnswerPlaceholder>
+      )}
+    </div>
   );
 }
 

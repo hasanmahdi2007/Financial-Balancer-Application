@@ -1,6 +1,6 @@
 /*
- * One light theme: white surfaces, a calm blue accent, and warm amber only where something needs
- * attention. Every colour is a token here, so a different palette (white and orange, white with green
+ * One light theme in three colours: blue for anything you can act on, orange for what deserves a
+ * second look, green for what is on track - on white, with a deep navy band for the headline figure. Every colour is a token here, so a different palette (white and orange, white with green
  * and brown) is a change to this block and nothing else.
  *
  * There is deliberately no dark variant. The app used to follow the operating system into a
@@ -21,6 +21,16 @@
   --accent-hover: #1d4ed8;
   --accent-soft: #eaf1ff;
   --accent-text: #ffffff;
+
+  --orange: #f97316;
+  --orange-hover: #ea580c;
+  --orange-soft: #fff4ea;
+  --orange-text: #c2410c;
+  --green: #10b981;
+  --green-soft: #e8f8f1;
+  --green-text: #047857;
+  --navy: #0b1f4d;
+  --navy-2: #1e3a8a;
 
   --info-bg: #eef5ff;
   --info-border: #c9dcfb;
@@ -100,7 +110,8 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.8rem max(16px, calc((100vw - 60rem) / 2));
+  /* Lined up with the centred page below, however wide the window. */
+  padding: 0.8rem max(24px, calc((100vw - 82rem) / 2 + 24px));
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--border);
@@ -144,10 +155,175 @@ a:hover {
   white-space: nowrap;
 }
 
-.shell__main {
-  max-width: 46rem;
+.shell__body {
+  display: grid;
+  gap: 2rem;
+  max-width: 82rem;
   margin: 0 auto;
-  padding: 2rem 16px 4rem;
+  padding: 2rem 24px 4rem;
+}
+
+.shell--app .shell__body {
+  grid-template-columns: 15.5rem minmax(0, 1fr);
+}
+
+.shell--welcome .shell__body {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 28rem);
+  align-items: start;
+  max-width: 72rem;
+  padding-top: 3.5rem;
+}
+
+.shell__main {
+  min-width: 0;
+}
+
+/* The menu. Sticky beside the page on a desktop; a scrolling row above it on a phone. */
+.sidebar {
+  position: sticky;
+  top: 5.5rem;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 0.6rem;
+}
+
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-small);
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.93rem;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.sidebar__link:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.sidebar__link.active {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  font-weight: 600;
+}
+
+.sidebar__link .icon {
+  flex: none;
+}
+
+/* The welcome panel beside sign-in and sign-up. */
+.welcome {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 2.75rem;
+  color: #fff;
+  background:
+    radial-gradient(400px 260px at 100% 0%, rgba(249, 115, 22, 0.45), transparent 70%),
+    radial-gradient(420px 300px at 0% 100%, rgba(16, 185, 129, 0.35), transparent 70%),
+    linear-gradient(145deg, var(--navy), var(--navy-2) 60%, var(--accent));
+  box-shadow: var(--shadow-lift);
+}
+
+.welcome__eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fdba74;
+}
+
+.welcome__title {
+  font-size: 2.1rem;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  margin: 0.8rem 0 2rem;
+  max-width: 28rem;
+}
+
+.welcome__points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  max-width: 30rem;
+}
+
+.welcome__points li {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.welcome__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  color: #fff;
+}
+
+.welcome__icon--blue {
+  background: rgba(96, 165, 250, 0.35);
+}
+
+.welcome__icon--orange {
+  background: rgba(249, 115, 22, 0.55);
+}
+
+.welcome__icon--green {
+  background: rgba(16, 185, 129, 0.5);
+}
+
+.shell--welcome .card--narrow {
+  margin: 0;
+  max-width: none;
+}
+
+@media (max-width: 60rem) {
+  .shell--app .shell__body,
+  .shell--welcome .shell__body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+    padding: 1.25rem 16px 3rem;
+  }
+
+  .sidebar {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0.4rem;
+  }
+
+  .sidebar__link {
+    white-space: nowrap;
+  }
+
+  .welcome {
+    padding: 1.75rem;
+  }
+
+  .welcome__title {
+    font-size: 1.5rem;
+  }
 }
 
 /* --- Surfaces ----------------------------------------------------------------------------------- */
@@ -229,6 +405,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 1.35rem;
+  max-width: 40rem;
 }
 
 .field {
@@ -345,6 +522,17 @@ input[type='radio'] {
 .button:disabled {
   opacity: 0.55;
   cursor: progress;
+}
+
+.button--orange {
+  background: var(--orange);
+  border-color: var(--orange);
+  box-shadow: 0 1px 2px rgba(249, 115, 22, 0.3);
+}
+
+.button--orange:hover {
+  background: var(--orange-hover);
+  border-color: var(--orange-hover);
 }
 
 .button--secondary {
@@ -486,9 +674,17 @@ a:focus-visible {
 }
 
 .question-group {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
   gap: 0.9rem;
+}
+
+.question-group > .banner {
+  grid-column: 1 / -1;
+}
+
+.form:has(.question-group) {
+  max-width: none;
 }
 
 .options {
@@ -578,6 +774,229 @@ a:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-head h1 {
+  margin: 0;
+}
+
+/* The headline figure: a navy band with the amount large, and what it assumes beside it. */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1.75rem;
+  align-items: start;
+  padding: 2rem 2.25rem;
+  border-radius: 20px;
+  color: #fff;
+  background:
+    radial-gradient(480px 260px at 100% 0%, rgba(249, 115, 22, 0.35), transparent 70%),
+    radial-gradient(420px 260px at 0% 120%, rgba(16, 185, 129, 0.3), transparent 70%),
+    linear-gradient(140deg, var(--navy), var(--navy-2) 65%, var(--accent));
+  box-shadow: var(--shadow-lift);
+}
+
+.hero h2 {
+  margin: 0.6rem 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero .plan__made {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.hero .figure {
+  color: #fff;
+  font-size: 3.4rem;
+  margin: 0.2rem 0 0.4rem;
+}
+
+.hero__explanation {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero .assumes {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.hero .assumes strong {
+  color: #fed7aa;
+}
+
+.hero .assumes .aside {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 56rem) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 1.5rem;
+  }
+
+  .hero .figure {
+    font-size: 2.6rem;
+  }
+}
+
+/* Your money: four coloured tiles, then the smaller figures under them. */
+.money {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.money__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.money__head h2 {
+  margin: 0;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 1rem 1.1rem;
+}
+
+.tile dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.tile dd {
+  margin: 0.3rem 0 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile--blue {
+  border-top-color: var(--accent);
+}
+
+.tile--blue dd {
+  color: var(--accent-hover);
+}
+
+.tile--green {
+  border-top-color: var(--green);
+}
+
+.tile--green dd {
+  color: var(--green-text);
+}
+
+.tile--orange {
+  border-top-color: var(--orange);
+}
+
+.tile--orange dd {
+  color: var(--orange-text);
+}
+
+.money__more {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.9rem 1.1rem;
+}
+
+.money > .aside {
+  margin: 0;
+}
+
+.plan__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.plan__side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.plan__grid:has(.plan__side:empty) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.plan__side:empty {
+  display: none;
+}
+
+@media (max-width: 64rem) {
+  .plan__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.progress__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.progress__label span:last-child {
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress__track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e7edf6;
+  overflow: hidden;
+}
+
+.progress__bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), #60a5fa);
+}
+
+.progress__bar--full {
+  background: linear-gradient(90deg, var(--green), #34d399);
+}
+
 .assumes {
   background: var(--warning-bg);
   border: 1px solid var(--warning-border);
@@ -622,7 +1041,8 @@ a:focus-visible {
 }
 
 .goal {
-  background: var(--surface-soft);
+  border-left: 4px solid var(--accent) !important;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.1rem 1.2rem;
@@ -641,8 +1061,26 @@ a:focus-visible {
   font-size: 0.9rem;
 }
 
-.goal__status strong {
-  color: var(--accent-hover);
+.goal__status {
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.92rem;
+}
+
+.goal__status--ok {
+  background: var(--green-soft);
+}
+
+.goal__status--ok strong {
+  color: var(--green-text);
+}
+
+.goal__status--short {
+  background: var(--orange-soft);
+}
+
+.goal__status--short strong {
+  color: var(--orange-text);
 }
 
 .lines {
@@ -750,7 +1188,7 @@ a:focus-visible {
 }
 
 .verdict {
-  border-top: 4px solid var(--accent);
+  border-top: 4px solid var(--orange);
 }
 
 .verdict h2 {
@@ -775,4 +1213,53 @@ a:focus-visible {
 .hints ul {
   margin: 0.5rem 0 0;
   padding-left: 1.25rem;
+}
+
+/* The two decision pages: the question on the left, the answer on the right. */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.75rem;
+  align-items: start;
+}
+
+.split > .form {
+  max-width: none;
+}
+
+@media (max-width: 64rem) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  padding: 3rem 1.5rem;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.placeholder p {
+  margin: 0;
+  max-width: 22rem;
+}
+
+.placeholder__icon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 16px;
+  color: var(--orange);
+  background: var(--orange-soft);
+}
+
+.placeholder__title {
+  font-weight: 650;
 }

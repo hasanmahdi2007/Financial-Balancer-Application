@@ -882,6 +882,120 @@ class SurplusSpecTest {
         }
     }
 
+    @Nested
+    @DisplayName("what is really left from the figures as entered")
+    class LeftAsEntered {
+
+        /**
+         * The figure a person should see first. On the headline scenario the plan's figure is $2,070,
+         * but that assumes groceries come down to the local figure and going out comes down to the
+         * floor. Nothing has been assumed in this one: $6,000 less $4,500 of real spending, gym included.
+         */
+        @Test
+        void isIncomeLessEverythingSpentExactlyAsEntered() {
+            SurplusBreakdown breakdown = compute(headlineScenario());
+
+            assertThat(breakdown.surplus()).isEqualTo(Money.of(2070));
+            assertThat(breakdown.leftAsEntered()).isEqualTo(Money.of(1500));
+            assertThat(breakdown.leftAsEntered())
+                    .as("the sum of every actual figure, tax and items on top included")
+                    .isEqualTo(breakdown.income().minus(Money.of(4500)));
+        }
+
+        /**
+         * The case a refactor will break. Going out is $150 against a $300 floor and nothing is above a
+         * local figure, so the assumed reduction is floored at zero - and {@code surplus -
+         * assumedReduction} would then report $2,200 when the user really has $2,350 left. The
+         * shortfall is exactly the $150 by which going out sits below the floor.
+         */
+        @Test
+        void isRightWhenGoingOutSpendingIsBelowTheFloorWhereTheSubtractionIsWrong() {
+            SurplusBreakdown breakdown = compute(input(
+                    "4000",
+                    List.of(
+                            spent(SpendCategory.RENT, "1200"),
+                            spent(SpendCategory.GROCERIES, "300", "450"),
+                            spent(SpendCategory.ENTERTAINMENT, "150"))));
+
+            assertThat(breakdown.assumedReduction()).isEqualTo(Money.ZERO);
+            assertThat(breakdown.leftAsEntered()).isEqualTo(Money.of(2350));
+            assertThat(breakdown.surplus().minus(breakdown.assumedReduction()))
+                    .as("the derivation this figure must never be replaced by")
+                    .isEqualTo(Money.of(2200))
+                    .isNotEqualTo(breakdown.leftAsEntered());
+        }
+
+        /** A name put to part of a category is already inside that category's figure. */
+        @Test
+        void doesNotCountANamedPartOfACategoryTwice() {
+            List<CategoryObservation> spending = List.of(
+                    spent(SpendCategory.RENT, "1200"), spent(SpendCategory.GROCERIES, "700", "450"));
+
+            SurplusBreakdown plain = compute(input("4000", spending, List.of(), SAVES_NOTHING_YET));
+            SurplusBreakdown named = compute(input(
+                    "4000",
+                    spending,
+                    List.of(UserLineItem.alreadyIn("li-shop", "Corner shop", SpendCategory.GROCERIES, Money.of(400))),
+                    SAVES_NOTHING_YET));
+            SurplusBreakdown onTop = compute(input(
+                    "4000",
+                    spending,
+                    List.of(UserLineItem.onTopOf("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(60))),
+                    SAVES_NOTHING_YET));
+
+            assertThat(plain.leftAsEntered()).isEqualTo(Money.of(2100));
+            assertThat(named.leftAsEntered()).isEqualTo(Money.of(2100));
+            assertThat(onTop.leftAsEntered())
+                    .as("whereas an item on top of a category is money spent in its own right")
+                    .isEqualTo(Money.of(2040));
+        }
+
+        /** Spending more than you earn is the first thing to be told, so it is never clamped to zero. */
+        @Test
+        void isNegativeWhenSpendingExceedsIncome() {
+            SurplusBreakdown breakdown = compute(input(
+                    "2000",
+                    List.of(spent(SpendCategory.RENT, "1800"), spent(SpendCategory.GROCERIES, "500", "450"))));
+
+            assertThat(breakdown.leftAsEntered()).isEqualTo(Money.of(-300));
+        }
+
+        /** Money already put into savings is money not spent: part of what is left, not taken from it. */
+        @Test
+        void doesNotTakeWhatIsAlreadySavedOffIt() {
+            List<CategoryObservation> spending = List.of(spent(SpendCategory.RENT, "1200"));
+
+            SurplusBreakdown saving = compute(input("4000", spending, List.of(), Money.of(500)));
+            SurplusBreakdown notSaving = compute(input("4000", spending, List.of(), SAVES_NOTHING_YET));
+
+            assertThat(saving.leftAsEntered()).isEqualTo(notSaving.leftAsEntered()).isEqualTo(Money.of(2800));
+        }
+
+        /** It is reported beside the arithmetic, and does not disturb conservation. */
+        @Test
+        void leavesConservationAlone() {
+            SurplusBreakdown breakdown = compute(headlineScenario());
+
+            assertThatConservationHolds(breakdown);
+        }
+
+        private SurplusInput headlineScenario() {
+            return input(
+                    "6000",
+                    List.of(
+                            spent(SpendCategory.RENT, "2400", "2100"),
+                            spent(SpendCategory.HEALTHCARE, "320"),
+                            spent(SpendCategory.SUBSCRIPTIONS, "60"),
+                            spent(SpendCategory.UTILITIES, "180", "200"),
+                            spent(SpendCategory.GROCERIES, "700", "450"),
+                            spent(SpendCategory.TRANSPORT_FUEL, "160", "220"),
+                            spent(SpendCategory.DINING_OUT, "380"),
+                            spent(SpendCategory.ENTERTAINMENT, "240")),
+                    List.of(UserLineItem.onTopOf("li-gym", "Gym membership", SpendCategory.SUBSCRIPTIONS, Money.of(60))),
+                    Money.of(400));
+        }
+    }
+
     /**
      * The headline loop, end to end and with zero I/O: income and observed spending plus baselines
      * produce a surplus, the surplus plus goals produce a plan, and a goal that does not fit
