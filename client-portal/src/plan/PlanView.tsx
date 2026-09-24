@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import type { Basis, Cuts, Plan, PlanGoal, Surplus, WayOut } from '../api/plan';
+import type { Basis, Cuts, Plan, PlanGoal, Surplus, Today, WayOut } from '../api/plan';
 import { formatCalendarDate, GatheredOn, ProvenanceBadge, StalenessBanner } from '../provenance/Provenance';
 import { formatMoney } from '../ui/amount';
 
@@ -12,6 +12,11 @@ import { formatMoney } from '../ui/amount';
  * only which figures must never be shown apart - the monthly amount without what it already assumes,
  * or suggested cuts without the changes they come on top of - because shown alone, each one says
  * something the plan does not.
+ *
+ * A plan opens on where the user stands from their own figures, then the changes that improve it, and
+ * only then the plan's own monthly figure - the result of those changes, never the first number they
+ * read. A plan made before that panel existed is shown exactly as it was then: it is a record of what
+ * the user was told, so nothing here works the missing figure out from its lines.
  */
 export function PlanView({ plan, goalActions }: { plan: Plan; goalActions?: (goal: PlanGoal) => ReactNode }) {
   return (
@@ -19,13 +24,108 @@ export function PlanView({ plan, goalActions }: { plan: Plan; goalActions?: (goa
       <p className="plan__made">
         Made <time dateTime={plan.takenAt}>{formatCalendarDate(plan.takenAt.slice(0, 10))}</time> · {plan.reason}
       </p>
-      <SurplusCard surplus={plan.surplus} />
+      {plan.today ? (
+        <>
+          <TodayCard today={plan.today} />
+          <ImproveSection plan={plan} today={plan.today} />
+        </>
+      ) : (
+        <SurplusCard surplus={plan.surplus} />
+      )}
       <GoalsSection goals={plan.goals} actions={goalActions} />
-      <CutsSection cuts={plan.cuts} />
+      {plan.today ? null : <CutsSection cuts={plan.cuts} />}
       <LeftOver plan={plan} />
-      <SpendingSection plan={plan} />
+      {/* Hints move up into the changes on a current plan, so they are said once, not twice. */}
+      <SpendingSection plan={plan} showHints={!plan.today} />
       <MoneySection plan={plan} editable={goalActions !== undefined} />
     </div>
+  );
+}
+
+/**
+ * What is really left each month from the figures exactly as entered. Nothing in it is assumed, which
+ * is the whole claim of the card - so it says how many of its figures are our estimate, when any are.
+ */
+function TodayCard({ today }: { today: Today }) {
+  return (
+    <section className="panel" aria-labelledby="today-heading">
+      <h2 id="today-heading">Where you stand today</h2>
+      <dl className="figures">
+        <dt>Arrives each month</dt>
+        <dd>{formatMoney(today.income)}</dd>
+        {today.taxSetAside !== null ? (
+          <>
+            <dt>Tax set aside</dt>
+            <dd>{formatMoney(today.taxSetAside)}</dd>
+          </>
+        ) : null}
+        <dt>What you spend</dt>
+        <dd>{formatMoney(today.spent)}</dd>
+        <dt>Left each month</dt>
+        <dd className="figure">{formatMoney(today.leftAsEntered)}</dd>
+      </dl>
+      <p>{today.leftAsEnteredExplanation}</p>
+      {/* Someone spending more than they earn needs to know how long their savings cover it. */}
+      {today.runway ? <p>{today.runway}</p> : null}
+      {today.alreadySavingNote ? <p>{today.alreadySavingNote}</p> : null}
+      {today.estimatedNote ? <p className="aside">{today.estimatedNote}</p> : null}
+    </section>
+  );
+}
+
+/**
+ * Each change the plan counts on, as what it adds per month, closing with the plan's own figure as
+ * their result. That order is also what keeps the figure honest: it can only be read after the
+ * changes it depends on.
+ */
+function ImproveSection({ plan, today }: { plan: Plan; today: Today }) {
+  const { surplus, cuts, hints } = plan;
+  const anything = surplus.reductions.length + cuts.suggested.length + hints.length > 0;
+  return (
+    <section className="panel" aria-labelledby="improve-heading">
+      <h2 id="improve-heading">How to improve it</h2>
+      {anything ? null : <p>There is nothing we would change.</p>}
+      {surplus.reductions.length + cuts.suggested.length > 0 ? (
+        <ul className="tips" aria-label="Changes and what each adds">
+          {surplus.reductions.map((r) => (
+            <li key={`reduce-${r.label}`}>
+              Bring {r.label} from {formatMoney(r.from)} to {formatMoney(r.to)}:{' '}
+              <strong>+{formatMoney(r.by)} a month</strong>
+            </li>
+          ))}
+          {cuts.suggested.map((cut) => (
+            <li key={`cut-${cut.label}`}>
+              Spend less on {cut.label}: <strong>+{formatMoney(cut.by)} a month</strong>
+              <span className="aside"> ({cut.howWilling.label})</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {/* Words only. A hint is never a figure and never enters a total: it is advice about where a
+          line could move, not money the plan has found. */}
+      {hints.map((h) => (
+        <p key={h.id} className="hint">
+          <strong>{h.label}:</strong> {h.hint}
+        </p>
+      ))}
+      {cuts.stillShort !== '0.00' ? (
+        <div className="banner banner--warning" role="note">
+          <strong>Even with all of that, you are still {formatMoney(cuts.stillShort)} a month short.</strong>
+          {cuts.options.length > 0 ? <WaysOut options={cuts.options} /> : null}
+        </div>
+      ) : null}
+      <div role="group" aria-label="The result">
+        <h3>Each month for your goals</h3>
+        <p>{today.planResult}</p>
+        <p className="figure">{formatMoney(surplus.amount)}</p>
+        <p>{surplus.explanation}</p>
+        <dl className="figures">
+          <dt>Everything you would change</dt>
+          <dd>{formatMoney(cuts.totalChange)}</dd>
+        </dl>
+        <p className="aside">{surplus.assumedReductionExplanation}</p>
+      </div>
+    </section>
   );
 }
 
@@ -177,9 +277,9 @@ function basisKey(basis: Basis): string {
   return `${basis.label}|${basis.explanation}|${basis.gathered}`;
 }
 
-function SpendingSection({ plan }: { plan: Plan }) {
+function SpendingSection({ plan, showHints }: { plan: Plan; showHints: boolean }) {
   const lines = plan.surplus.lines;
-  const hints = new Map(plan.hints.map((h) => [h.id, h.hint]));
+  const hints = new Map<string, string>(showHints ? plan.hints.map((h) => [h.id, h.hint]) : []);
   // Each source is explained once, below the table, rather than on all eleven rows it applies to.
   const sources = [...new Map(lines.flatMap((l) => (l.basis ? [[basisKey(l.basis), l.basis] as const] : []))).values()];
   // One warning per distinct tier, however many lines share it.

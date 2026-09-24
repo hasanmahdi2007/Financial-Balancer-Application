@@ -65,6 +65,12 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                 .andExpect(status().isCreated())
                 // The two figures that must always travel together: a monthly surplus is not money in
                 // hand, and cuts shown without the reduction already assumed read as the whole job.
+                // What the user sees first: their position from the figures exactly as entered, with
+                // the plan's own figure introduced only after the changes that produce it.
+                .andExpect(jsonPath("$.today.leftAsEntered").exists())
+                .andExpect(jsonPath("$.today.leftAsEnteredExplanation").exists())
+                .andExpect(jsonPath("$.today.planResult").exists())
+                .andExpect(jsonPath("$.today.alreadySavingNote").value("Of which you already move $150.00 into savings."))
                 .andExpect(jsonPath("$.surplus.amount").exists())
                 .andExpect(jsonPath("$.surplus.assumedReduction").exists())
                 .andExpect(jsonPath("$.cuts.alreadyAssumed").exists())
@@ -336,6 +342,41 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                 .andExpect(content().string(not(containsString("DISPOSABLE"))))
                 .andExpect(content().string(not(containsString("COUNT_MORE_OF_YOUR_BALANCE"))))
                 .andExpect(content().string(not(containsString("GIVE_A_GOAL_MORE_TIME"))));
+    }
+
+    /**
+     * Every plan made before "where you stand today" existed is stored without it, and must still be
+     * served exactly as it was stored. The body here is a real response recorded from budget-core before
+     * the change, inserted untouched - the one thing this must not do is work the figure out afresh from
+     * that snapshot's lines, because a snapshot is what the user was told and they were not told this.
+     */
+    @Test
+    @DisplayName("a plan saved before the today panel existed is still served, without one")
+    void aPlanSavedBeforeTheTodayPanelIsServedWithoutOne() throws Exception {
+        String body;
+        try (var in = getClass().getResourceAsStream("/fixtures/snapshots/plan-before-today.json")) {
+            body = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        assertThat(body).as("the recorded body really predates the field").doesNotContain("\"today\"");
+        String snapshotId = "old-" + UUID.randomUUID();
+        jdbc.sql("""
+                        INSERT INTO plan_snapshot (id, user_id, taken_at, reason, body)
+                        VALUES (:id, :userId, now(), 'You added a goal: Emergency fund', CAST(:body AS jsonb))
+                        """)
+                .param("id", snapshotId)
+                .param("userId", ben)
+                .param("body", body)
+                .update();
+
+        mockMvc.perform(as(ben, get("/api/v1/plan")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reason").value("You added a goal: Emergency fund"))
+                .andExpect(jsonPath("$.surplus.amount").value("520.00"))
+                .andExpect(jsonPath("$.today").doesNotExist());
+
+        mockMvc.perform(as(ben, get("/api/v1/plan/history/" + snapshotId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.today").doesNotExist());
     }
 
     /** A user with a city, money, spending and one plan already made. */

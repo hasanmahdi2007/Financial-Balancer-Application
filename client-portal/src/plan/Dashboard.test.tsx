@@ -5,7 +5,9 @@ import { FakeAuth, FakeServer, renderApp } from '../test/fakes';
 import type { Plan } from '../api/plan';
 import { internalWordsIn } from '../test/internalWords';
 import finishFirst from '../test/fixtures/finish-first.json';
+import planBeforeToday from '../test/fixtures/plan-before-today.json';
 import planFixture from '../test/fixtures/plan.json';
+import tightBeforeToday from '../test/fixtures/tight-plan-before-today.json';
 import tightHistory from '../test/fixtures/tight-plan-history.json';
 import tightPlan from '../test/fixtures/tight-plan.json';
 
@@ -17,25 +19,36 @@ const stretched = () =>
     .on('/api/v1/plan', { status: 200, body: tightPlan })
     .on('/api/v1/plan/history', { status: 200, body: tightHistory });
 
+/**
+ * Real plans recorded before "where you stand today" existed. Every plan saved before it shipped looks
+ * like this for ever, so the layout they were shown with is still guarded - against these, not against
+ * a current plan with the new field stripped out.
+ */
+const beforeToday = () => new FakeServer().on('/api/v1/plan', { status: 200, body: planBeforeToday });
+const stretchedBeforeToday = () =>
+  new FakeServer()
+    .on('/api/v1/plan', { status: 200, body: tightBeforeToday })
+    .on('/api/v1/plan/history', { status: 200, body: tightHistory });
+
 const row = (label: string) => screen.getByRole('rowheader', { name: new RegExp(`^${label}`) }).closest('tr')!;
 
 describe('the plan', () => {
-  it('never shows the monthly figure without what it already assumes you change', async () => {
-    renderApp('/plan', signedIn());
+  it('never shows the monthly figure without what it already assumes you change, on a plan saved before today', async () => {
+    renderApp('/plan', signedIn(), beforeToday());
     const surplus = (await screen.findByRole('heading', { name: 'Each month for your goals' })).closest('section')!;
 
     expect(within(surplus).getByText('$520.00')).toBeInTheDocument();
     const assumes = within(surplus).getByRole('group', { name: 'What this already assumes' });
     expect(assumes).toHaveTextContent('$280.00 less a month');
     expect(assumes).toHaveTextContent('Groceries: $380.00 → $300.00');
-    expect(assumes).toHaveTextContent(planFixture.surplus.assumedReductionExplanation);
+    expect(assumes).toHaveTextContent(planBeforeToday.surplus.assumedReductionExplanation);
   });
 
-  it('gives a line that cannot be cut a sentence about where it could move, never a figure', async () => {
-    renderApp('/plan', signedIn());
+  it('gives a line that cannot be cut a sentence about where it could move, never a figure, on a plan saved before today', async () => {
+    renderApp('/plan', signedIn(), beforeToday());
     await screen.findByRole('heading', { name: 'What you spend' });
 
-    for (const hint of planFixture.hints) {
+    for (const hint of planBeforeToday.hints) {
       const line = row(hint.label);
       expect(within(line).getByText(hint.hint)).toBeInTheDocument();
       // The hint is advice, not money: it must not be dressed as an amount anywhere it appears.
@@ -88,8 +101,8 @@ describe('the plan', () => {
     expect(warnings[0]).toHaveTextContent(stale.meaning);
   });
 
-  it('never shows suggested cuts without what was already assumed and the total change', async () => {
-    renderApp('/plan', signedIn(), stretched());
+  it('never shows suggested cuts without what was already assumed and the total change, on a plan saved before today', async () => {
+    renderApp('/plan', signedIn(), stretchedBeforeToday());
     const cuts = (await screen.findByRole('heading', { name: 'What would have to change' })).closest('section')!;
 
     expect(within(cuts).getByText(/Subscriptions: \$40\.00 less a month/)).toBeInTheDocument();
@@ -182,5 +195,84 @@ describe('a past plan', () => {
     expect(await screen.findByRole('link', { name: 'You added a goal: Emergency fund' })).toBeInTheDocument();
     expect(screen.getByText('Your first plan.')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem').some((li) => li.textContent?.startsWith('Car: Behind'))).toBe(true);
+  });
+});
+
+describe('where you stand, then how to improve it', () => {
+  /** True when `first` comes before `second` in the page, which is the order a person reads them in. */
+  const before = (first: Element, second: Element) =>
+    (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  const section = async (heading: string) =>
+    (await screen.findByRole('heading', { name: heading, level: 2 })).closest('section')!;
+
+  it('opens on what is really left from the figures as entered, before anything else', async () => {
+    renderApp('/plan', signedIn());
+    const today = await section('Where you stand today');
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings.slice(0, 2)).toEqual(['Where you stand today', 'How to improve it']);
+
+    expect(within(today).getByText('Arrives each month').nextElementSibling).toHaveTextContent('$2,000.00');
+    expect(within(today).getByText('What you spend').nextElementSibling).toHaveTextContent('$1,760.00');
+    expect(within(today).getByText('Left each month').nextElementSibling).toHaveTextContent('$240.00');
+    expect(today).toHaveTextContent(planFixture.today!.leftAsEnteredExplanation);
+    // The card claims to be from what the user entered, so it says how much of it is our estimate.
+    expect(today).toHaveTextContent(planFixture.today!.estimatedNote!);
+    // The plan's own figure is not the first thing they read.
+    expect(within(today).queryByText('$520.00')).not.toBeInTheDocument();
+  });
+
+  it('states each change as what it adds a month, and closes on the plan figure as their result', async () => {
+    renderApp('/plan', signedIn());
+    const improve = await section('How to improve it');
+
+    const tips = within(improve).getByRole('list', { name: 'Changes and what each adds' });
+    expect(tips).toHaveTextContent('Bring Groceries from $380.00 to $300.00: +$80.00 a month');
+    expect(tips).toHaveTextContent('+$200.00 a month');
+
+    const result = within(improve).getByRole('group', { name: 'The result' });
+    expect(result).toHaveTextContent(planFixture.today!.planResult);
+    expect(within(result).getByText('$520.00')).toBeInTheDocument();
+    // Never the figure without what it counts on: the changes above it, and the sentence saying so.
+    expect(result).toHaveTextContent(planFixture.surplus.assumedReductionExplanation);
+    expect(within(result).getByText('Everything you would change').nextElementSibling).toHaveTextContent('$280.00');
+    expect(before(tips, result)).toBe(true);
+  });
+
+  it('says a line that cannot be cut is advice in words, once, and never a figure', async () => {
+    renderApp('/plan', signedIn());
+    const improve = await section('How to improve it');
+
+    for (const hint of planFixture.hints) {
+      expect(within(improve).getByText(hint.hint)).toBeInTheDocument();
+      expect(screen.getAllByText(hint.hint)).toHaveLength(1);
+      expect(hint.hint).not.toMatch(/\$\d/);
+    }
+  });
+
+  it('tells someone spending more than they earn that first, with how long their savings cover it', async () => {
+    renderApp('/plan', signedIn(), stretched());
+    const today = await section('Where you stand today');
+
+    expect(within(today).getByText('Left each month').nextElementSibling).toHaveTextContent('-$60.00');
+    expect(today).toHaveTextContent('You spend $60.00 more than you earn each month.');
+    expect(today).toHaveTextContent('What you have would cover it for about 16 months.');
+    // The plan's own runway is measured after its changes and would say the opposite; it is not here.
+    expect(today).not.toHaveTextContent(tightPlan.money.runway.label);
+
+    const improve = await section('How to improve it');
+    expect(improve).toHaveTextContent('Spend less on Subscriptions: +$40.00 a month');
+    expect(within(improve).getByText('Everything you would change').nextElementSibling).toHaveTextContent('$320.00');
+  });
+
+  it('shows a plan saved before this existed without the panel, and never works it out afresh', async () => {
+    renderApp('/plan', signedIn(), beforeToday());
+    await screen.findByRole('heading', { name: 'Each month for your goals' });
+
+    expect(screen.queryByRole('heading', { name: 'Where you stand today' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'How to improve it' })).not.toBeInTheDocument();
+    // $240.00 is what the lines of this old plan would add up to. It was never said to the user, so
+    // it must not appear: a past plan is a record of what they were told.
+    expect(screen.queryByText('$240.00')).not.toBeInTheDocument();
   });
 });

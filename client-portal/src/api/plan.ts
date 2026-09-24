@@ -253,12 +253,45 @@ export interface Hint {
   hint: string;
 }
 
+/**
+ * Where the user stands before the plan changes anything: what is really left each month from the
+ * figures exactly as they gave them. Nothing in it is assumed, which is why it is shown first and the
+ * plan's own figure only after the changes that produce it.
+ */
+export interface Today {
+  income: string;
+  /** Null for anyone whose pay arrives with tax already taken off. */
+  taxSetAside: string | null;
+  spent: string;
+  /** Negative when they spend more than they earn - never clamped, because that is the first thing to see. */
+  leftAsEntered: string;
+  leftAsEnteredExplanation: string;
+  /**
+   * How long their savings cover that shortfall; null when there is none. Measured against the real
+   * gap - the plan's own runway comes after its changes, and would call this user "not running down".
+   */
+  runway: string | null;
+  /** Part of what is left, not taken from it. Null when nothing is put by. */
+  alreadySaving: string | null;
+  alreadySavingNote: string | null;
+  /** How many of the figures behind this are our local estimate rather than the user's own. */
+  estimatedLines: number;
+  estimatedNote: string | null;
+  /** Introduces the plan's own monthly figure, once the changes that produce it are listed. */
+  planResult: string;
+}
+
 export interface Plan {
   id: string;
   takenAt: string;
   asOf: string;
   /** Why this plan was made, e.g. "You added a goal: Emergency fund". */
   reason: string;
+  /**
+   * Absent on every plan made before it existed, and never worked out here from an old plan's lines:
+   * a past plan is a record of what the user was told, and they were not told this.
+   */
+  today?: Today | null;
   money: {
     monthlyIncome: string;
     balanceInScope: string;

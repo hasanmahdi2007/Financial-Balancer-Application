@@ -15,12 +15,17 @@ import java.util.List;
  * <p>Every amount is a string with two decimals, so the client neither parses a float nor loses a
  * trailing zero. Every enum arrives as words - a {@link KeyLabel} where the client may send the value
  * back, a {@link LabelMeaning} where it only shows it - and never as a constant name.
+ *
+ * @param today where the user stands from their own figures, before any change the plan suggests. Null
+ *     on every snapshot taken before it existed, and deliberately left null: a snapshot is what the user
+ *     was told, and they were not told this, so it is never worked out afresh from an old plan's lines.
  */
 public record PlanView(
         String id,
         Instant takenAt,
         LocalDate asOf,
         String reason,
+        Today today,
         MoneyInScope money,
         Surplus surplus,
         List<Goal> goals,
@@ -32,6 +37,38 @@ public record PlanView(
         goals = List.copyOf(goals);
         hints = List.copyOf(hints);
     }
+
+    /**
+     * The first thing a plan shows: what is really left each month from the figures exactly as the user
+     * gave them. Nothing in it is assumed, which is what makes it a starting point rather than a
+     * promise - the plan's own figure comes later, as the result of the changes it suggests.
+     *
+     * @param taxSetAside null when no tax is held back, which is everyone paid with tax already taken off
+     * @param spent everything else going out each month, exactly as entered
+     * @param leftAsEntered income, less tax set aside, less what is spent. Negative when they spend more
+     *     than they earn, and never clamped: that is the first thing such a user needs to see
+     * @param runway how long the money they have would cover that shortfall, or null when there is none.
+     *     Measured against the shortfall as entered, not the plan's own runway, which is worked out after
+     *     the plan's changes and would call someone spending more than they earn "not running down"
+     * @param alreadySaving null when nothing is put by; otherwise part of {@code leftAsEntered}, not taken
+     *     from it, with {@code alreadySavingNote} saying so
+     * @param estimatedLines how many of the figures behind this are our local estimate rather than
+     *     the user's own, because they have not told us; {@code estimatedNote} is null when there are none
+     * @param planResult the sentence that introduces the plan's own monthly figure, once the changes
+     *     that produce it have been listed
+     */
+    public record Today(
+            String income,
+            String taxSetAside,
+            String spent,
+            String leftAsEntered,
+            String leftAsEnteredExplanation,
+            String runway,
+            String alreadySaving,
+            String alreadySavingNote,
+            int estimatedLines,
+            String estimatedNote,
+            String planResult) {}
 
     /** A value the client may send back, with the words to show for it. */
     public record KeyLabel(String key, String label) {}
