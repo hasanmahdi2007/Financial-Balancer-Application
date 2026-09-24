@@ -75,6 +75,7 @@ public final class SurplusCalculation {
                 .minus(lineItemTotal)
                 .minus(input.discretionaryFloor());
 
+        Money observedSpending = observedSpending(input);
         return new SurplusBreakdown(
                 input.income(),
                 fixedTotal,
@@ -83,7 +84,11 @@ public final class SurplusCalculation {
                 input.discretionaryFloor(),
                 input.alreadySaving(),
                 surplus,
-                assumedReduction(input, fixedTotal, cappedTotal, lineItemTotal),
+                assumedReduction(input, observedSpending, fixedTotal, cappedTotal, lineItemTotal),
+                // Straight from what was spent, and deliberately not surplus - assumedReduction: the
+                // reduction is floored at zero, so that subtraction is wrong for anyone whose going-out
+                // spending is below the floor. Not clamped either - a negative figure is the truth.
+                input.income().minus(observedSpending),
                 lines);
     }
 
@@ -100,7 +105,21 @@ public final class SurplusCalculation {
      * negative reduction is not a thing anyone can act on.
      */
     private static Money assumedReduction(
-            SurplusInput input, Money fixedTotal, Money cappedTotal, Money lineItemTotal) {
+            SurplusInput input, Money observedSpending, Money fixedTotal, Money cappedTotal, Money lineItemTotal) {
+        return observedSpending
+                .minus(fixedTotal)
+                .minus(cappedTotal)
+                .minus(lineItemTotal)
+                .minus(input.discretionaryFloor())
+                .max(Money.ZERO);
+    }
+
+    /**
+     * Every dollar the user spends, exactly as they gave it: each observation's actual figure, plus
+     * items subtracted in their own right. Both the assumed reduction and what is left as entered are
+     * measured from this one sum, so the two can never disagree about what was spent.
+     */
+    private static Money observedSpending(SurplusInput input) {
         Money observedSpending = Money.ZERO;
         for (CategoryObservation observation : input.observations()) {
             observedSpending = observedSpending.plus(observation.actual());
@@ -112,12 +131,7 @@ public final class SurplusCalculation {
                 observedSpending = observedSpending.plus(item.monthlyAmount());
             }
         }
-        return observedSpending
-                .minus(fixedTotal)
-                .minus(cappedTotal)
-                .minus(lineItemTotal)
-                .minus(input.discretionaryFloor())
-                .max(Money.ZERO);
+        return observedSpending;
     }
 
     private static Map<SpendCategory, Money> observedByCategory(List<CategoryObservation> observations) {

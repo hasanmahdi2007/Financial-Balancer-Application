@@ -1,6 +1,6 @@
 {
   "goal": {
-    "id": "7e28801f-3d00-41fc-b2db-a74374b5939c",
+    "id": "ce347227-bf16-48c9-9cbb-d67b7734aad8",
     "name": "Car",
     "priority": {
       "key": "high",
@@ -11,10 +11,23 @@
     "finishFirst": false
   },
   "plan": {
-    "id": "c49ee762-53cf-4ee1-b278-be93796cf23b",
-    "takenAt": "2026-09-23T20:54:05.514839200Z",
-    "asOf": "2026-09-23",
+    "id": "b55af23a-0c0f-4623-addc-0ac1b3d8551a",
+    "takenAt": "2026-09-24T16:20:29.953580700Z",
+    "asOf": "2026-09-24",
     "reason": "You added a goal: Car",
+    "today": {
+      "income": "2000.00",
+      "taxSetAside": null,
+      "spent": "1760.00",
+      "leftAsEntered": "240.00",
+      "leftAsEnteredExplanation": "What is left each month from the figures you gave us, before any change we suggest. It is money you are either saving already or simply not spending.",
+      "runway": null,
+      "alreadySaving": null,
+      "alreadySavingNote": null,
+      "estimatedLines": 5,
+      "estimatedNote": "5 of these figures are our estimate for Beirut, because you have not told us what you spend on them. Tell us and this becomes entirely yours.",
+      "planResult": "Make every change above and you would have this much each month for your goals."
+    },
     "money": {
       "monthlyIncome": "2000.00",
       "balanceInScope": "20000.00",
@@ -28,9 +41,9 @@
     },
     "surplus": {
       "amount": "520.00",
-      "explanation": "What is left each month for your goals, if your spending comes down to the figures below. It is not money you have today.",
+      "explanation": "What would be left each month for your goals once you make the changes above. It is not money you have today.",
       "assumedReduction": "280.00",
-      "assumedReductionExplanation": "The monthly figure above already assumes you make these changes. Following only the suggested cuts, without these, would leave you this much short.",
+      "assumedReductionExplanation": "This figure already counts on the changes above. Making only some of them would leave you short by the rest.",
       "reductions": [
         {
           "label": "Groceries",
@@ -157,7 +170,7 @@
           "basis": {
             "label": "Your own figure",
             "explanation": "You told us this, so we use it and nothing overrides it.",
-            "gathered": "2026-09-23",
+            "gathered": "2026-09-24",
             "ageing": null
           }
         },
@@ -302,7 +315,7 @@
     },
     "goals": [
       {
-        "id": "7e28801f-3d00-41fc-b2db-a74374b5939c",
+        "id": "ce347227-bf16-48c9-9cbb-d67b7734aad8",
         "name": "Car",
         "priority": {
           "key": "high",

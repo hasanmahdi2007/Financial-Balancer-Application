@@ -23,6 +23,14 @@ import java.util.Objects;
  *     reader to add a suggested cut on top and conclude a goal is reachable, when the real
  *     instruction was this reduction plus that cut. Anything showing a plan to a person must show
  *     both numbers.
+ * @param leftAsEntered what is really left each month from the figures exactly as the user gave them:
+ *     income less every line's {@code actual}, never its {@code counted}. The figure a person should
+ *     see before any plan, because nothing in it is assumed. May be negative and is never clamped -
+ *     someone spending more than they earn has to be told that first. {@code alreadySaving} is part of
+ *     it, not taken from it: money put by is money not spent.
+ *     <p>Never derive it as {@code surplus - assumedReduction}. That holds only while going-out
+ *     spending is above the floor; below it {@code assumedReduction} is floored at zero and the
+ *     subtraction understates what the user really has left.
  */
 public record SurplusBreakdown(
         Money income,
@@ -33,12 +41,14 @@ public record SurplusBreakdown(
         Money alreadySaving,
         Money surplus,
         Money assumedReduction,
+        Money leftAsEntered,
         List<CategoryLine> lines) {
 
     public SurplusBreakdown {
         Objects.requireNonNull(income, "income");
         Objects.requireNonNull(surplus, "surplus");
         Objects.requireNonNull(assumedReduction, "assumedReduction");
+        Objects.requireNonNull(leftAsEntered, "leftAsEntered");
         lines = List.copyOf(lines);
     }
 
