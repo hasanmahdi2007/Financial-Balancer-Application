@@ -12,13 +12,16 @@ import java.util.Optional;
  */
 public interface PlanSnapshotStore {
 
-    void append(String userId, PlanView plan);
+    void append(PlanKey plan, PlanView view);
 
-    Optional<PlanView> latest(String userId);
+    Optional<PlanView> latest(PlanKey plan);
 
-    /** Newest first. */
-    List<PlanView> all(String userId);
+    /** Newest first, and only this plan's: the history of one place never mixes in another's. */
+    List<PlanView> all(PlanKey plan);
 
-    /** Empty when this user has no snapshot with that id - including when another user does. */
+    /**
+     * Any of this user's snapshots, from whichever plan. Empty when they have none with that id -
+     * including when another user does.
+     */
     Optional<PlanView> find(String userId, String snapshotId);
 }

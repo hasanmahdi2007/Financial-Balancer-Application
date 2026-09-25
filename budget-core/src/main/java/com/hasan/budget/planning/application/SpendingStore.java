@@ -7,20 +7,20 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * What a user says they spend, and the commitments they have named. Every method is scoped to one
- * user: an item id is only unique within its owner's items, so no lookup here can take an id alone.
+ * What a user says they spend in one plan, and the commitments they named there. Every method is
+ * scoped to one plan of one user: an item id is a name the user chose, unique only within that plan.
  */
 public interface SpendingStore {
 
-    Map<SpendCategory, Money> spending(String userId);
+    Map<SpendCategory, Money> spending(PlanKey plan);
 
     /** Replaces the whole set, so a category the user removed stops being stated rather than lingering. */
-    void replaceSpending(String userId, Map<SpendCategory, Money> spending);
+    void replaceSpending(PlanKey plan, Map<SpendCategory, Money> spending);
 
-    List<UserLineItem> lineItems(String userId);
+    List<UserLineItem> lineItems(PlanKey plan);
 
-    void saveLineItem(String userId, UserLineItem item);
+    void saveLineItem(PlanKey plan, UserLineItem item);
 
     /** @return false when this user has no item with that id - including when another user does */
-    boolean deleteLineItem(String userId, String itemId);
+    boolean deleteLineItem(PlanKey plan, String itemId);
 }

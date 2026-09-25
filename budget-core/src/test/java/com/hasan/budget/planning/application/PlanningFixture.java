@@ -36,6 +36,9 @@ public final class PlanningFixture {
 
     public static final CountryCode LEBANON = new CountryCode("LB");
     public static final MetroId BEIRUT = new MetroId("beirut");
+    public static final MetroId TRIPOLI = new MetroId("tripoli");
+    public static final CountryCode US = new CountryCode("US");
+    public static final MetroId AUSTIN = new MetroId("austin");
     private static final LocalDate GATHERED = LocalDate.of(2026, 3, 1);
 
     private final AtomicInteger nextId = new AtomicInteger();
@@ -108,13 +111,22 @@ public final class PlanningFixture {
 
         @Override
         public Optional<String> countryName(CountryCode country) {
-            return LEBANON.equals(country) ? Optional.of("Lebanon") : Optional.empty();
+            if (LEBANON.equals(country)) {
+                return Optional.of("Lebanon");
+            }
+            return US.equals(country) ? Optional.of("United States") : Optional.empty();
         }
 
         @Override
         public Optional<City> city(CountryCode country, MetroId city) {
-            return LEBANON.equals(country) && BEIRUT.equals(city)
-                    ? Optional.of(new City(BEIRUT, "Beirut", "Researched by us", "A careful estimate.", GATHERED))
+            if (LEBANON.equals(country) && BEIRUT.equals(city)) {
+                return Optional.of(new City(BEIRUT, "Beirut", "Researched by us", "A careful estimate.", GATHERED));
+            }
+            if (LEBANON.equals(country) && TRIPOLI.equals(city)) {
+                return Optional.of(new City(TRIPOLI, "Tripoli", "Researched by us", "A careful estimate.", GATHERED));
+            }
+            return US.equals(country) && AUSTIN.equals(city)
+                    ? Optional.of(new City(AUSTIN, "Austin", "Researched by us", "A careful estimate.", GATHERED))
                     : Optional.empty();
         }
 
@@ -141,129 +153,175 @@ public final class PlanningFixture {
         }
     }
 
+    /**
+     * Plans keyed by user and plan, as the tables are. {@code activate} refuses a plan this user does not
+     * own, as the foreign key on the real table does, so a test that forges a plan id fails here too.
+     */
     private static final class InMemoryProfiles implements PlanningProfileStore {
-        private final Map<String, PlanningProfile> byUser = new LinkedHashMap<>();
-        private final Map<String, StatedMoney> money = new LinkedHashMap<>();
+        private final Map<PlanKey, PlanningProfile> plans = new LinkedHashMap<>();
+        private final Map<PlanKey, Instant> lastUsed = new LinkedHashMap<>();
+        private final Map<PlanKey, Money> income = new LinkedHashMap<>();
+        private final Map<String, PlanKey> active = new LinkedHashMap<>();
+        private final Map<String, StatedMoney> personal = new LinkedHashMap<>();
+        // The fixture's clock is fixed, so use is ordered by a counter rather than by time.
+        private final AtomicInteger uses = new AtomicInteger();
 
         @Override
-        public Optional<PlanningProfile> profile(String userId) {
-            return Optional.ofNullable(byUser.get(userId));
+        public Optional<PlanKey> active(String userId) {
+            return Optional.ofNullable(active.get(userId));
         }
 
         @Override
-        public void save(PlanningProfile profile) {
-            byUser.put(profile.userId(), profile);
+        public void activate(PlanKey plan) {
+            if (!plans.containsKey(plan)) {
+                throw new IllegalStateException("no such plan for this user: " + plan);
+            }
+            active.put(plan.userId(), plan);
+            lastUsed.put(plan, Instant.ofEpochSecond(uses.incrementAndGet()));
         }
 
         @Override
-        public Optional<StatedMoney> money(String userId) {
-            return Optional.ofNullable(money.get(userId));
+        public List<StoredPlan> plans(String userId) {
+            return plans.entrySet().stream()
+                    .filter(entry -> entry.getKey().userId().equals(userId))
+                    .map(entry -> new StoredPlan(entry.getKey(), entry.getValue(), lastUsed.get(entry.getKey())))
+                    .sorted((left, right) -> right.lastUsedAt().compareTo(left.lastUsedAt()))
+                    .toList();
         }
 
         @Override
-        public void saveMoney(String userId, StatedMoney stated) {
-            money.put(userId, stated);
+        public Optional<PlanningProfile> profile(PlanKey plan) {
+            return Optional.ofNullable(plans.get(plan));
+        }
+
+        @Override
+        public void save(PlanKey plan, PlanningProfile profile) {
+            plans.put(plan, profile);
+            lastUsed.putIfAbsent(plan, Instant.ofEpochSecond(uses.incrementAndGet()));
+        }
+
+        @Override
+        public Optional<StatedMoney> money(PlanKey plan) {
+            StatedMoney theirs = personal.get(plan.userId());
+            Money arrives = income.get(plan);
+            return theirs == null || arrives == null
+                    ? Optional.empty()
+                    : Optional.of(new StatedMoney(arrives, theirs.balance(), theirs.alreadySaving()));
+        }
+
+        @Override
+        public void saveMoney(PlanKey plan, StatedMoney stated) {
+            income.put(plan, stated.monthlyIncome());
+            personal.put(plan.userId(), stated);
         }
     }
 
     private static final class InMemorySpending implements SpendingStore {
-        private final Map<String, Map<SpendCategory, Money>> byUser = new LinkedHashMap<>();
-        private final Map<String, List<UserLineItem>> items = new LinkedHashMap<>();
+        private final Map<PlanKey, Map<SpendCategory, Money>> byPlan = new LinkedHashMap<>();
+        private final Map<PlanKey, List<UserLineItem>> items = new LinkedHashMap<>();
 
         @Override
-        public Map<SpendCategory, Money> spending(String userId) {
-            return Map.copyOf(byUser.getOrDefault(userId, Map.of()));
+        public Map<SpendCategory, Money> spending(PlanKey plan) {
+            return Map.copyOf(byPlan.getOrDefault(plan, Map.of()));
         }
 
         @Override
-        public void replaceSpending(String userId, Map<SpendCategory, Money> spending) {
-            byUser.put(userId, new EnumMap<>(spending));
+        public void replaceSpending(PlanKey plan, Map<SpendCategory, Money> spending) {
+            byPlan.put(plan, new EnumMap<>(spending));
         }
 
         @Override
-        public List<UserLineItem> lineItems(String userId) {
-            return List.copyOf(items.getOrDefault(userId, List.of()));
+        public List<UserLineItem> lineItems(PlanKey plan) {
+            return List.copyOf(items.getOrDefault(plan, List.of()));
         }
 
         @Override
-        public void saveLineItem(String userId, UserLineItem item) {
-            List<UserLineItem> mine = items.computeIfAbsent(userId, user -> new ArrayList<>());
+        public void saveLineItem(PlanKey plan, UserLineItem item) {
+            List<UserLineItem> mine = items.computeIfAbsent(plan, key -> new ArrayList<>());
             mine.removeIf(existing -> existing.id().equals(item.id()));
             mine.add(item);
         }
 
         @Override
-        public boolean deleteLineItem(String userId, String itemId) {
-            return items.getOrDefault(userId, new ArrayList<>()).removeIf(item -> item.id().equals(itemId));
+        public boolean deleteLineItem(PlanKey plan, String itemId) {
+            return items.getOrDefault(plan, new ArrayList<>()).removeIf(item -> item.id().equals(itemId));
         }
     }
 
     private static final class InMemoryGoals implements GoalStore {
-        private final Map<String, List<GoalDraft>> byUser = new LinkedHashMap<>();
-        private final Map<String, String> finishFirst = new LinkedHashMap<>();
+        private final Map<PlanKey, List<GoalDraft>> byPlan = new LinkedHashMap<>();
+        private final Map<PlanKey, String> finishFirst = new LinkedHashMap<>();
 
         @Override
-        public List<GoalDraft> goals(String userId) {
-            return List.copyOf(byUser.getOrDefault(userId, List.of()));
+        public List<GoalDraft> goals(PlanKey plan) {
+            return List.copyOf(byPlan.getOrDefault(plan, List.of()));
         }
 
         @Override
-        public Optional<GoalDraft> goal(String userId, String goalId) {
-            return goals(userId).stream().filter(goal -> goal.id().equals(goalId)).findFirst();
+        public Optional<GoalDraft> goal(PlanKey plan, String goalId) {
+            return goals(plan).stream().filter(goal -> goal.id().equals(goalId)).findFirst();
         }
 
         @Override
-        public void save(String userId, GoalDraft goal) {
-            List<GoalDraft> mine = byUser.computeIfAbsent(userId, user -> new ArrayList<>());
+        public void save(PlanKey plan, GoalDraft goal) {
+            List<GoalDraft> mine = byPlan.computeIfAbsent(plan, key -> new ArrayList<>());
             mine.removeIf(existing -> existing.id().equals(goal.id()));
             mine.add(goal);
         }
 
         @Override
-        public boolean delete(String userId, String goalId) {
-            return byUser.getOrDefault(userId, new ArrayList<>()).removeIf(goal -> goal.id().equals(goalId));
+        public boolean delete(PlanKey plan, String goalId) {
+            return byPlan.getOrDefault(plan, new ArrayList<>()).removeIf(goal -> goal.id().equals(goalId));
         }
 
         @Override
-        public Optional<String> finishFirst(String userId) {
-            return Optional.ofNullable(finishFirst.get(userId));
+        public Optional<String> finishFirst(PlanKey plan) {
+            return Optional.ofNullable(finishFirst.get(plan));
         }
 
         @Override
-        public void setFinishFirst(String userId, Optional<String> goalId) {
-            goalId.ifPresentOrElse(id -> finishFirst.put(userId, id), () -> finishFirst.remove(userId));
+        public void setFinishFirst(PlanKey plan, Optional<String> goalId) {
+            goalId.ifPresentOrElse(id -> finishFirst.put(plan, id), () -> finishFirst.remove(plan));
         }
     }
 
     /** Append-only in the same way the table is: there is no way in here to change what was stored. */
     private static final class InMemorySnapshots implements PlanSnapshotStore {
-        private final Map<String, List<PlanView>> byUser = new LinkedHashMap<>();
+        private final Map<PlanKey, List<PlanView>> byPlan = new LinkedHashMap<>();
         private final AtomicInteger order = new AtomicInteger();
         private final Map<String, Integer> appendedAt = new LinkedHashMap<>();
 
         @Override
-        public void append(String userId, PlanView plan) {
-            byUser.computeIfAbsent(userId, user -> new ArrayList<>()).add(plan);
-            appendedAt.put(plan.id(), order.incrementAndGet());
+        public void append(PlanKey plan, PlanView view) {
+            byPlan.computeIfAbsent(plan, key -> new ArrayList<>()).add(view);
+            appendedAt.put(view.id(), order.incrementAndGet());
         }
 
         @Override
-        public Optional<PlanView> latest(String userId) {
-            return all(userId).stream().findFirst();
+        public Optional<PlanView> latest(PlanKey plan) {
+            return all(plan).stream().findFirst();
         }
 
         @Override
-        public List<PlanView> all(String userId) {
-            List<PlanView> mine = new ArrayList<>(byUser.getOrDefault(userId, List.of()));
-            // Newest first, as the table's index returns them. A fixed clock makes every snapshot
-            // share a timestamp, so insertion order is what orders them here.
-            mine.sort((left, right) -> appendedAt.get(right.id()) - appendedAt.get(left.id()));
-            return List.copyOf(mine);
+        public List<PlanView> all(PlanKey plan) {
+            return newestFirst(byPlan.getOrDefault(plan, List.of()));
         }
 
         @Override
         public Optional<PlanView> find(String userId, String snapshotId) {
-            return all(userId).stream().filter(plan -> plan.id().equals(snapshotId)).findFirst();
+            return byPlan.entrySet().stream()
+                    .filter(entry -> entry.getKey().userId().equals(userId))
+                    .flatMap(entry -> entry.getValue().stream())
+                    .filter(view -> view.id().equals(snapshotId))
+                    .findFirst();
+        }
+
+        // Newest first, as the table's index returns them. A fixed clock makes every snapshot share a
+        // timestamp, so insertion order is what orders them here.
+        private List<PlanView> newestFirst(List<PlanView> views) {
+            List<PlanView> sorted = new ArrayList<>(views);
+            sorted.sort((left, right) -> appendedAt.get(right.id()) - appendedAt.get(left.id()));
+            return List.copyOf(sorted);
         }
     }
 

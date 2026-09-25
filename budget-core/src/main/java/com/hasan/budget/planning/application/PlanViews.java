@@ -48,7 +48,7 @@ public final class PlanViews {
 
     private PlanViews() {}
 
-    public static PlanView from(AssembledPlan plan, String id, Instant takenAt, String reason) {
+    public static PlanView from(AssembledPlan plan, String id, Instant takenAt, String reason, PlanView.Place place) {
         return new PlanView(
                 id,
                 takenAt,
@@ -60,7 +60,8 @@ public final class PlanViews {
                 goals(plan),
                 cuts(plan),
                 plan.hints().stream().map(hint -> new Hint(hint.lineId(), hint.label(), hint.hint())).toList(),
-                leftOver(plan));
+                leftOver(plan),
+                place);
     }
 
     /**

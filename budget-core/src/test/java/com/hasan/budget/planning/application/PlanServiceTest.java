@@ -196,13 +196,29 @@ class PlanServiceTest {
          */
         @Test
         void aGoalAddedBeforeThereIsAnythingToPlanWithIsStillKept() {
+            plans.saveProfile("newcomer", new PlanService.ProfileChange(
+                    PlanningFixture.LEBANON, PlanningFixture.BEIRUT, null, null, true, null));
+
             PlanService.GoalAndPlan added = plans.addGoal("newcomer", new PlanService.GoalChange(
                     "Car", Money.of(9000), NEXT_YEAR, Priority.HIGH));
 
             assertThat(added.goal().name()).isEqualTo("Car");
             assertThat(added.plan()).isNull();
-            assertThat(added.waitingFor()).contains("country and city");
+            assertThat(added.waitingFor()).contains("comes in each month");
             assertThat(plans.goals("newcomer")).hasSize(1);
+        }
+
+        /**
+         * A goal belongs to a plan, and a plan is a place, so before any place there is nothing to keep
+         * a goal in. The user is told the one thing to do first, and nothing is half-stored.
+         */
+        @Test
+        void aGoalCannotBeAddedBeforeTheUserHasSaidWhereTheyLive() {
+            assertThatThrownBy(() -> plans.addGoal("newcomer", new PlanService.GoalChange(
+                            "Car", Money.of(9000), NEXT_YEAR, Priority.HIGH)))
+                    .isInstanceOf(NeedsMoreInformationException.class)
+                    .hasMessageContaining("country and city");
+            assertThat(plans.goals("newcomer")).isEmpty();
         }
 
         /** The plan a user is looking at does not change under them until they ask for a new one. */
@@ -276,7 +292,7 @@ class PlanServiceTest {
 
             assertThat(plan.breakdown().alreadySaving()).isEqualTo(Money.of(250));
             assertThat(plan.inputs().savingWasMeasured()).isTrue();
-            assertThat(PlanViews.from(plan, "id", java.time.Instant.EPOCH, "a test").surplus()
+            assertThat(PlanViews.from(plan, "id", java.time.Instant.EPOCH, "a test", null).surplus()
                             .alreadySavingExplanation())
                     .contains("February 2026", "from your bank");
         }
