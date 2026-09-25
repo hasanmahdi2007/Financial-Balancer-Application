@@ -215,6 +215,11 @@ export interface PlanGoal extends SavedGoal {
   monthlyFunded: string;
   shortBy: string;
   status: Meaning;
+  /**
+   * Whole percent of the target already covered, rounded down so a goal never reads as done early.
+   * Null on plans made before the server sent it.
+   */
+  percentCovered?: number | null;
 }
 
 export interface SuggestedCut {

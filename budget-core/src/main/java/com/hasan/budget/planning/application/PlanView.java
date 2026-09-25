@@ -160,6 +160,9 @@ public record PlanView(
     /**
      * @param fromBalance the part of the balance credited to this goal. There is no other way for a
      *     goal to hold money, which is what stops the same dollars counting twice.
+     * @param percentCovered how much of the target {@code fromBalance} already covers, in whole percent
+     *     and rounded down, so a goal never reads as done before it is: 100 only when fully covered.
+     *     Null on snapshots taken before it existed, and never worked out afresh for them.
      */
     public record Goal(
             String id,
@@ -173,7 +176,8 @@ public record PlanView(
             String monthlyFunded,
             String shortBy,
             boolean finishFirst,
-            LabelMeaning status) {}
+            LabelMeaning status,
+            Integer percentCovered) {}
 
     /**
      * Both numbers, together, always.

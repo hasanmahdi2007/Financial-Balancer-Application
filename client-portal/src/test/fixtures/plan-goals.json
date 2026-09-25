@@ -1,0 +1,389 @@
+{
+  "id": "13b09139-6117-43d3-8810-376b69e5081d",
+  "takenAt": "2026-09-25T11:49:18.954336400Z",
+  "asOf": "2026-09-25",
+  "reason": "You asked for a fresh plan",
+  "today": {
+    "income": "2000.00",
+    "taxSetAside": null,
+    "spent": "1695.00",
+    "leftAsEntered": "305.00",
+    "leftAsEnteredExplanation": "What is left each month from the figures you gave us, before any change we suggest. It is money you are either saving already or simply not spending.",
+    "runway": null,
+    "alreadySaving": null,
+    "alreadySavingNote": null,
+    "estimatedLines": 8,
+    "estimatedNote": "8 of these figures are our estimate for Beirut, because you have not told us what you spend on them. Tell us and this becomes entirely yours.",
+    "planResult": "Make every change above and you would have this much each month for your goals."
+  },
+  "money": {
+    "monthlyIncome": "2000.00",
+    "balanceInScope": "3000.00",
+    "setAside": "0.00",
+    "putTowardGoals": "3000.00",
+    "leftUnassigned": "0.00",
+    "runway": {
+      "label": "Your money is not running down",
+      "months": null
+    }
+  },
+  "surplus": {
+    "amount": "534.92",
+    "explanation": "What would be left each month for your goals once you make the changes above. It is not money you have today.",
+    "assumedReduction": "229.92",
+    "assumedReductionExplanation": "This figure already counts on the changes above. Making only some of them would leave you short by the rest.",
+    "reductions": [
+      {
+        "label": "Groceries",
+        "from": "320.00",
+        "to": "300.00",
+        "by": "20.00"
+      },
+      {
+        "label": "Eating out, Going out and fun, Clothes, Everything else",
+        "from": "360.00",
+        "to": "150.08",
+        "by": "209.92"
+      }
+    ],
+    "lines": [
+      {
+        "id": "rent",
+        "label": "Rent",
+        "category": {
+          "key": "rent",
+          "label": "Rent"
+        },
+        "spent": "600.00",
+        "localFigure": "600.00",
+        "counted": "600.00",
+        "assumed": false,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "locked",
+          "label": "Cannot be changed"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      },
+      {
+        "id": "healthcare",
+        "label": "Healthcare",
+        "category": {
+          "key": "healthcare",
+          "label": "Healthcare"
+        },
+        "spent": "90.00",
+        "localFigure": "90.00",
+        "counted": "90.00",
+        "assumed": true,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "essential",
+          "label": "Very important"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      },
+      {
+        "id": "subscriptions",
+        "label": "Subscriptions",
+        "category": {
+          "key": "subscriptions",
+          "label": "Subscriptions"
+        },
+        "spent": "25.00",
+        "localFigure": "25.00",
+        "counted": "25.00",
+        "assumed": true,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "essential",
+          "label": "Very important"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      },
+      {
+        "id": "utilities",
+        "label": "Utilities",
+        "category": {
+          "key": "utilities",
+          "label": "Utilities"
+        },
+        "spent": "180.00",
+        "localFigure": "180.00",
+        "counted": "180.00",
+        "assumed": true,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "essential",
+          "label": "Very important"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      },
+      {
+        "id": "groceries",
+        "label": "Groceries",
+        "category": {
+          "key": "groceries",
+          "label": "Groceries"
+        },
+        "spent": "320.00",
+        "localFigure": "300.00",
+        "counted": "300.00",
+        "assumed": false,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "essential",
+          "label": "Very important"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      },
+      {
+        "id": "transport-fuel",
+        "label": "Transport",
+        "category": {
+          "key": "transport-fuel",
+          "label": "Transport"
+        },
+        "spent": "120.00",
+        "localFigure": "120.00",
+        "counted": "120.00",
+        "assumed": true,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "essential",
+          "label": "Very important"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      },
+      {
+        "id": "dining-out",
+        "label": "Eating out",
+        "category": {
+          "key": "dining-out",
+          "label": "Eating out"
+        },
+        "spent": "150.00",
+        "localFigure": "150.00",
+        "counted": "0.00",
+        "assumed": true,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "flexible",
+          "label": "Flexible"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      },
+      {
+        "id": "entertainment",
+        "label": "Going out and fun",
+        "category": {
+          "key": "entertainment",
+          "label": "Going out and fun"
+        },
+        "spent": "80.00",
+        "localFigure": "80.00",
+        "counted": "0.00",
+        "assumed": true,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "disposable",
+          "label": "Not very important"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      },
+      {
+        "id": "clothing",
+        "label": "Clothes",
+        "category": {
+          "key": "clothing",
+          "label": "Clothes"
+        },
+        "spent": "60.00",
+        "localFigure": "60.00",
+        "counted": "0.00",
+        "assumed": true,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "flexible",
+          "label": "Flexible"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      },
+      {
+        "id": "other",
+        "label": "Everything else",
+        "category": {
+          "key": "other",
+          "label": "Everything else"
+        },
+        "spent": "70.00",
+        "localFigure": "70.00",
+        "counted": "0.00",
+        "assumed": true,
+        "measuredFrom": null,
+        "howWilling": {
+          "key": "flexible",
+          "label": "Flexible"
+        },
+        "basis": {
+          "label": "Researched by us",
+          "explanation": "We gathered this from listings and local prices. It is a careful estimate, not an official statistic.",
+          "gathered": "2026-09-01",
+          "ageing": null
+        }
+      }
+    ],
+    "leastForEnjoyingLife": "150.08",
+    "leastForEnjoyingLifeBasis": "typical for someone in Beirut who goes out regularly",
+    "alreadySaving": "0.00",
+    "alreadySavingExplanation": "What you already move into savings each month. It is shown, never subtracted, because it is not spending."
+  },
+  "goals": [
+    {
+      "id": "b7db5d41-531a-4c38-9719-50d55ae24b8b",
+      "name": "Car",
+      "priority": {
+        "key": "high",
+        "label": "Very important"
+      },
+      "target": "9000.00",
+      "fromBalance": "3000.00",
+      "stillNeeded": "6000.00",
+      "deadline": "2027-06-30",
+      "monthlyNeeded": "666.67",
+      "monthlyFunded": "534.92",
+      "shortBy": "131.75",
+      "finishFirst": false,
+      "status": {
+        "label": "Behind",
+        "meaning": "It gets part of what it needs each month, so it will be late unless something changes."
+      },
+      "percentCovered": 33
+    },
+    {
+      "id": "c1a04945-a66e-467e-9287-e69fd2ff8299",
+      "name": "Wedding",
+      "priority": {
+        "key": "medium",
+        "label": "Important"
+      },
+      "target": "20000.00",
+      "fromBalance": "0.00",
+      "stillNeeded": "20000.00",
+      "deadline": "2027-01-31",
+      "monthlyNeeded": "5000.00",
+      "monthlyFunded": "0.00",
+      "shortBy": "5000.00",
+      "finishFirst": false,
+      "status": {
+        "label": "Not funded yet",
+        "meaning": "Nothing is left for it each month once the goals ahead of it are paid for."
+      },
+      "percentCovered": 0
+    }
+  ],
+  "cuts": {
+    "suggested": [
+      {
+        "label": "Subscriptions",
+        "category": {
+          "key": "subscriptions",
+          "label": "Subscriptions"
+        },
+        "by": "25.00",
+        "howWilling": {
+          "key": "essential",
+          "label": "Very important"
+        },
+        "lineIds": [
+          "subscriptions"
+        ]
+      }
+    ],
+    "suggestedTotal": "25.00",
+    "alreadyAssumed": "229.92",
+    "totalChange": "254.92",
+    "totalChangeExplanation": "Everything you would change to make this plan work: the changes the monthly figure already assumes, plus the cuts suggested on top.",
+    "stillShort": "5106.75",
+    "options": [
+      {
+        "label": "Use more of your savings this month",
+        "meaning": "You can tell us to count more of your balance as money you are willing to spend. Nothing moves by itself - it only changes what we plan around.",
+        "answerWith": "PUT /api/v1/money"
+      },
+      {
+        "label": "Push one of your goals back",
+        "meaning": "Giving a goal a later date frees up what it was taking each month. We will show you exactly what that costs you in time before you decide.",
+        "answerWith": "PUT /api/v1/goals/{id}"
+      }
+    ]
+  },
+  "hints": [
+    {
+      "id": "rent",
+      "label": "Rent",
+      "hint": "a roommate, or renegotiating the lease at renewal, is the only real lever here - the monthly figure itself will not move"
+    }
+  ],
+  "leftOver": {
+    "amount": "0.00",
+    "explanation": "Nothing is left over once your goals are paid for."
+  },
+  "place": {
+    "country": {
+      "code": "LB",
+      "name": "Lebanon"
+    },
+    "city": {
+      "id": "beirut",
+      "name": "Beirut"
+    },
+    "cityNotListed": null,
+    "label": "Beirut, Lebanon"
+  }
+}
