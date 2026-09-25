@@ -9,6 +9,8 @@ const MENU: { to: string; label: string; icon: IconName; end?: boolean; bankOnly
   { to: '/goals/new', label: 'Add a goal', icon: 'plus' },
   { to: '/afford', label: 'Can I afford this?', icon: 'bag' },
   { to: '/rebalance', label: 'Give me more for something', icon: 'sliders' },
+  { to: '/plans/new', label: 'New plan', icon: 'spark' },
+  { to: '/plans', label: 'My plans', icon: 'pin', end: true },
   { to: '/plan/history', label: 'Every plan so far', icon: 'clock' },
   { to: '/money', label: 'Your money', icon: 'wallet' },
   // Only where a bank can actually be connected: offering it to someone in a country the bank

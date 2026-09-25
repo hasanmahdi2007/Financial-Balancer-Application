@@ -1,0 +1,7 @@
+{
+  "detail": "Your plan was made for Beirut, Lebanon. To plan for Austin, United States, pick up a plan you already have there or start a new one. Your plan for Beirut, Lebanon stays exactly as it is.",
+  "instance": "/api/v1/profile",
+  "status": 409,
+  "title": "Choose a plan for where you live now",
+  "type": "https://financialbalancer.app/problems/choose-a-plan"
+}

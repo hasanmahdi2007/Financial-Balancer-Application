@@ -1,0 +1,36 @@
+{
+  "plans": [
+    {
+      "id": "7a712a7f-76ea-48f4-9de6-656a6b379541",
+      "place": {
+        "country": {
+          "code": "LB",
+          "name": "Lebanon"
+        },
+        "city": {
+          "id": "beirut",
+          "name": "Beirut"
+        },
+        "cityNotListed": null,
+        "label": "Beirut, Lebanon"
+      },
+      "active": false,
+      "lastUsedAt": "2026-09-25T11:35:23.432363Z",
+      "summary": {
+        "leftEachMonth": "305.00",
+        "leftEachMonthLabel": "Left each month, from what you entered",
+        "goals": 1,
+        "goalsLabel": "1 goal"
+      },
+      "use": {
+        "label": "Use this plan",
+        "meaning": "Your goals, spending and history from Beirut come back exactly as you left them. The money you have now stays as it is."
+      }
+    }
+  ],
+  "startNew": {
+    "label": "Start a new plan here",
+    "meaning": "A fresh plan for this place. What you spend starts from what is typical here, not from where you lived before. The money you have comes with you.",
+    "bringGoalsLabel": "Bring my goals with me"
+  }
+}

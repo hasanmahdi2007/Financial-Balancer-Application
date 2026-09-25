@@ -19,8 +19,11 @@ public final class PlanHistory {
 
     private PlanHistory() {}
 
-    /** @param changes null for the first plan, which had nothing before it */
-    public record Entry(String id, Instant takenAt, String reason, Changes changes) {}
+    /**
+     * @param changes null for the first plan, which had nothing before it
+     * @param place where the plan was made for, or null for a snapshot taken before plans had one
+     */
+    public record Entry(String id, Instant takenAt, String reason, Changes changes, PlanView.Place place) {}
 
     public record Changes(
             List<String> goalsAdded, List<String> goalsRemoved, Shift surplus, List<GoalChange> goals) {
@@ -51,7 +54,11 @@ public final class PlanHistory {
             PlanView plan = newestFirst.get(i);
             PlanView previous = i + 1 < newestFirst.size() ? newestFirst.get(i + 1) : null;
             entries.add(new Entry(
-                    plan.id(), plan.takenAt(), plan.reason(), previous == null ? null : between(previous, plan)));
+                    plan.id(),
+                    plan.takenAt(),
+                    plan.reason(),
+                    previous == null ? null : between(previous, plan),
+                    plan.place()));
         }
         return entries;
     }
