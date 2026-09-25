@@ -156,7 +156,7 @@ class ProfilePolicyIT {
     /** The precedence the configuration declares is the precedence the wired resolver applies. */
     @Test
     void theWiredChainPutsTheUsersOwnFigureFirst() {
-        typedByTheUser.record("the-wired-user", Rate.ofPercent("31"), LocalDate.of(2026, 3, 14));
+        typedByTheUser.record("the-wired-user", CountryCode.LEBANON, Rate.ofPercent("31"), LocalDate.of(2026, 3, 14));
 
         assertThat(wiredResolver.resolve("the-wired-user", CountryCode.LEBANON).orElseThrow().rate())
                 .isEqualTo(Rate.ofPercent("31"));
@@ -170,7 +170,7 @@ class ProfilePolicyIT {
      */
     @Test
     void aTypedRateWinsForItsOwnerAndLeavesEveryoneElseOnTheSeededFigure() {
-        typedByTheUser.record("the-freelancer", Rate.ofPercent("22"), LocalDate.of(2026, 3, 14));
+        typedByTheUser.record("the-freelancer", CountryCode.LEBANON, Rate.ofPercent("22"), LocalDate.of(2026, 3, 14));
         TaxRateResolver resolver = new TaxRateResolver(List.of(typedByTheUser, seededForTheCountry));
 
         ResolvedTaxRate theirs = resolver.resolve("the-freelancer", CountryCode.LEBANON).orElseThrow();
@@ -180,5 +180,35 @@ class ProfilePolicyIT {
         assertThat(theirs.confidence()).isEqualTo(Confidence.USER_PROVIDED);
         assertThat(everyoneElse.confidence()).isEqualTo(Confidence.ESTIMATED);
         assertThat(everyoneElse.rate()).isNotEqualTo(theirs.rate());
+    }
+
+    /**
+     * The move that used to carry a rate across a border. A rate typed in Lebanon is what the user
+     * pays in Lebanon; in the US they are back on the US estimate until they say otherwise, and
+     * going back to Lebanon finds their own figure exactly where they left it.
+     */
+    @Test
+    void aRateTypedForOneCountryDoesNotFollowTheUserToAnother() {
+        typedByTheUser.record("the-mover", CountryCode.LEBANON, Rate.ofPercent("22"), LocalDate.of(2026, 3, 14));
+
+        ResolvedTaxRate inTheUs = wiredResolver.resolve("the-mover", CountryCode.US).orElseThrow();
+        ResolvedTaxRate backInLebanon = wiredResolver.resolve("the-mover", CountryCode.LEBANON).orElseThrow();
+
+        assertThat(inTheUs.confidence()).isEqualTo(Confidence.ESTIMATED);
+        assertThat(backInLebanon.rate()).isEqualTo(Rate.ofPercent("22"));
+        assertThat(backInLebanon.confidence()).isEqualTo(Confidence.USER_PROVIDED);
+    }
+
+    /** One figure per country, each replaced only by a later answer for the same country. */
+    @Test
+    void aUserCanHoldARateForEachCountryIndependently() {
+        typedByTheUser.record("two-homes", CountryCode.LEBANON, Rate.ofPercent("18"), LocalDate.of(2026, 3, 14));
+        typedByTheUser.record("two-homes", CountryCode.US, Rate.ofPercent("27"), LocalDate.of(2026, 3, 14));
+        typedByTheUser.record("two-homes", CountryCode.US, Rate.ofPercent("29"), LocalDate.of(2026, 4, 1));
+
+        assertThat(typedByTheUser.rateFor("two-homes", CountryCode.LEBANON).orElseThrow().rate())
+                .isEqualTo(Rate.ofPercent("18"));
+        assertThat(typedByTheUser.rateFor("two-homes", CountryCode.US).orElseThrow().rate())
+                .isEqualTo(Rate.ofPercent("29"));
     }
 }
