@@ -1263,3 +1263,81 @@ a:focus-visible {
 .placeholder__title {
   font-weight: 650;
 }
+
+/* --- Plans, one per place ------------------------------------------------------------------------ */
+
+.plan-choices__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.plan-choice {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.plan-choice h3,
+.plan-choice p {
+  margin: 0;
+}
+
+.plan-choice__meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.field--check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.field--check input {
+  width: auto;
+}
+
+/* --- Goals and their progress -------------------------------------------------------------------- */
+
+.goal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+}
+
+.goal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.goal-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.goal-card__head h2 {
+  margin: 0;
+}
+
+.goal-card__percent {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}

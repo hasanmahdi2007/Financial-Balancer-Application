@@ -48,7 +48,7 @@ public final class PlanViews {
 
     private PlanViews() {}
 
-    public static PlanView from(AssembledPlan plan, String id, Instant takenAt, String reason) {
+    public static PlanView from(AssembledPlan plan, String id, Instant takenAt, String reason, PlanView.Place place) {
         return new PlanView(
                 id,
                 takenAt,
@@ -60,7 +60,8 @@ public final class PlanViews {
                 goals(plan),
                 cuts(plan),
                 plan.hints().stream().map(hint -> new Hint(hint.lineId(), hint.label(), hint.hint())).toList(),
-                leftOver(plan));
+                leftOver(plan),
+                place);
     }
 
     /**
@@ -221,9 +222,25 @@ public final class PlanViews {
                             text(allocation.allocated()),
                             text(allocation.shortfall()),
                             goal.id().equals(finishFirst),
-                            new LabelMeaning(status.label(), status.meaning()));
+                            new LabelMeaning(status.label(), status.meaning()),
+                            percentCovered(fromBalance, goal.target()));
                 })
                 .toList();
+    }
+
+    /**
+     * Whole percent of the target already covered, rounded down: $8,999.99 of $9,000 is 99, never 100,
+     * because a goal shown as done that is not done is the one progress figure that misleads.
+     */
+    static int percentCovered(Money covered, Money target) {
+        if (!target.isPositive()) {
+            return 100;
+        }
+        int percent = covered.amount()
+                .multiply(java.math.BigDecimal.valueOf(100))
+                .divide(target.amount(), 0, java.math.RoundingMode.DOWN)
+                .intValueExact();
+        return Math.max(0, Math.min(100, percent));
     }
 
     private static Cuts cuts(AssembledPlan plan) {

@@ -14,9 +14,12 @@ import { OnboardingDraftProvider } from './onboarding/OnboardingDraft';
 import { AffordPage } from './decisions/AffordPage';
 import { RebalancePage } from './decisions/RebalancePage';
 import { GoalFormPage } from './goals/GoalForm';
+import { GoalsPage } from './goals/GoalsPage';
 import { Dashboard } from './plan/Dashboard';
 import { HistoryPage, PastPlanPage } from './plan/HistoryPages';
 import { MoneyPage } from './plan/MoneyPage';
+import { MyPlansPage } from './plans/MyPlansPage';
+import { NewPlanPage } from './plans/NewPlanPage';
 import { QuestionsStep } from './setup/QuestionsStep';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { Layout } from './ui/Layout';
@@ -52,8 +55,11 @@ export function App({
                     <Route path="/plan" element={<Dashboard />} />
                     <Route path="/plan/history" element={<HistoryPage />} />
                     <Route path="/plan/history/:planId" element={<PastPlanPage />} />
+                    <Route path="/plans" element={<MyPlansPage />} />
+                    <Route path="/plans/new" element={<NewPlanPage />} />
                     <Route path="/money" element={<MoneyPage />} />
                     <Route path="/bank" element={<BankPage />} />
+                    <Route path="/goals" element={<GoalsPage />} />
                     <Route path="/goals/new" element={<GoalFormPage />} />
                     <Route path="/goals/:goalId" element={<GoalFormPage />} />
                     <Route path="/afford" element={<AffordPage />} />

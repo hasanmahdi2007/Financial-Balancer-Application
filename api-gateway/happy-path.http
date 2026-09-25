@@ -383,3 +383,39 @@ Authorization: Bearer {{token}}
 # deleted. 204; 404 for a connection that is not this user's.
 DELETE {{gateway}}/api/v1/bank/connections/paste-a-connection-id
 Authorization: Bearer {{token}}
+
+### 28. Every plan this user has, one per place, most recently used first. Add ?country=US to get only
+# the plans in one country: that is the list to offer after someone says they moved there.
+# -> {"plans":[{"id":"...","place":{"country":{"code":"LB","name":"Lebanon"},"city":{"id":"beirut",
+#     "name":"Beirut"},"cityNotListed":null,"label":"Beirut, Lebanon"},"active":true,"lastUsedAt":"...",
+#     "summary":{"leftEachMonth":"1500.00","leftEachMonthLabel":"...","goals":1,"goalsLabel":"1 goal"},
+#     "use":{"label":"The plan you are using","meaning":"..."}}],
+#     "startNew":{"label":"Start a new plan here","meaning":"...","bringGoalsLabel":"Bring my goals with me"}}
+# "summary" is null for a plan that was never made.
+GET {{gateway}}/api/v1/plans?country=US
+Authorization: Bearer {{token}}
+
+### 29. Moving is not an edit. Changing the place of a plan that has already been made answers 409 with
+# type ".../choose-a-plan" and a sentence to show; the client opens the chooser (step 28) instead.
+PUT {{gateway}}/api/v1/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "country": "US", "city": "austin", "lifestyle": "regular", "incomeArrivesTaxed": true }
+
+### 30. Start a plan for a new place, now in use. Goals come along unless "bringGoals" is false; spending
+# never does. 201 with one entry shaped as in step 28. Then answer the setup questions for this place.
+POST {{gateway}}/api/v1/plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "country": "US", "city": "austin", "bringGoals": true }
+
+### 31. Pick up a plan the user already has. Its goals, spending and history come back as they were;
+# GET /api/v1/plan then returns the last plan it made. No new snapshot is taken. 404 for a plan id that
+# is not this user's.
+PUT {{gateway}}/api/v1/plans/active
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "planId": "paste-an-id-from-step-28" }

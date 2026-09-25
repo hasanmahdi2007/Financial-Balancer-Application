@@ -358,10 +358,17 @@ class PlanningApiIT extends PlanningDatabaseFixture {
             body = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
         }
         assertThat(body).as("the recorded body really predates the field").doesNotContain("\"today\"");
+        assertThat(body).as("and predates plans having a place").doesNotContain("\"place\"");
+        // A snapshot is always filed under a plan, as every old one was when V34 ran.
+        mockMvc.perform(as(ben, put("/api/v1/profile"))
+                        .content("""
+                                {"country":"LB","city":"beirut","lifestyle":"regular","incomeArrivesTaxed":true}"""))
+                .andExpect(status().isOk());
         String snapshotId = "old-" + UUID.randomUUID();
         jdbc.sql("""
-                        INSERT INTO plan_snapshot (id, user_id, taken_at, reason, body)
-                        VALUES (:id, :userId, now(), 'You added a goal: Emergency fund', CAST(:body AS jsonb))
+                        INSERT INTO plan_snapshot (id, user_id, plan_id, taken_at, reason, body)
+                        SELECT :id, :userId, plan_id, now(), 'You added a goal: Emergency fund', CAST(:body AS jsonb)
+                          FROM planning_active_plan WHERE user_id = :userId
                         """)
                 .param("id", snapshotId)
                 .param("userId", ben)
@@ -372,7 +379,9 @@ class PlanningApiIT extends PlanningDatabaseFixture {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reason").value("You added a goal: Emergency fund"))
                 .andExpect(jsonPath("$.surplus.amount").value("520.00"))
-                .andExpect(jsonPath("$.today").doesNotExist());
+                .andExpect(jsonPath("$.today").doesNotExist())
+                // Shown as it was: never given a place afterwards, just as it is never given a today.
+                .andExpect(jsonPath("$.place").doesNotExist());
 
         mockMvc.perform(as(ben, get("/api/v1/plan/history/" + snapshotId)))
                 .andExpect(status().isOk())

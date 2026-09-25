@@ -19,6 +19,8 @@ import java.util.List;
  * @param today where the user stands from their own figures, before any change the plan suggests. Null
  *     on every snapshot taken before it existed, and deliberately left null: a snapshot is what the user
  *     was told, and they were not told this, so it is never worked out afresh from an old plan's lines.
+ * @param place where this plan was made for. Null on snapshots taken before plans belonged to a place,
+ *     and never filled in afterwards, for the same reason as {@code today}.
  */
 public record PlanView(
         String id,
@@ -31,7 +33,8 @@ public record PlanView(
         List<Goal> goals,
         Cuts cuts,
         List<Hint> hints,
-        LeftOver leftOver) {
+        LeftOver leftOver,
+        Place place) {
 
     public PlanView {
         goals = List.copyOf(goals);
@@ -69,6 +72,19 @@ public record PlanView(
             int estimatedLines,
             String estimatedNote,
             String planResult) {}
+
+    /**
+     * A place as a person reads it, with the ids the client sends back. {@code label} is the whole
+     * place in words ("Beirut, Lebanon"), so no screen ever assembles one.
+     *
+     * @param city null when the user's city is not one we list
+     * @param cityNotListed what they called their city in that case, or null
+     */
+    public record Place(Country country, City city, String cityNotListed, String label) {}
+
+    public record Country(String code, String name) {}
+
+    public record City(String id, String name) {}
 
     /** A value the client may send back, with the words to show for it. */
     public record KeyLabel(String key, String label) {}
@@ -144,6 +160,9 @@ public record PlanView(
     /**
      * @param fromBalance the part of the balance credited to this goal. There is no other way for a
      *     goal to hold money, which is what stops the same dollars counting twice.
+     * @param percentCovered how much of the target {@code fromBalance} already covers, in whole percent
+     *     and rounded down, so a goal never reads as done before it is: 100 only when fully covered.
+     *     Null on snapshots taken before it existed, and never worked out afresh for them.
      */
     public record Goal(
             String id,
@@ -157,7 +176,8 @@ public record PlanView(
             String monthlyFunded,
             String shortBy,
             boolean finishFirst,
-            LabelMeaning status) {}
+            LabelMeaning status,
+            Integer percentCovered) {}
 
     /**
      * Both numbers, together, always.

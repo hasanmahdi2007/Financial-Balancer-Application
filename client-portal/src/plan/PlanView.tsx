@@ -189,7 +189,12 @@ function GoalsSection({ goals, actions }: { goals: PlanGoal[]; actions?: (goal: 
             <p className={goal.shortBy === '0.00' ? 'goal__status goal__status--ok' : 'goal__status goal__status--short'}>
               <strong>{goal.status.label}.</strong> {goal.status.meaning}
             </p>
-            <Progress label="Covered by what you already have" part={goal.fromBalance} whole={goal.target} />
+            <Progress
+              label="Covered by what you already have"
+              part={goal.fromBalance}
+              whole={goal.target}
+              percent={goal.percentCovered}
+            />
             {goal.monthlyNeeded !== '0.00' ? (
               <Progress label="Monthly amount it gets" part={goal.monthlyFunded} whole={goal.monthlyNeeded} />
             ) : null}
@@ -213,9 +218,21 @@ function GoalsSection({ goals, actions }: { goals: PlanGoal[]; actions?: (goal: 
  * width - and never becomes a figure anyone reads, so a float is harmless here in a way it would not
  * be for the amounts themselves, which are shown exactly as the server sent them.
  */
-function Progress({ label, part, whole }: { label: string; part: string; whole: string }) {
+export function Progress({
+  label,
+  part,
+  whole,
+  percent: fromServer,
+}: {
+  label: string;
+  part: string;
+  whole: string;
+  /** The server's own figure where it sent one, which is rounded down on purpose. */
+  percent?: number | null;
+}) {
   const ratio = Number(whole) > 0 ? Math.min(1, Math.max(0, Number(part) / Number(whole))) : 0;
-  const percent = Math.round(ratio * 100);
+  // Down, never to nearest: 99.6% drawn as a full bar would tell someone a goal is done when it is not.
+  const percent = fromServer ?? Math.floor(ratio * 100);
   return (
     <div className="progress">
       <div className="progress__label">
@@ -225,7 +242,7 @@ function Progress({ label, part, whole }: { label: string; part: string; whole: 
         </span>
       </div>
       <div className="progress__track" role="img" aria-label={`${label}: ${percent}%`}>
-        <div className={ratio >= 1 ? 'progress__bar progress__bar--full' : 'progress__bar'} style={{ width: `${percent}%` }} />
+        <div className={percent >= 100 ? 'progress__bar progress__bar--full' : 'progress__bar'} style={{ width: `${percent}%` }} />
       </div>
     </div>
   );

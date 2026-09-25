@@ -2,6 +2,7 @@ package com.hasan.budget.web;
 
 import com.hasan.budget.ingestion.application.BankNotOfferedException;
 import com.hasan.budget.ingestion.application.BankUnavailableException;
+import com.hasan.budget.planning.application.ChooseAPlanException;
 import com.hasan.budget.planning.application.NeedsMoreInformationException;
 import com.hasan.budget.planning.application.NotFoundException;
 import com.hasan.budget.web.CurrentUserArgumentResolver.NotSignedInException;
@@ -59,6 +60,15 @@ class ApiProblems {
     ProblemDetail needsMore(NeedsMoreInformationException problem) {
         return detail(
                 HttpStatus.CONFLICT, "needs-more-information", "We need a little more first", problem.getMessage());
+    }
+
+    /**
+     * A distinct type rather than another conflict, because the client does something different with
+     * it: it opens the plan chooser for the new place instead of showing the sentence as a problem.
+     */
+    @ExceptionHandler(ChooseAPlanException.class)
+    ProblemDetail chooseAPlan(ChooseAPlanException problem) {
+        return detail(HttpStatus.CONFLICT, "choose-a-plan", "Choose a plan for where you live now", problem.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

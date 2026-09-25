@@ -312,7 +312,7 @@ class PlanAssemblerTest {
             PlanningInputs inputs = withoutGroceries(measuredScenario(Money.ZERO, Money.of(10_500)));
             AssembledPlan plan = assembler.assemble(
                     withMeasured(inputs, Map.of(SpendCategory.GROCERIES, Money.of(612))));
-            PlanView view = PlanViews.from(plan, "snapshot", Instant.EPOCH, "a test");
+            PlanView view = PlanViews.from(plan, "snapshot", Instant.EPOCH, "a test", null);
 
             assertThat(view.surplus().lines())
                     .filteredOn(line -> line.id().equals("groceries"))
@@ -440,7 +440,7 @@ class PlanAssemblerTest {
         }
 
         private PlanView viewOf(PlanningInputs inputs) {
-            return PlanViews.from(assembler.assemble(inputs), "snapshot", Instant.EPOCH, "a test");
+            return PlanViews.from(assembler.assemble(inputs), "snapshot", Instant.EPOCH, "a test", null);
         }
     }
 
