@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { PlanChoice, PlanChoices } from '../api/plans';
@@ -60,7 +60,7 @@ describe('starting a new plan', () => {
     expect(screen.getByRole('checkbox', { name: 'Bring my goals with me' })).toBeChecked();
     await user.click(screen.getByRole('button', { name: 'Start a new plan here' }));
 
-    expect(await screen.findByTestId('path')).toHaveTextContent('/setup/questions');
+    await waitFor(() => expect(screen.getByTestId('path').textContent).toBe('/setup/questions'));
     expect(fake.sentTo('POST', '/api/v1/plans')).toEqual([
       { country: 'US', city: 'austin', cityNotListed: null, bringGoals: true },
     ]);
@@ -152,7 +152,7 @@ describe('a country that already has a plan', () => {
     await chooseCountry(user, 'Lebanon');
     await user.click(await screen.findByRole('button', { name: 'Use this plan' }));
 
-    expect(await screen.findByTestId('path')).toHaveTextContent('/plan');
+    await waitFor(() => expect(screen.getByTestId('path').textContent).toBe('/plan'));
     expect(fake.sentTo('PUT', '/api/v1/plans/active')).toEqual([{ planId: plansLB.plans[0]!.id }]);
   });
 
@@ -190,7 +190,7 @@ describe('My plans', () => {
     const other = plans.find((p) => within(p).queryByRole('button', { name: 'Use this plan' }))!;
     await user.click(within(other).getByRole('button', { name: 'Use this plan' }));
 
-    expect(await screen.findByTestId('path')).toHaveTextContent('/plan');
+    await waitFor(() => expect(screen.getByTestId('path').textContent).toBe('/plan'));
     expect(fake.sentTo('PUT', '/api/v1/plans/active')).toHaveLength(1);
   });
 
