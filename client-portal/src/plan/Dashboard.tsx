@@ -86,6 +86,10 @@ export function Dashboard() {
           <Link to="/afford" className="button button--orange">
             Can I afford this?
           </Link>
+          {/* Hasan asked for this one on the page itself, not only in the menu. */}
+          <Link to="/plans/new" className="button button--secondary">
+            New plan
+          </Link>
         </div>
       </div>
       {act.error ? <Failure message={act.error} /> : null}

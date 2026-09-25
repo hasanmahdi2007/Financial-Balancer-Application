@@ -1,0 +1,22 @@
+{
+  "id": "c16fc1ae-b3c8-417d-b747-73746070fa96",
+  "place": {
+    "country": {
+      "code": "US",
+      "name": "United States"
+    },
+    "city": {
+      "id": "austin",
+      "name": "Austin"
+    },
+    "cityNotListed": null,
+    "label": "Austin, United States"
+  },
+  "active": true,
+  "lastUsedAt": "2026-09-25T11:35:23.802133Z",
+  "summary": null,
+  "use": {
+    "label": "The plan you are using",
+    "meaning": "This is the plan on your dashboard now."
+  }
+}
