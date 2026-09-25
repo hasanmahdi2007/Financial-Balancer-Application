@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { Bank } from '../api/bank';
@@ -10,9 +10,11 @@ const signedIn = () => new FakeAuth().signedInAs('maya@example.com');
 const EXPLANATION =
   'We can only read your transactions and balances. Nothing here can move money, and your bank login is typed into your bank\'s own window, never into ours.';
 
-const nothingConnected: Bank = { connected: false, connections: [], accounts: [], explanation: EXPLANATION };
+const nothingConnected: Bank = { offered: true, notOffered: null, connected: false, connections: [], accounts: [], explanation: EXPLANATION };
 
 const importing: Bank = {
+  offered: true,
+  notOffered: null,
   connected: true,
   connections: [
     {
@@ -27,6 +29,8 @@ const importing: Bank = {
 };
 
 const connected: Bank = {
+  offered: true,
+  notOffered: null,
   connected: true,
   connections: [{ id: 7, connectedAt: '2026-09-24T10:00:00Z', lastUpdated: '2026-09-24T10:01:12Z', status: 'Up to date' }],
   accounts: [
@@ -46,21 +50,35 @@ class FakeBankWindow implements BankWindow {
   }
 }
 
-/** GET /api/v1/bank answers each of `states` in turn, then keeps answering the last. */
-function bankAnswering(server: FakeServer, ...states: Bank[]) {
-  let call = 0;
-  return server.on('/api/v1/bank', async () => {
-    const body = states[Math.min(call++, states.length - 1)];
-    return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  });
+const json = (body: unknown, status = 200) =>
+  new Response(body === undefined ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+/**
+ * A bank that changes when the user acts, as the server does: GET answers `now` until connecting
+ * or disconnecting moves it to the state given for that. Keyed on actions rather than on how many
+ * times it was asked, because the menu asks too and a count would hand the menu the page's answer.
+ */
+function bankAnswering(server: FakeServer, now: Bank, after: { connecting?: Bank; disconnecting?: Bank } = {}) {
+  let current = now;
+  return server
+    .on('/api/v1/bank', async () => json(current))
+    .on('POST /api/v1/bank/connections', async () => {
+      current = after.connecting ?? current;
+      return json(current, 202);
+    })
+    .on('DELETE /api/v1/bank/connections/7', async () => {
+      current = after.disconnecting ?? current;
+      return json(undefined, 204);
+    });
 }
 
 describe('connecting a bank', () => {
   it('is offered in the menu of every signed-in page', async () => {
-    renderApp('/plan', signedIn());
+    renderApp('/plan', signedIn(), bankAnswering(new FakeServer(), nothingConnected));
 
     const menu = await screen.findByRole('navigation', { name: 'Main' });
-    expect(within(menu).getByRole('link', { name: 'Connect your bank' })).toHaveAttribute('href', '/bank');
+    // The menu asks the server first, so the entry arrives a moment after the menu itself.
+    expect(await within(menu).findByRole('link', { name: 'Connect your bank' })).toHaveAttribute('href', '/bank');
   });
 
   it('explains what connecting allows before anyone presses anything', async () => {
@@ -72,10 +90,10 @@ describe('connecting a bank', () => {
   });
 
   it("opens the bank's own window and hands the token it returns to the server", async () => {
-    const server = bankAnswering(new FakeServer(), nothingConnected, connected).on('POST /api/v1/bank/link-token', {
-      status: 200,
-      body: { linkToken: 'link-sandbox-123' },
-    }).on('POST /api/v1/bank/connections', { status: 202, body: importing });
+    const server = bankAnswering(new FakeServer(), nothingConnected, { connecting: connected }).on(
+      'POST /api/v1/bank/link-token',
+      { status: 200, body: { linkToken: 'link-sandbox-123' } },
+    );
     const bankWindow = new FakeBankWindow('public-sandbox-456');
     renderApp('/bank', signedIn(), server, bankWindow);
     const user = userEvent.setup();
@@ -114,6 +132,38 @@ describe('connecting a bank', () => {
     await user.click(await screen.findByRole('button', { name: 'Connect your bank' }));
 
     expect(await screen.findByText(detail)).toBeInTheDocument();
+  });
+});
+
+const IN_LEBANON =
+  'Connecting a bank works only for banks in the United States. For Lebanon, your plan uses the figures you enter under Your money, and works just as well.';
+const livesInLebanon: Bank = { ...nothingConnected, offered: false, notOffered: IN_LEBANON };
+
+describe('where no bank can be connected', () => {
+  it('is not in the menu', async () => {
+    renderApp('/bank', signedIn(), bankAnswering(new FakeServer(), livesInLebanon));
+
+    // The page and the menu ask the same question at the same moment. Once the page shows the
+    // answer, the menu has had it too - so an absent entry means hidden, not merely not loaded yet.
+    await screen.findByText(IN_LEBANON);
+    const menu = screen.getByRole('navigation', { name: 'Main' });
+    await waitFor(() => expect(within(menu).getByRole('link', { name: 'Your money' })).toBeInTheDocument());
+    expect(within(menu).queryByRole('link', { name: 'Connect your bank' })).not.toBeInTheDocument();
+  });
+
+  it("says why in the server's words and points to entering figures instead, with nothing to press that would fail", async () => {
+    renderApp('/bank', signedIn(), bankAnswering(new FakeServer(), livesInLebanon));
+
+    expect(await screen.findByText(IN_LEBANON)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Enter your figures' })).toHaveAttribute('href', '/money');
+    expect(screen.queryByRole('button', { name: 'Connect your bank' })).not.toBeInTheDocument();
+  });
+
+  it('is not suggested on the money page', async () => {
+    renderApp('/money', signedIn(), bankAnswering(new FakeServer(), livesInLebanon));
+
+    await screen.findByLabelText('How much arrives in your account each month?');
+    expect(screen.queryByRole('link', { name: 'Connect your bank' })).not.toBeInTheDocument();
   });
 });
 
@@ -160,9 +210,7 @@ describe('a connected bank', () => {
   });
 
   it('disconnects only after the user confirms, having been told what it deletes', async () => {
-    const server = bankAnswering(new FakeServer(), connected, nothingConnected).on('DELETE /api/v1/bank/connections/7', {
-      status: 204,
-    });
+    const server = bankAnswering(new FakeServer(), connected, { disconnecting: nothingConnected });
     renderApp('/bank', signedIn(), server);
     const user = userEvent.setup();
 

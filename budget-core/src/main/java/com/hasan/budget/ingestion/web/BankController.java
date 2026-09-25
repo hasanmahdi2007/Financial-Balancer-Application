@@ -4,12 +4,14 @@ import com.hasan.budget.ingestion.application.IngestionService;
 import com.hasan.budget.ingestion.domain.AccountRole;
 import com.hasan.budget.ingestion.domain.AccountSnapshot;
 import com.hasan.budget.ingestion.domain.ConnectionStatus;
+import com.hasan.budget.ingestion.port.UserCountries;
 import com.hasan.budget.planning.application.NotFoundException;
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.web.CurrentUser;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,9 +38,11 @@ import org.springframework.web.bind.annotation.RestController;
 class BankController {
 
     private final IngestionService ingestion;
+    private final UserCountries countries;
 
-    BankController(IngestionService ingestion) {
+    BankController(IngestionService ingestion, UserCountries countries) {
         this.ingestion = ingestion;
+        this.countries = countries;
     }
 
     record LinkTokenView(String linkToken) {}
@@ -54,7 +58,17 @@ class BankController {
      */
     record AccountView(String name, String kind, String balance, String meaning, String available) {}
 
-    record BankView(boolean connected, List<ConnectionView> connections, List<AccountView> accounts, String explanation) {}
+    /**
+     * @param offered whether this user may connect a bank, which depends on where they live
+     * @param notOffered why not, and what to do instead; null when {@code offered}
+     */
+    record BankView(
+            boolean offered,
+            String notOffered,
+            boolean connected,
+            List<ConnectionView> connections,
+            List<AccountView> accounts,
+            String explanation) {}
 
     record RefreshView(int banks) {}
 
@@ -69,13 +83,15 @@ class BankController {
                         .thenComparing(account -> account.label() == null ? "" : account.label()))
                 .map(BankController::view)
                 .toList();
-        return new BankView(!connections.isEmpty(), connections, accounts, EXPLANATION);
+        Optional<String> notOffered = ingestion.whyNotOffered(countries.countryOf(userId));
+        return new BankView(
+                notOffered.isEmpty(), notOffered.orElse(null), !connections.isEmpty(), connections, accounts, EXPLANATION);
     }
 
     /** A short-lived token that opens the provider's connection widget for this user. */
     @PostMapping("/link-token")
     LinkTokenView linkToken(@CurrentUser String userId) {
-        return new LinkTokenView(ingestion.startLinking(userId));
+        return new LinkTokenView(ingestion.startLinking(userId, countries.countryOf(userId)));
     }
 
     /**
@@ -88,7 +104,7 @@ class BankController {
         if (request == null || request.publicToken() == null || request.publicToken().isBlank()) {
             throw new IllegalArgumentException("Connect your bank through the bank window first.");
         }
-        ingestion.connect(userId, request.publicToken().strip());
+        ingestion.connect(userId, request.publicToken().strip(), countries.countryOf(userId));
         return bank(userId);
     }
 

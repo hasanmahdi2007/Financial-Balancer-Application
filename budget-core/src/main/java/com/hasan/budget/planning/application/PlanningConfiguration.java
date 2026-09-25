@@ -4,6 +4,7 @@ import com.hasan.budget.costofliving.application.BaselineResolver;
 import com.hasan.budget.costofliving.application.CityCatalogService;
 import com.hasan.budget.ingestion.application.IngestionService;
 import com.hasan.budget.ingestion.port.ObservedMerchantPrices;
+import com.hasan.budget.ingestion.port.UserCountries;
 import com.hasan.budget.planning.domain.AllocationStrategy;
 import com.hasan.budget.planning.domain.GreedyPriorityAllocator;
 import com.hasan.budget.profile.application.DiscretionaryFloorService;
@@ -79,6 +80,12 @@ public class PlanningConfiguration {
     @Bean
     BankSpending bankSpending(ObservedMerchantPrices prices, IngestionService ingestion) {
         return new IngestionBankSpending(prices, ingestion);
+    }
+
+    /** Answers the bank module's one question about the profile: where the user lives. */
+    @Bean
+    UserCountries userCountries(PlanningProfileStore profiles) {
+        return new ProfileUserCountries(profiles);
     }
 
     @Bean

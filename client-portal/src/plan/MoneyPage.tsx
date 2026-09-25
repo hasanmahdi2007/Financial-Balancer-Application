@@ -4,6 +4,7 @@ import { useApi } from '../api/ApiProvider';
 import { plan, type Money } from '../api/plan';
 import { useAction } from '../api/useAction';
 import { useRemote } from '../api/useRemote';
+import { useBankOffer } from '../bank/useBankOffer';
 import { orNothing } from '../setup/saveLocation';
 import { AMOUNT_PROBLEM, isAmount } from '../ui/amount';
 import { Failure, Loading } from '../ui/Feedback';
@@ -18,12 +19,15 @@ import { MoneyField } from '../ui/MoneyField';
 export function MoneyPage() {
   const api = useApi();
   const money = useRemote('money', (signal) => orNothing(plan.money(api, signal)));
+  const bankOffered = useBankOffer();
   return (
     <section className="card">
       <h1>Your money</h1>
-      <p className="aside">
-        Rather not type these? <Link to="/bank">Connect your bank</Link> and your plan uses what it really shows.
-      </p>
+      {bankOffered ? (
+        <p className="aside">
+          Rather not type these? <Link to="/bank">Connect your bank</Link> and your plan uses what it really shows.
+        </p>
+      ) : null}
       {money.state === 'loading' ? <Loading what="your figures" /> : null}
       {money.state === 'failed' ? <Failure message={money.message} retry={money.retry} /> : null}
       {money.state === 'ready' ? <MoneyForm existing={money.data} /> : null}

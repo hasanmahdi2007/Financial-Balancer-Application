@@ -15,6 +15,9 @@ ingestion:
     # Optional. Without a publicly reachable address there is nothing for Plaid to notify, and syncs
     # still happen when the user opens the app.
     webhook-url: ${PLAID_WEBHOOK_URL:}
+    # Where the banks a user may connect are. Plaid cannot reach Lebanese banks at all, so a user whose
+    # profile says they live anywhere not listed here is not offered the option.
+    countries: US
   # 32 random bytes, base64 encoded. Encrypts stored access tokens, each of which can read a person's
   # entire financial history.
   token-encryption-key: ${TOKEN_ENCRYPTION_KEY:}

@@ -340,7 +340,10 @@ Authorization: Bearer {{token}}
 ### 23. The user's connected banks and what their accounts hold. Before anything is connected,
 # "connected" is false and both lists are empty; "explanation" is the sentence to show beside the
 # connect button.
-# -> {"connected":true,
+# "offered" says whether this user may connect a bank at all, which depends on the country in their
+# profile: Plaid reaches US banks and no Lebanese ones. When false, "notOffered" is the sentence to
+# show instead - why, and what to do instead - and there is no connect button to offer.
+# -> {"offered":true,"notOffered":null,"connected":true,
 #     "connections":[{"id":7,"connectedAt":"2026-09-24T10:00:00Z","lastUpdated":"2026-09-24T10:01:12Z",
 #                     "status":"Up to date"}],
 #     "accounts":[{"name":"Plaid Checking ••0000","kind":"Bank account","balance":"110.00",
@@ -357,6 +360,8 @@ Authorization: Bearer {{token}}
 # bank login is typed there and never reaches this service.
 # -> {"linkToken":"link-sandbox-..."}
 # 503 with a readable "detail" when the bank cannot be reached or the service has no bank keys.
+# 409 with the "notOffered" sentence as "detail" when the user's country has no banks we can reach
+# (step 25 refuses the same way).
 POST {{gateway}}/api/v1/bank/link-token
 Authorization: Bearer {{token}}
 

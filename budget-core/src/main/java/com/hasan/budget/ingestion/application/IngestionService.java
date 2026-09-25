@@ -16,13 +16,17 @@ import com.hasan.budget.ingestion.port.BankDataProvider;
 import com.hasan.budget.ingestion.port.BankLedger;
 import com.hasan.budget.ingestion.port.BankLinkProvider;
 import com.hasan.budget.ingestion.port.RecurringStreamProvider;
+import com.hasan.budget.shared.CountryCode;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,17 +80,50 @@ public class IngestionService {
     }
 
     /** A token for the provider's consent widget. The user's bank credentials never reach us. */
-    public String startLinking(String userId) {
+    public String startLinking(String userId, Optional<CountryCode> livesIn) {
+        whyNotOffered(livesIn).ifPresent(reason -> {
+            throw new BankNotOfferedException(reason);
+        });
         return reachingTheBank(
                 "We could not start connecting to your bank just now. Try again in a few minutes.",
                 () -> links.createLinkToken(userId));
     }
 
     /**
+     * Why connecting a bank is not available to someone living there, or empty when it is.
+     *
+     * <p>Worded from the provider's own list of countries, so serving another country changes this
+     * sentence without anybody editing it.
+     */
+    public Optional<String> whyNotOffered(Optional<CountryCode> livesIn) {
+        if (livesIn.isEmpty()) {
+            return Optional.of("Tell us where you live first, under Where you live. Connecting a bank depends on it.");
+        }
+        Set<CountryCode> served = links.countriesServed();
+        if (served.contains(livesIn.get())) {
+            return Optional.empty();
+        }
+        String where = served.stream().map(IngestionService::nameOf).sorted().collect(Collectors.joining(" and "));
+        return Optional.of("Connecting a bank works only for banks in " + where + ". For " + nameOf(livesIn.get())
+                + ", your plan uses the figures you enter under Your money, and works just as well.");
+    }
+
+    private static String nameOf(CountryCode country) {
+        String name = Locale.of("", country.value()).getDisplayCountry(Locale.ENGLISH);
+        return name.startsWith("United") ? "the " + name : name;
+    }
+
+    /**
      * Completes a connection and returns as soon as it is recorded, with the import already running
      * elsewhere.
+     *
+     * <p>Checked against where the user lives here as well as when linking starts, so a token obtained
+     * some other way cannot connect a bank this user is not offered.
      */
-    public BankConnection connect(String userId, String publicToken) {
+    public BankConnection connect(String userId, String publicToken, Optional<CountryCode> livesIn) {
+        whyNotOffered(livesIn).ifPresent(reason -> {
+            throw new BankNotOfferedException(reason);
+        });
         BankConnection connection = reachingTheBank(
                 "Your bank said yes, but we could not finish connecting it. Try connecting again.",
                 () -> {

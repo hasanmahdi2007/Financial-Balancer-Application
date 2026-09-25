@@ -1,5 +1,6 @@
 package com.hasan.budget.web;
 
+import com.hasan.budget.ingestion.application.BankNotOfferedException;
 import com.hasan.budget.ingestion.application.BankUnavailableException;
 import com.hasan.budget.planning.application.NeedsMoreInformationException;
 import com.hasan.budget.planning.application.NotFoundException;
@@ -37,6 +38,12 @@ class ApiProblems {
     ProblemDetail bankUnavailable(BankUnavailableException problem) {
         return detail(
                 HttpStatus.SERVICE_UNAVAILABLE, "bank-unavailable", "We could not reach your bank", problem.getMessage());
+    }
+
+    /** Connecting a bank is not available where this user lives. 409: the request is fine, their situation is not. */
+    @ExceptionHandler(BankNotOfferedException.class)
+    ProblemDetail bankNotOffered(BankNotOfferedException problem) {
+        return detail(HttpStatus.CONFLICT, "bank-not-offered", "Connecting a bank is not available", problem.getMessage());
     }
 
     @ExceptionHandler(NotFoundException.class)

@@ -1,5 +1,8 @@
 package com.hasan.budget.ingestion.port;
 
+import com.hasan.budget.shared.CountryCode;
+import java.util.Set;
+
 /**
  * Starting a bank connection, and identifying the one that results.
  *
@@ -21,6 +24,12 @@ public interface BankLinkProvider {
      * credentials. Those credentials never reach this application.
      */
     String createLinkToken(String userId);
+
+    /**
+     * The countries whose banks this provider can connect to. A user living anywhere else is not
+     * offered a connection at all, rather than sent into a widget that cannot find their bank.
+     */
+    Set<CountryCode> countriesServed();
 
     /**
      * The provider's identifier for the connection behind an access token.
