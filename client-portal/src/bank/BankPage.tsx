@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useApi } from '../api/ApiProvider';
 import { bank, type Bank, type BankConnection } from '../api/bank';
 import { plan } from '../api/plan';
@@ -73,6 +73,21 @@ function BankDetails({ bank: held, onChange }: { bank: Bank; onChange(): void })
     onChange();
   });
 
+  if (!held.offered && !held.connected) {
+    return (
+      <>
+        <div className="banner banner--info" role="note">
+          <p>{held.notOffered}</p>
+        </div>
+        <div className="actions">
+          <Link to="/money" className="button">
+            Enter your figures
+          </Link>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <p className="lede">
@@ -121,7 +136,7 @@ function BankDetails({ bank: held, onChange }: { bank: Bank; onChange(): void })
             <button type="button" className="button button--secondary" disabled={refresh.busy} onClick={() => void refresh.run()}>
               {refresh.busy ? 'Asking your bank…' : 'Check for new transactions'}
             </button>
-            <ConnectButton label="Connect another bank" secondary onConnected={onChange} />
+            {held.offered ? <ConnectButton label="Connect another bank" secondary onConnected={onChange} /> : null}
             <button type="button" className="button" disabled={importing || replan.busy} onClick={() => void replan.run()}>
               {replan.busy ? 'Working out your plan…' : 'Update my plan with this'}
             </button>

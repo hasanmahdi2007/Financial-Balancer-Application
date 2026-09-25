@@ -19,11 +19,15 @@ import com.hasan.budget.ingestion.domain.SyncResult;
 import com.hasan.budget.ingestion.port.BankDataProvider;
 import com.hasan.budget.ingestion.port.BankLinkProvider;
 import com.hasan.budget.ingestion.port.RecurringStreamProvider;
+import com.hasan.budget.ingestion.port.UserCountries;
+import com.hasan.budget.shared.CountryCode;
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.SpendCategory;
 import com.hasan.budget.web.CurrentUserArgumentResolver;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.BeforeEach;
@@ -209,6 +213,41 @@ class BankApiIT {
         mockMvc.perform(post("/api/v1/bank/link-token")).andExpect(status().isUnauthorized());
     }
 
+    @Test
+    @DisplayName("someone living in the US is offered a bank")
+    void offeredInTheUs() throws Exception {
+        mockMvc.perform(as(ana, get("/api/v1/bank")))
+                .andExpect(jsonPath("$.offered").value(true))
+                .andExpect(jsonPath("$.notOffered").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("someone living in Lebanon is told why there is no bank to connect, and can start nothing")
+    void notOfferedInLebanon() throws Exception {
+        String layla = "leb-" + UUID.randomUUID();
+
+        mockMvc.perform(as(layla, get("/api/v1/bank")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.offered").value(false))
+                .andExpect(jsonPath("$.notOffered").value(containsString("only for banks in the United States")))
+                .andExpect(jsonPath("$.notOffered").value(containsString("For Lebanon")));
+        mockMvc.perform(as(layla, post("/api/v1/bank/link-token")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value(containsString("For Lebanon")));
+        mockMvc.perform(as(layla, post("/api/v1/bank/connections")).content("""
+                        {"publicToken":"public-%s"}""".formatted(layla)))
+                .andExpect(status().isConflict());
+        mockMvc.perform(as(layla, get("/api/v1/bank"))).andExpect(jsonPath("$.connected").value(false));
+    }
+
+    @Test
+    @DisplayName("someone who has not said where they live is asked to first")
+    void askedWhereTheyLiveFirst() throws Exception {
+        mockMvc.perform(as("new-" + UUID.randomUUID(), get("/api/v1/bank")))
+                .andExpect(jsonPath("$.offered").value(false))
+                .andExpect(jsonPath("$.notOffered").value(containsString("Where you live")));
+    }
+
     private long connectAndImport(String userId) throws Exception {
         mockMvc.perform(as(userId, post("/api/v1/bank/connections")).content("""
                         {"publicToken":"public-%s"}""".formatted(userId)))
@@ -249,6 +288,19 @@ class BankApiIT {
         InMemoryProvider inMemoryProvider() {
             return new InMemoryProvider();
         }
+
+        /**
+         * Where each test user lives, read from their id: "leb-" lives in Lebanon, "new-" has not said
+         * yet, everyone else in the US. The real answer comes from the profile, whose own tests cover
+         * saving a country; what is checked here is what the bank routes do with it.
+         */
+        @Bean
+        @Primary
+        UserCountries userCountriesByName() {
+            return userId -> userId.startsWith("new-")
+                    ? Optional.empty()
+                    : Optional.of(userId.startsWith("leb-") ? CountryCode.LEBANON : CountryCode.US);
+        }
     }
 
     /**
@@ -266,6 +318,11 @@ class BankApiIT {
                 throw new IllegalStateException("Plaid /link/token/create failed: INVALID_API_KEYS");
             }
             return "link-sandbox-for-" + userId;
+        }
+
+        @Override
+        public Set<CountryCode> countriesServed() {
+            return Set.of(CountryCode.US);
         }
 
         @Override

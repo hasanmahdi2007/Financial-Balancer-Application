@@ -22,6 +22,7 @@ import com.hasan.budget.ingestion.support.InMemoryBankStore;
 import com.hasan.budget.ingestion.support.LogCapture;
 import com.hasan.budget.ingestion.support.RecordingBankDataProvider;
 import com.hasan.budget.ingestion.support.TestExecutors;
+import com.hasan.budget.shared.CountryCode;
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.Rigidity;
 import com.hasan.budget.shared.SpendCategory;
@@ -29,6 +30,7 @@ import com.hasan.budget.shared.TransactionKind;
 import java.time.YearMonth;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.Predicate;
@@ -281,7 +283,7 @@ class BankDataSpecTest {
             sandbox = RecordedSandbox.withRecordedHistory();
             RecordingBankDataProvider watched = new RecordingBankDataProvider(sandbox.provider());
             IngestionService before = serviceUsing(watched, TestExecutors.immediate());
-            long connectionId = before.connect(USER, "public-token").id();
+            long connectionId = before.connect(USER, "public-token", Optional.of(CountryCode.US)).id();
             String cursorAfterTheFirstImport =
                     store.cursor(connectionId).orElseThrow();
             int importedSoFar = store.entriesForUser(USER).size();
@@ -324,7 +326,7 @@ class BankDataSpecTest {
         void aRemovedTransactionIsRemovedFromTheBreakdown() {
             sandbox = RecordedSandbox.serving(RecordedSandbox.fixture("sync-initial-page-1.json"));
             IngestionService ingestion = serviceUsing(sandbox.provider(), TestExecutors.immediate());
-            long connectionId = ingestion.connect(USER, "public-token").id();
+            long connectionId = ingestion.connect(USER, "public-token", Optional.of(CountryCode.US)).id();
 
             // A real meal out of this user's real history, retracted the way a bank retracts one.
             NormalisedTransaction doomed = find(entry -> entry.classification()
@@ -382,7 +384,7 @@ class BankDataSpecTest {
             TestExecutors.Queueing later = TestExecutors.queueing();
             IngestionService ingestion = serviceUsing(watched, later);
 
-            BankConnection connection = ingestion.connect(USER, "public-token");
+            BankConnection connection = ingestion.connect(USER, "public-token", Optional.of(CountryCode.US));
 
             // The caller already has an answer, and the bank has not been asked for anything yet.
             assertThat(connection.id()).isPositive();
@@ -482,7 +484,7 @@ class BankDataSpecTest {
         BankConnection connection;
         String logged;
         try (LogCapture logs = LogCapture.start()) {
-            connection = ingestion.connect(USER, "public-token");
+            connection = ingestion.connect(USER, "public-token", Optional.of(CountryCode.US));
             ingestion.syncNow(connection.id());
             logged = logs.everything();
         }
@@ -511,7 +513,7 @@ class BankDataSpecTest {
             sandbox = RecordedSandbox.withRecordedHistory();
         }
         IngestionService ingestion = serviceUsing(sandbox.provider(), TestExecutors.immediate());
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", Optional.of(CountryCode.US)).id();
         while (ingestion.syncNow(connectionId).changedAnything()) {
             // Each recorded page was captured after the one before it; keep going until it is quiet.
         }

@@ -180,6 +180,6 @@ public final class RecordedSandbox {
      */
     private static PlaidProperties credentials() {
         return new PlaidProperties(
-                PlaidProperties.PlaidEnvironment.SANDBOX, "test-client-id", "test-secret", null, null);
+                PlaidProperties.PlaidEnvironment.SANDBOX, "test-client-id", "test-secret", null, null, null);
     }
 }

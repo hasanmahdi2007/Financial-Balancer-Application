@@ -265,11 +265,11 @@ class PlaidBankDataProviderTest {
 
     private static PlaidProperties configured() {
         return new PlaidProperties(
-                PlaidProperties.PlaidEnvironment.SANDBOX, "test-client-id", "test-secret", null, null);
+                PlaidProperties.PlaidEnvironment.SANDBOX, "test-client-id", "test-secret", null, null, null);
     }
 
     private static PlaidProperties unconfigured() {
-        return new PlaidProperties(PlaidProperties.PlaidEnvironment.SANDBOX, "", "", null, null);
+        return new PlaidProperties(PlaidProperties.PlaidEnvironment.SANDBOX, "", "", null, null, null);
     }
 
     private static String aPageWithAmount(String amount) {

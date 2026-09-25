@@ -15,6 +15,7 @@ import com.hasan.budget.ingestion.port.RecurringStreamProvider;
 import com.hasan.budget.ingestion.support.InMemoryBankStore;
 import com.hasan.budget.ingestion.support.LogCapture;
 import com.hasan.budget.ingestion.support.TestExecutors;
+import com.hasan.budget.shared.CountryCode;
 import com.hasan.budget.shared.Money;
 import com.hasan.budget.shared.SpendCategory;
 import java.security.SecureRandom;
@@ -22,6 +23,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +41,8 @@ class IngestionServiceTest {
 
     private static final String USER = "user-1";
     private static final String ITEM = "item-1";
+    private static final Optional<CountryCode> LIVES_IN_US = Optional.of(CountryCode.US);
+    private static final Optional<CountryCode> LIVES_IN_LEBANON = Optional.of(CountryCode.LEBANON);
 
     private final InMemoryBankStore store = new InMemoryBankStore();
     private final AccessTokenCipher cipher = new AccessTokenCipher(aKey());
@@ -49,7 +54,7 @@ class IngestionServiceTest {
                 SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", true),
                 SyncResult.of(List.of(purchase("t-2", "20.00")), List.of(), List.of(), "c2", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
 
         assertThat(store.entriesForUser(USER)).hasSize(2);
         assertThat(store.cursor(connectionId)).contains("c2");
@@ -62,7 +67,7 @@ class IngestionServiceTest {
         ScriptedBank bank = new ScriptedBank(
                 SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
 
         // A second sync finishes while this one is still reading its pages - the only moment the
         // race is real, since each attempt re-reads the cursor before it starts.
@@ -92,7 +97,7 @@ class IngestionServiceTest {
         bank.queue(SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
 
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
 
         // Third request went back to the original cursor rather than continuing from c1.
         assertThat(bank.cursors).containsExactly(null, "c1", null);
@@ -108,7 +113,7 @@ class IngestionServiceTest {
             bank.thenFail(new SyncInterrupted("changed again"));
         }
         IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
 
         assertThatThrownBy(() -> ingestion.syncNow(connectionId)).isInstanceOf(SyncInterrupted.class);
         assertThat(bank.cursors).hasSize(3);
@@ -120,7 +125,7 @@ class IngestionServiceTest {
         ScriptedBank bank = new ScriptedBank(
                 SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
         int afterTheImport = bank.recurringCalls;
 
         bank.queue(SyncResult.of(List.of(), List.of(), List.of(), "c1", false));
@@ -150,7 +155,7 @@ class IngestionServiceTest {
         ScriptedBank bank = new ScriptedBank(
                 SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
-        ingestion.connect(USER, "public-token");
+        ingestion.connect(USER, "public-token", LIVES_IN_US);
         int requestsSoFar = bank.cursors.size();
 
         ingestion.onWebhook(new BankWebhook(ITEM, BankWebhook.Action.REFRESH_RECURRING));
@@ -170,7 +175,7 @@ class IngestionServiceTest {
         bank.refuseStreams(new IllegalStateException("PRODUCT_NOT_READY"));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
 
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
         IngestionService.SyncOutcome outcome;
         try (LogCapture logs = LogCapture.start()) {
             bank.queue(SyncResult.of(List.of(purchase("t-2", "20.00")), List.of(), List.of(), "c2", false));
@@ -190,7 +195,7 @@ class IngestionServiceTest {
         ScriptedBank bank = new ScriptedBank();
         bank.alwaysAnswer(SyncResult.of(List.of(purchase("t-1", "1.00")), List.of(), List.of(), "c", true));
         IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
 
         assertThatThrownBy(() -> ingestion.syncNow(connectionId))
                 .isInstanceOf(IllegalStateException.class)
@@ -207,7 +212,7 @@ class IngestionServiceTest {
 
         try (LogCapture logs = LogCapture.start()) {
             // Nothing is waiting on this, so it must not escape - but it must be findable.
-            ingestion.connect(USER, "public-token");
+            ingestion.connect(USER, "public-token", LIVES_IN_US);
 
             assertThat(logs.everything()).contains("Background sync");
         }
@@ -221,7 +226,7 @@ class IngestionServiceTest {
         TestExecutors.Queueing executor = TestExecutors.queueing();
         IngestionService ingestion = serviceOver(bank, executor);
 
-        ingestion.connect(USER, "public-token");
+        ingestion.connect(USER, "public-token", LIVES_IN_US);
         assertThat(ingestion.connectionsFor(USER)).singleElement().satisfies(status -> assertThat(status.hasImported())
                 .isFalse());
 
@@ -237,7 +242,7 @@ class IngestionServiceTest {
         bank.refuseExchanging(new IllegalStateException("INVALID_API_KEYS for client 5f3c secret abc123"));
         IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
 
-        assertThatThrownBy(() -> ingestion.connect(USER, "public-token"))
+        assertThatThrownBy(() -> ingestion.connect(USER, "public-token", LIVES_IN_US))
                 .isInstanceOf(BankUnavailableException.class)
                 .hasMessage("Your bank said yes, but we could not finish connecting it. Try connecting again.")
                 .hasMessageNotContaining("abc123");
@@ -250,9 +255,9 @@ class IngestionServiceTest {
         ScriptedBank bank = new ScriptedBank();
         TestExecutors.Queueing executor = TestExecutors.queueing();
         IngestionService ingestion = serviceOver(bank, executor);
-        ingestion.connect(USER, "first-bank");
-        ingestion.connect(USER, "second-bank");
-        ingestion.connect("someone-else", "their-bank");
+        ingestion.connect(USER, "first-bank", LIVES_IN_US);
+        ingestion.connect(USER, "second-bank", LIVES_IN_US);
+        ingestion.connect("someone-else", "their-bank", LIVES_IN_US);
         executor.runQueuedWork();
 
         int asked = ingestion.requestSyncFor(USER);
@@ -267,8 +272,8 @@ class IngestionServiceTest {
         ScriptedBank bank = new ScriptedBank();
         TestExecutors.Queueing executor = TestExecutors.queueing();
         IngestionService ingestion = serviceOver(bank, executor);
-        ingestion.connect(USER, "first-bank");
-        ingestion.connect("someone-else", "their-bank");
+        ingestion.connect(USER, "first-bank", LIVES_IN_US);
+        ingestion.connect("someone-else", "their-bank", LIVES_IN_US);
         executor.runQueuedWork();
 
         new BankRefreshSchedule(ingestion).refreshEveryConnection();
@@ -282,8 +287,8 @@ class IngestionServiceTest {
         ScriptedBank bank = new ScriptedBank();
         TestExecutors.Queueing setup = TestExecutors.queueing();
         IngestionService connecting = serviceOver(bank, setup);
-        connecting.connect(USER, "first-bank");
-        connecting.connect(USER, "second-bank");
+        connecting.connect(USER, "first-bank", LIVES_IN_US);
+        connecting.connect(USER, "second-bank", LIVES_IN_US);
 
         IngestionService full = serviceOver(bank, work -> {
             throw new RejectedExecutionException("queue full");
@@ -301,7 +306,7 @@ class IngestionServiceTest {
         ScriptedBank bank = new ScriptedBank(
                 SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
         assertThat(store.entriesForUser(USER)).isNotEmpty();
 
         assertThat(ingestion.disconnect(USER, connectionId)).isTrue();
@@ -318,7 +323,7 @@ class IngestionServiceTest {
         ScriptedBank bank = new ScriptedBank(
                 SyncResult.of(List.of(purchase("t-1", "10.00")), List.of(), List.of(), "c1", false));
         IngestionService ingestion = serviceOver(bank, TestExecutors.immediate());
-        long theirs = ingestion.connect(USER, "public-token").id();
+        long theirs = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
 
         assertThat(ingestion.disconnect("someone-else", theirs)).isFalse();
 
@@ -332,11 +337,45 @@ class IngestionServiceTest {
     void disconnectingSurvivesAnUnreachableProvider() {
         ScriptedBank bank = new ScriptedBank();
         IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
-        long connectionId = ingestion.connect(USER, "public-token").id();
+        long connectionId = ingestion.connect(USER, "public-token", LIVES_IN_US).id();
         bank.refuseRevoking(new IllegalStateException("provider unreachable"));
 
         assertThat(ingestion.disconnect(USER, connectionId)).isTrue();
         assertThat(ingestion.connectionsFor(USER)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("someone living where the provider has no banks is told so, in words, and nothing is started")
+    void aCountryTheProviderDoesNotServeIsNotOffered() {
+        ScriptedBank bank = new ScriptedBank();
+        IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
+
+        assertThat(ingestion.whyNotOffered(LIVES_IN_LEBANON)).contains(
+                "Connecting a bank works only for banks in the United States. For Lebanon, your plan uses the "
+                        + "figures you enter under Your money, and works just as well.");
+        assertThatThrownBy(() -> ingestion.startLinking(USER, LIVES_IN_LEBANON))
+                .isInstanceOf(BankNotOfferedException.class);
+    }
+
+    @Test
+    @DisplayName("a token obtained some other way cannot connect a bank where it is not offered")
+    void connectingIsCheckedToo() {
+        ScriptedBank bank = new ScriptedBank();
+        IngestionService ingestion = serviceOver(bank, TestExecutors.queueing());
+
+        assertThatThrownBy(() -> ingestion.connect(USER, "public-token", LIVES_IN_LEBANON))
+                .isInstanceOf(BankNotOfferedException.class);
+        assertThat(store.forUser(USER)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("someone who has not said where they live is asked to, before being offered a bank")
+    void noCountryYetMeansAskFirst() {
+        IngestionService ingestion = serviceOver(new ScriptedBank(), TestExecutors.queueing());
+
+        assertThat(ingestion.whyNotOffered(Optional.empty())).hasValueSatisfying(reason -> assertThat(reason)
+                .contains("Where you live"));
+        assertThat(ingestion.whyNotOffered(LIVES_IN_US)).isEmpty();
     }
 
     private IngestionService serviceOver(ScriptedBank bank, Executor executor) {
@@ -405,6 +444,11 @@ class IngestionServiceTest {
         @Override
         public String createLinkToken(String userId) {
             return "link-token";
+        }
+
+        @Override
+        public Set<CountryCode> countriesServed() {
+            return Set.of(CountryCode.US);
         }
 
         @Override

@@ -1,18 +1,36 @@
 import { Link, NavLink, Outlet } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
+import { useBankOffer } from '../bank/useBankOffer';
 import { Icon, type IconName } from './Icon';
 
 /** Everywhere a signed-in person can go, in the order they tend to need it. */
-const MENU: { to: string; label: string; icon: IconName; end?: boolean }[] = [
+const MENU: { to: string; label: string; icon: IconName; end?: boolean; bankOnly?: boolean }[] = [
   { to: '/plan', label: 'Your plan', icon: 'plan', end: true },
   { to: '/goals/new', label: 'Add a goal', icon: 'plus' },
   { to: '/afford', label: 'Can I afford this?', icon: 'bag' },
   { to: '/rebalance', label: 'Give me more for something', icon: 'sliders' },
   { to: '/plan/history', label: 'Every plan so far', icon: 'clock' },
   { to: '/money', label: 'Your money', icon: 'wallet' },
-  { to: '/bank', label: 'Connect your bank', icon: 'bank' },
+  // Only where a bank can actually be connected: offering it to someone in a country the bank
+  // provider cannot reach would send them into a window with no bank of theirs in it.
+  { to: '/bank', label: 'Connect your bank', icon: 'bank', bankOnly: true },
   { to: '/setup/location', label: 'Where you live', icon: 'pin' },
 ];
+
+/** The menu, which only exists for a signed-in person - so only then is the bank asked about. */
+function Menu() {
+  const bankOffered = useBankOffer();
+  return (
+    <nav className="sidebar" aria-label="Main">
+      {MENU.filter((item) => !item.bankOnly || bankOffered).map((item) => (
+        <NavLink key={item.to} to={item.to} end={item.end} className="sidebar__link">
+          <Icon name={item.icon} />
+          <span>{item.label}</span>
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
 
 export function Layout() {
   const { status, session, signOut } = useAuth();
@@ -36,14 +54,7 @@ export function Layout() {
         {signedIn ? (
           // Outside <main> on purpose: the menu is the frame, not the page, and a page that must have
           // nothing on it to press - a past plan - is checked by looking inside <main>.
-          <nav className="sidebar" aria-label="Main">
-            {MENU.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.end} className="sidebar__link">
-                <Icon name={item.icon} />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-          </nav>
+          <Menu />
         ) : (
           <aside className="welcome" aria-label="About Financial Balancer">
             <p className="welcome__eyebrow">Your money, planned around your life</p>

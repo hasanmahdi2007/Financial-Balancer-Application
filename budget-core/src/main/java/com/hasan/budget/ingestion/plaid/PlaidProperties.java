@@ -1,5 +1,6 @@
 package com.hasan.budget.ingestion.plaid;
 
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -14,12 +15,21 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     cannot end up pointing a sandbox key at production by editing a URL somewhere.
  * @param webhookUrl where Plaid should send notifications. Optional: without a publicly reachable
  *     address there is nothing to notify, and syncing still happens when the user opens the app.
+ * @param countries where the banks a user may connect are, as ISO codes. Plaid reaches the US,
+ *     Canada, the UK and much of Europe, and nowhere else - not Lebanon. Only the US is listed
+ *     because it is the only one of those this product plans for; adding a country is one entry.
  */
 @ConfigurationProperties(prefix = "ingestion.plaid")
 public record PlaidProperties(
-        PlaidEnvironment environment, String clientId, String secret, String clientName, String webhookUrl) {
+        PlaidEnvironment environment,
+        String clientId,
+        String secret,
+        String clientName,
+        String webhookUrl,
+        List<String> countries) {
 
     public PlaidProperties {
+        countries = countries == null || countries.isEmpty() ? List.of("US") : List.copyOf(countries);
         environment = environment == null ? PlaidEnvironment.SANDBOX : environment;
         clientName = clientName == null || clientName.isBlank() ? "Financial Balancer" : clientName;
     }

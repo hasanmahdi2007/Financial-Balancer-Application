@@ -8,11 +8,14 @@ import com.hasan.budget.ingestion.domain.SyncResult;
 import com.hasan.budget.ingestion.port.BankDataProvider;
 import com.hasan.budget.ingestion.port.BankLinkProvider;
 import com.hasan.budget.ingestion.port.RecurringStreamProvider;
+import com.hasan.budget.shared.CountryCode;
 import com.hasan.budget.shared.Money;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Plaid, behind the three ports this module reads banks through.
@@ -33,7 +36,6 @@ public class PlaidBankDataProvider implements BankDataProvider, BankLinkProvider
      */
     private static final List<String> GRANTED_PRODUCTS = List.of("transactions");
 
-    private static final List<String> COUNTRIES = List.of("US");
     private static final int PAGE_SIZE = 500;
 
     private final PlaidClient client;
@@ -51,12 +53,17 @@ public class PlaidBankDataProvider implements BankDataProvider, BankLinkProvider
         PlaidWire.LinkTokenRequest request = new PlaidWire.LinkTokenRequest(
                 properties.clientName(),
                 "en",
-                COUNTRIES,
+                properties.countries(),
                 new PlaidWire.LinkUser(userId),
                 GRANTED_PRODUCTS,
                 blankToNull(properties.webhookUrl()));
         return client.post("/link/token/create", request, PlaidWire.LinkTokenResponse.class)
                 .linkToken();
+    }
+
+    @Override
+    public Set<CountryCode> countriesServed() {
+        return properties.countries().stream().map(CountryCode::new).collect(Collectors.toUnmodifiableSet());
     }
 
     @Override

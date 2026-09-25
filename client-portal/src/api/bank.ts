@@ -29,6 +29,10 @@ export interface BankAccount {
 }
 
 export interface Bank {
+  /** Whether this user may connect a bank, which depends on where they live. */
+  offered: boolean;
+  /** Why not, and what to do instead, written for a person. Null when offered. */
+  notOffered: string | null;
   connected: boolean;
   connections: BankConnection[];
   accounts: BankAccount[];
